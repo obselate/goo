@@ -265,6 +265,29 @@ public partial class Window {
     return WindowOperationResult.Accepted
   }
 
+  /// Sets the input region for an open Wayland toplevel or layer-shell window.
+  /// The compositor applies the region when the next frame is committed.
+  /// @param rectangles the union of rectangles in surface-local logical pixels, rounded out to whole pixels.
+  /// Null restores the full surface. An empty array disables pointer and touch input.
+  /// @returns Accepted if queued, Closed if not open, or Unsupported for other window types and platforms.
+  /// @exception ArgumentException when a rectangle has a nonfinite coordinate or a negative size.
+  public func SetInputRegion(rectangles [] ? ElementRect) WindowOperationResult {
+    requireUiThread("Window.SetInputRegion")
+    if !IsOpen || host?.IsClosing == true { return WindowOperationResult.Closed }
+    guard let native = host as SdlHost? else { return WindowOperationResult.Unsupported }
+    if !native.SupportsInputRegion() { return WindowOperationResult.Unsupported }
+    if let values = rectangles {
+      for rect in values {
+        if !Double.IsFinite(rect.X) || !Double.IsFinite(rect.Y) || !Double.IsFinite(rect.Width)
+          || !Double.IsFinite(rect.Height) || rect.Width < 0.0 || rect.Height < 0.0 {
+          throw ArgumentException("Input rectangles require finite coordinates and nonnegative sizes", "rectangles")
+        }
+      }
+    }
+    if native.SetInputRegion(rectangles) { requestRender() }
+    return WindowOperationResult.Accepted
+  }
+
   /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
   public prop RenderingDevice RenderingDeviceInfo{
     get -> ReadUntrackedWindowValue((windowTarget as VulkanWindowTarget?)?.RenderingDevice ?? default(RenderingDeviceInfo))

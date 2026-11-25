@@ -37,6 +37,10 @@
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../NativeWindow/test_layer_window_resize.py" Link="test_layer_window_resize.py"
              CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../NativeWindow/test_window_input_region.py;../NativeWindow/virtual_pointer.c"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../.github/scripts/with-headless-wayland.sh"
+             Link="with-headless-wayland.sh" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="%(Filename)%(Extension)"
