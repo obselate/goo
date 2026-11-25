@@ -1,0 +1,1 @@
+- Keep Wayland still-image layer windows unmapped until their first image is ready, avoiding a flash of the canvas color on startup.
