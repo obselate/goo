@@ -201,20 +201,22 @@ internal partial class FlexLayoutEngine {
         return independent
     }
 
-    private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64) FlexSize {
+    private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64, contentMain int32 = 0) FlexSize {
         if node.Display == Display.None {
             if arrange {
                 Hide(node, frame)
             }
             return FlexSize{}
         }
-        let key = request.CacheKey(OwnerIndependent(node))
+        var key = request.CacheKey(OwnerIndependent(node))
+        key.Flags |= contentMain << 11
         if node.FlexMeasures.HasCommitted && node.FlexMeasures.Committed.Matches(in key) {
             return FlexSize{
                 Width: node.LogicalLayout.Raw.W,
                 Height: node.LogicalLayout.Raw.H,
                 Baseline: node.LogicalLayout.Baseline,
-                TextBaseline: node.LogicalLayout.TextBaseline
+                TextBaseline: node.LogicalLayout.TextBaseline,
+                ContentAxes: node.LogicalLayout.ContentAxes
             }
         }
         if !arrange && node.FlexMeasures.TryMeasure(in key, out var cached) {
@@ -257,6 +259,7 @@ internal partial class FlexLayoutEngine {
             node.LogicalLayout.Density = request.Density
             node.LogicalLayout.Baseline = result.Baseline
             node.LogicalLayout.TextBaseline = result.TextBaseline
+            node.LogicalLayout.ContentAxes = uint8(result.ContentAxes | contentMain)
             node.LogicalLayout.Valid = true
             node.LogicalLayout.Generation = frame
             node.FlexMeasures.Committed = key

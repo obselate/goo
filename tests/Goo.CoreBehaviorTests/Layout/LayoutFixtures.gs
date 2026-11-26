@@ -1678,6 +1678,112 @@ internal class LayoutFixtures {
     return true
   }
 
+  func ContentSizingFollowsCurrentCachedLayoutPass() bool {
+    for absolute in []bool{true, false} {
+      let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 100, Padding: Edges{Top: 16},
+        Container{Position: absolute ? PositionType.Absolute : PositionType.Relative, Top: absolute ? 16 : 0,
+          Width: 108, FlexDirection: FlexDirection.Row, Overflow: Overflow.Hidden,
+          Text{Content: "gjpqy ÁÉ", FontSize: 12, LineHeight: 1.2, TextWrap: TextWrap.NoWrap}}})
+      try {
+        let layout = Layout()
+        let parent = root.Children[0]
+        let text = parent.Children[0]
+        layout.SetPixelDensity(1.0F)
+        layout.Calculate(root, 400.0F, 100.0F)
+        let raw = parent.LogicalLayout.Raw.H
+        for intrinsic in []bool{true, false, true, false} {
+          let size = intrinsic ? NodeLength{} : NodeLength{Unit: LengthUnit.Px, Value: raw}
+          if absolute {
+            parent.Height = size
+            FlexLayoutEngine.Invalidate(parent)
+          } else {
+            parent.FlexBasis = size
+            FlexLayoutEngine.Invalidate(root)
+          }
+          for _ in 0 ... 2 {
+            layout.Calculate(root, 400.0F, 100.0F)
+            let bottom = parent.Rect.Y + parent.Rect.H
+            let textBottom = text.Rect.Y + text.Rect.H
+            if parent.LogicalLayout.Raw.H != raw || bottom != (intrinsic ? 31.0F : 30.0F) || textBottom != 31.0F {
+              throw InvalidOperationException("absolute=$absolute, intrinsic=$intrinsic, raw=${parent.LogicalLayout.Raw.H}, bottom=$bottom, textBottom=$textBottom")
+            }
+          }
+        }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    return true
+  }
+
+  func ContentClipsPreservePaddingAndSnapBorderedEdges() bool {
+    for mode in 0 ... 4 {
+      for padding in []float64{0, 4} {
+        let root = Reconciler{Res: Resolver{}}.Mount(Container{Width: 400, Height: 100,
+          Container{Position: PositionType.Absolute, Left: 0.5, Top: 0.5, BorderWidth: 1, Padding: padding,
+            OverflowX: mode == 2 ? Overflow.Hidden : Overflow.Visible,
+            OverflowY: mode == 0 ? Overflow.Visible : (mode == 3 ? Overflow.Scroll : Overflow.Hidden),
+            FlexDirection: FlexDirection.Row,
+            Container{Overflow: Overflow.Visible, FlexDirection: FlexDirection.Row,
+              Text{Content: "gjpqy ÁÉ", FontSize: 12, LineHeight: 1.2, TextWrap: TextWrap.NoWrap}}}})
+        try {
+          let layout = Layout()
+          layout.SetPixelDensity(1.25F)
+          layout.Calculate(root, 400.0F, 100.0F)
+          let parent = root.Children[0]
+          let text = parent.Children[0].Children[0]
+          let raw = parent.LogicalLayout.Raw
+          let border = parent.LogicalLayout.Border
+          for axis in 0 ... 2 {
+            let horizontal = axis == 0
+            let clips = horizontal ? mode == 2 : mode == 1 || mode == 2
+            let start = horizontal ? parent.Rect.X : parent.Rect.Y
+            let end = start + (horizontal ? parent.Rect.W : parent.Rect.H)
+            let rawStart = float64(horizontal ? raw.X : raw.Y)
+            let rawSize = float64(horizontal ? raw.W : raw.H)
+            let normalStart = float32(FlexLayoutEngine.PixelRound(rawStart, 1.25F))
+            let normalEnd = float32(FlexLayoutEngine.PixelRound(rawStart + rawSize, 1.25F))
+            if !clips || padding > 0 {
+              if MathF.Abs(start - normalStart) > 0.0001F || MathF.Abs(end - normalEnd) > 0.0001F {
+                throw InvalidOperationException("Unneeded clip growth: mode=$mode, padding=$padding, axis=$axis")
+              }
+            } else {
+              let childStart = horizontal ? text.Rect.X : text.Rect.Y
+              let childEnd = childStart + (horizontal ? text.Rect.W : text.Rect.H)
+              if MathF.Abs(start * 1.25F - MathF.Round(start * 1.25F)) > 0.0001F
+                || MathF.Abs(end * 1.25F - MathF.Round(end * 1.25F)) > 0.0001F
+                || childStart < start + (horizontal ? border.Left : border.Top) - 0.0001F
+                || childEnd > end - (horizontal ? border.Right : border.Bottom) + 0.0001F {
+                throw InvalidOperationException("Bordered clip containment: mode=$mode, axis=$axis, parent=$start..$end, measured=$childStart..$childEnd")
+              }
+            }
+          }
+        } finally { NodeLifecycle.DisposeTree(root) }
+      }
+    }
+    return true
+  }
+
+  func ContentClipsPreserveDeliberateOverflow() bool {
+    for density in []float32{1.0F, 1.5F} {
+      let root = Reconciler{Res: Resolver{}}.Mount(Column{Width: 100, Height: 100,
+        Column{OverflowY: Overflow.Hidden,
+          Container{Height: 20, Position: PositionType.Relative, Top: 40}},
+        Column{OverflowY: Overflow.Hidden,
+          Container{Height: 20, Margin: Edges{Top: -6}}}})
+      try {
+        let layout = Layout()
+        layout.SetPixelDensity(density)
+        layout.Calculate(root, 100.0F, 100.0F)
+        let offset = root.Children[0]
+        let margin = root.Children[1]
+        if offset.Rect.Y != 0.0F || offset.Rect.H != 20.0F || offset.Children[0].Rect.Y != 40.0F
+          || margin.Rect.Y != 20.0F || margin.Rect.H != 14.0F || margin.Children[0].Rect.Y != 14.0F {
+            throw InvalidOperationException("density=$density, relative=${offset.Rect.Y},${offset.Rect.H}, negativeMargin=${margin.Rect.Y},${margin.Rect.H}")
+        }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    return true
+  }
+
   func NestedBaselinesIgnorePixelSnappedPositions() bool {
     let pair = (size float64) -> Container{
       Width: 100, FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Baseline,

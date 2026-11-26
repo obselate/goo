@@ -95,6 +95,7 @@ internal struct FlexSize {
     internal var Height float32
     internal var Baseline float32
     internal var TextBaseline bool
+    internal var ContentAxes uint8
 }
 
 internal struct FlexInsets {
@@ -127,6 +128,7 @@ internal struct LayoutResult {
     internal var TextBaseline bool
     internal var Line int32
     internal var Valid bool
+    internal var ContentAxes uint8
     internal var Density float32
     internal var Generation uint64
 }
@@ -214,6 +216,7 @@ internal struct FlexItem {
     internal var Align AlignSelf
     internal var Stretch bool
     internal var Frozen bool
+    internal var IntrinsicBasis bool
     internal var Violation int32
     internal var End int32
     internal var Count int32
