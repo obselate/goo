@@ -861,7 +861,6 @@ internal class StyleFixtures {
     logicalResolver.Flush()
     return logicalState.MarginRight.Value == 1.0F && logicalState.MarginLeft.Value == 10.0F
       && logicalState.PaddingRight.Value == 2.0F && logicalState.PaddingLeft.Value == 20.0F
-      && logicalState.Margin.Unit == LengthUnit.Unset && logicalState.Padding.Unit == LengthUnit.Unset
   }
 
   func EdgesContract() bool {

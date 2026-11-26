@@ -44,6 +44,9 @@ internal partial class FlexLayoutEngine {
     private func PrepareItem(
         parent Node,
         child Node,
+        childIndex int32,
+        state FlexThreadState,
+        slot int32,
         in request FlexRequest,
         axis FlexAxis,
         crossAxis FlexAxis,
@@ -92,7 +95,7 @@ internal partial class FlexLayoutEngine {
                     intrinsic == FlexMeasureMode.MinContent ? FlexConstraint.Minimum() : FlexConstraint{}
                 )
                 probe.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
-                let size = Solve(child, ref probe, false, frame)
+                let size = Solve(child, ref probe, false, frame, state)
                 basis = axis.Select(size.Width, size.Height)
                 intrinsicBasis = (size.ContentAxes & (horizontal ? 1 : 2)) != 0
             }
@@ -116,7 +119,7 @@ internal partial class FlexLayoutEngine {
                     SetAxis(ref probe, !horizontal, replaced && stretch ? FlexConstraint{} : crossRequest)
                     SetAxis(ref probe, horizontal, FlexConstraint.Minimum())
                     probe.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
-                    let size = Solve(child, ref probe, false, frame)
+                    let size = Solve(child, ref probe, false, frame, state)
                     content = axis.Select(size.Width, size.Height)
                 }
                 if box.Ratio > 0.0F {
@@ -138,8 +141,8 @@ internal partial class FlexLayoutEngine {
                 usedMin = MathF.Max(usedMin, MathF.Min(content, maximum))
             }
         }
-        child.FlexScratch = FlexItem{
-            Frame: frame,
+        state.Arena.Items[slot] = FlexItem{
+            ChildIndex: childIndex,
             Base: basis,
             Decoration: decorations,
             Hypothetical: MathF.Max(usedMin, MathF.Min(basis, maximum)),
@@ -155,20 +158,6 @@ internal partial class FlexLayoutEngine {
         }
     }
 
-    private func CloseLine(first Node, end int32, count int32, occupied float32) {
-        first.FlexScratch.End = end
-        first.FlexScratch.Count = count
-        first.FlexScratch.Occupied = occupied
-    }
-
-    private func NextItem(node Node, start int32) int32 {
-        var index = start
-        while index < node.Children.Count && !InFlow(node.Children[index]) {
-            index++
-        }
-        return index
-    }
-
     private func SolveFlex(
         node Node,
         ref request FlexRequest,
@@ -177,7 +166,8 @@ internal partial class FlexLayoutEngine {
         width float32,
         height float32,
         arrange bool,
-        frame uint64
+        frame uint64,
+        state FlexThreadState
     ) FlexSize {
         let main = MainAxis(node, direction)
         let cross = CrossAxis(node, main, direction)
@@ -213,13 +203,15 @@ internal partial class FlexLayoutEngine {
             crossDecorations
         )
         var childRequest = ChildRequest(in request, innerWidth, innerHeight, direction)
-        let firstIndex = NextItem(node, 0)
-        var lineFirst = firstIndex
+        let arena = state.Arena
+        let scratchBase = arena.Reserve(node.Children.Count)
+        var slot = scratchBase
+        var lineFirstSlot = -1
         var count = 0
         var lines = 0
         var occupied = 0.0F
         var widest = 0.0F
-        for index in firstIndex ... node.Children.Count {
+        for index in 0 ... node.Children.Count {
             let child = node.Children[index]
             if !InFlow(child) {
                 continue
@@ -227,6 +219,9 @@ internal partial class FlexLayoutEngine {
             PrepareItem(
                 node,
                 child,
+                index,
+                state,
+                slot,
                 in childRequest,
                 main,
                 cross,
@@ -236,20 +231,26 @@ internal partial class FlexLayoutEngine {
                 crossConstraint.Mode,
                 frame
             )
-            let outer = child.FlexScratch.Hypothetical + child.FlexScratch.Margin.Sum(horizontal)
+            let outer = arena.Items[slot].Hypothetical + arena.Items[slot].Margin.Sum(horizontal)
             if wraps && count > 0 && Known(lineLimit) && occupied + mainGap + outer > lineLimit {
-                CloseLine(node.Children[lineFirst], index, count, occupied)
+                arena.Items[lineFirstSlot].End = slot
+                arena.Items[lineFirstSlot].Occupied = occupied
                 widest = MathF.Max(widest, occupied)
                 lines++
                 count = 0
                 occupied = 0.0F
-                lineFirst = index
+                lineFirstSlot = slot
+            } else if count == 0 {
+                lineFirstSlot = slot
             }
             occupied += count == 0 ? outer : mainGap + outer
             count++
+            slot++
         }
+        let arenaEnd = slot
         if count > 0 {
-            CloseLine(node.Children[lineFirst], node.Children.Count, count, occupied)
+            arena.Items[lineFirstSlot].End = arenaEnd
+            arena.Items[lineFirstSlot].Occupied = occupied
             widest = MathF.Max(widest, occupied)
             lines++
         }
@@ -266,35 +267,32 @@ internal partial class FlexLayoutEngine {
         }
         let availableMain = Inner(usedMain, mainDecorations)
         var totalCross = 0.0F
-        var baselineIndex = firstIndex
-        var index = firstIndex
-        while index < node.Children.Count {
-            let first = node.Children[index]
-            let end = first.FlexScratch.End
-            ResolveFlexibleLengths(node, index, end, main, availableMain, mainGap, frame)
+        var baselineSlot = scratchBase
+        var lineSlot = scratchBase
+        while lineSlot < arenaEnd {
+            let end = arena.Items[lineSlot].End
+            ResolveFlexibleLengths(node, arena, lineSlot, end, main, availableMain, mainGap)
             var lineCross = 0.0F
             var ascent = 0.0F
             var descent = 0.0F
-            for childIndex in index ... end {
-                let child = node.Children[childIndex]
-                if child.FlexScratch.Frame != frame {
-                    continue
-                }
-                let baselineAlign = child.FlexScratch.Align == AlignSelf.Baseline
-                && !cross.AutoStart(child.FlexScratch.AutoMargins) && !cross.AutoEnd(child.FlexScratch.AutoMargins)
-                if index == firstIndex && baselineIndex == firstIndex && baselineAlign
-                && first.FlexScratch.Align != AlignSelf.Baseline {
-                    baselineIndex = childIndex
+            for itemSlot in lineSlot ... end {
+                let item = arena.Items[itemSlot]
+                let child = node.Children[item.ChildIndex]
+                let baselineAlign = item.Align == AlignSelf.Baseline
+                && !cross.AutoStart(item.AutoMargins) && !cross.AutoEnd(item.AutoMargins)
+                if lineSlot == scratchBase && baselineSlot == scratchBase && baselineAlign
+                && arena.Items[lineSlot].Align != AlignSelf.Baseline {
+                    baselineSlot = itemSlot
                 }
                 if !wraps && Known(ownCross) && !baselineAlign {
                     continue
                 }
-                SetAxis(ref childRequest, horizontal, FlexConstraint.Exact(child.FlexScratch.Main))
-                SetAxis(ref childRequest, !horizontal, child.FlexScratch.CrossRequest)
-                childRequest.Baseline = baselineAlign || (request.Baseline && childIndex == firstIndex)
-                let measured = Solve(child, ref childRequest, false, frame)
+                SetAxis(ref childRequest, horizontal, FlexConstraint.Exact(item.Main))
+                SetAxis(ref childRequest, !horizontal, item.CrossRequest)
+                childRequest.Baseline = baselineAlign || (request.Baseline && itemSlot == scratchBase)
+                let margins = item.Margin
+                let measured = Solve(child, ref childRequest, false, frame, state)
                 let crossSize = cross.Select(measured.Width, measured.Height)
-                let margins = child.FlexScratch.Margin
                 lineCross = MathF.Max(lineCross, crossSize + margins.Sum(!horizontal))
                 if baselineAlign {
                     let logicalBaseline = cross.Reversed ? crossSize - measured.Baseline : measured.Baseline
@@ -303,10 +301,11 @@ internal partial class FlexLayoutEngine {
                     descent = MathF.Max(descent, crossSize + margins.Sum(!horizontal) - start)
                 }
             }
-            first.FlexScratch.Ascent = ascent
-            first.FlexScratch.LineCross = MathF.Max(lineCross, ascent + descent)
-            totalCross += first.FlexScratch.LineCross
-            index = end
+            let computedLineCross = MathF.Max(lineCross, ascent + descent)
+            arena.Items[lineSlot].Ascent = ascent
+            arena.Items[lineSlot].LineCross = computedLineCross
+            totalCross += computedLineCross
+            lineSlot = end
         }
         totalCross += crossGap * Math.Max(0, lines - 1)
         let usedCross = if Known(ownCross) {
@@ -331,9 +330,11 @@ internal partial class FlexLayoutEngine {
                 box,
                 main,
                 cross,
-                firstIndex,
+                state,
+                scratchBase,
+                arenaEnd,
                 lines,
-                baselineIndex,
+                baselineSlot,
                 mainGap,
                 crossGap,
                 totalCross,
@@ -343,39 +344,38 @@ internal partial class FlexLayoutEngine {
                 ref size
             )
         }
+        arena.Release(scratchBase)
         return size
     }
 
     private func ResolveFlexibleLengths(
         node Node,
+        arena FlexScratchArena,
         start int32,
         end int32,
         axis FlexAxis,
         available float32,
-        gap float32,
-        frame uint64
+        gap float32
     ) {
-        let first = node.Children[start]
-        let grow = first.FlexScratch.Occupied < available
-        let gaps = gap * (first.FlexScratch.Count - 1)
+        let items = arena.Items
+        let count = end - start
+        let grow = items[start].Occupied < available
+        let gaps = gap * (count - 1)
         var initial = float64(available - gaps)
         var remaining = 0
-        for index in start ... end {
-            let child = node.Children[index]
-            if child.FlexScratch.Frame != frame {
-                continue
-            }
-            let basis = child.FlexScratch.Base
+        for slot in start ... end {
+            let child = node.Children[items[slot].ChildIndex]
+            let basis = items[slot].Base
             if !grow {
-                child.FlexScratch.Minimum = MathF.Max(child.FlexScratch.Minimum, child.FlexScratch.PolicyMinimum)
-                child.FlexScratch.Hypothetical = MathF.Max(child.FlexScratch.Minimum, child.FlexScratch.Hypothetical)
+                items[slot].Minimum = MathF.Max(items[slot].Minimum, items[slot].PolicyMinimum)
+                items[slot].Hypothetical = MathF.Max(items[slot].Minimum, items[slot].Hypothetical)
             }
-            let hypothetical = child.FlexScratch.Hypothetical
-            let factor = grow ? child.FlexGrow : child.FlexShrink
+            let hypothetical = items[slot].Hypothetical
+            let factor = float64(grow ? child.FlexGrow : child.FlexShrink)
             let frozen = factor == 0.0 || (grow ? basis > hypothetical : basis < hypothetical)
-            child.FlexScratch.Frozen = frozen
-            child.FlexScratch.Main = frozen ? hypothetical : basis
-            initial -= float64(child.FlexScratch.Main) + child.FlexScratch.Margin.Sum(axis.Horizontal)
+            items[slot].Frozen = frozen
+            items[slot].Main = frozen ? hypothetical : basis
+            initial -= float64(items[slot].Main) + items[slot].Margin.Sum(axis.Horizontal)
             if !frozen {
                 remaining++
             }
@@ -384,22 +384,20 @@ internal partial class FlexLayoutEngine {
             var free = float64(available - gaps)
             var factors = 0.0
             var weights = 0.0
-            for index in start ... end {
-                let child = node.Children[index]
-                if child.FlexScratch.Frame != frame {
-                    continue
-                }
-                free -= child.FlexScratch.Margin.Sum(axis.Horizontal)
-                if child.FlexScratch.Frozen {
-                    free -= child.FlexScratch.Main
+            for slot in start ... end {
+                let item = items[slot]
+                let child = node.Children[item.ChildIndex]
+                free -= item.Margin.Sum(axis.Horizontal)
+                if item.Frozen {
+                    free -= item.Main
                 } else {
-                    let factor = grow ? child.FlexGrow : child.FlexShrink
+                    let factor = float64(grow ? child.FlexGrow : child.FlexShrink)
                     factors += factor
                     weights += grow ? factor : factor * MathF.Max(
                         0.0F,
-                        child.FlexScratch.Base - child.FlexScratch.Decoration
+                        item.Base - item.Decoration
                     )
-                    free -= child.FlexScratch.Base
+                    free -= item.Base
                 }
             }
             if factors < 1.0 && Math.Abs(initial * factors) < Math.Abs(free) {
@@ -407,31 +405,31 @@ internal partial class FlexLayoutEngine {
             }
             free = grow ? Math.Max(0.0, free) : Math.Min(0.0, free)
             var violation = 0.0
-            for index in start ... end {
-                let child = node.Children[index]
-                if child.FlexScratch.Frame != frame || child.FlexScratch.Frozen {
+            for slot in start ... end {
+                let item = items[slot]
+                if item.Frozen {
                     continue
                 }
-                let basis = child.FlexScratch.Base
-                let weight = grow ? child.FlexGrow : child.FlexShrink * MathF.Max(
+                let child = node.Children[item.ChildIndex]
+                let basis = item.Base
+                let weight = grow ? float64(child.FlexGrow) : float64(child.FlexShrink) * MathF.Max(
                     0.0F,
-                    basis - child.FlexScratch.Decoration
+                    basis - item.Decoration
                 )
                 let target = basis + (weights > 0.0 ? free * weight / weights : 0.0)
-                let clamped = Math.Max(child.FlexScratch.Minimum, Math.Min(child.FlexScratch.Maximum, target))
-                child.FlexScratch.Main = float32(clamped)
+                let clamped = Math.Max(item.Minimum, Math.Min(item.Maximum, target))
+                items[slot].Main = float32(clamped)
                 let delta = clamped - target
-                child.FlexScratch.Violation = delta > 0.0 ? 1 : (delta < 0.0 ? -1 : 0)
+                items[slot].Violation = delta > 0.0 ? 1 : (delta < 0.0 ? -1 : 0)
                 violation += delta
             }
-            for index in start ... end {
-                let child = node.Children[index]
-                if child.FlexScratch.Frame != frame || child.FlexScratch.Frozen {
+            for slot in start ... end {
+                if items[slot].Frozen {
                     continue
                 }
-                if violation == 0.0 || (violation > 0.0 && child.FlexScratch.Violation > 0)
-                || (violation < 0.0 && child.FlexScratch.Violation < 0) {
-                    child.FlexScratch.Frozen = true
+                if violation == 0.0 || (violation > 0.0 && items[slot].Violation > 0)
+                || (violation < 0.0 && items[slot].Violation < 0) {
+                    items[slot].Frozen = true
                     remaining--
                 }
             }
@@ -444,9 +442,11 @@ internal partial class FlexLayoutEngine {
         box FlexBox,
         main FlexAxis,
         cross FlexAxis,
-        firstIndex int32,
+        state FlexThreadState,
+        scratchBase int32,
+        arenaEnd int32,
         lines int32,
-        baselineIndex int32,
+        baselineSlot int32,
         mainGap float32,
         crossGap float32,
         totalCross float32,
@@ -455,6 +455,7 @@ internal partial class FlexLayoutEngine {
         frame uint64,
         ref result FlexSize
     ) {
+        let arena = state.Arena
         let horizontal = main.Horizontal
         let mainExtent = main.Select(result.Width, result.Height)
         let crossExtent = cross.Select(result.Width, result.Height)
@@ -478,25 +479,21 @@ internal partial class FlexLayoutEngine {
         if !nowrap {
             lineStart += Distribute(distribution, lineFree, lines, out lineSpacing)
         }
-        var index = firstIndex
-        var line = 0
-        while index < node.Children.Count {
-            let first = node.Children[index]
-            let end = first.FlexScratch.End
-            let count = first.FlexScratch.Count
-            let lineCross = nowrap ? innerCross : first.FlexScratch.LineCross + stretch
+        var lineSlot = scratchBase
+        while lineSlot < arenaEnd {
+            let end = arena.Items[lineSlot].End
+            let count = end - lineSlot
+            let lineAscent = arena.Items[lineSlot].Ascent
+            let lineCross = nowrap ? innerCross : arena.Items[lineSlot].LineCross + stretch
             var free = innerMain - mainGap * (count - 1)
             var autoCount = 0
-            for childIndex in index ... end {
-                let child = node.Children[childIndex]
-                if child.FlexScratch.Frame != frame {
-                    continue
-                }
-                free -= child.FlexScratch.Main + child.FlexScratch.Margin.Sum(horizontal)
-                if main.AutoStart(child.FlexScratch.AutoMargins) {
+            for slot in lineSlot ... end {
+                let item = arena.Items[slot]
+                free -= item.Main + item.Margin.Sum(horizontal)
+                if main.AutoStart(item.AutoMargins) {
                     autoCount++
                 }
-                if main.AutoEnd(child.FlexScratch.AutoMargins) {
+                if main.AutoEnd(item.AutoMargins) {
                     autoCount++
                 }
             }
@@ -506,15 +503,13 @@ internal partial class FlexLayoutEngine {
             if autoSpace == 0.0F {
                 start += Distribute(node.JustifyContent, free, count, out spacing)
             }
-            for childIndex in index ... end {
-                let child = node.Children[childIndex]
-                if child.FlexScratch.Frame != frame {
-                    continue
-                }
-                let margins = child.FlexScratch.Margin
-                let mask = child.FlexScratch.AutoMargins
-                let mainSize = child.FlexScratch.Main
-                let isBaseline = childIndex == baselineIndex && baseline
+            for slot in lineSlot ... end {
+                let item = arena.Items[slot]
+                let child = node.Children[item.ChildIndex]
+                let margins = item.Margin
+                let mask = item.AutoMargins
+                let mainSize = item.Main
+                let isBaseline = slot == baselineSlot && baseline
                 let crossAutoStart = cross.AutoStart(mask)
                 let crossAutoEnd = cross.AutoEnd(mask)
                 if arrange || isBaseline {
@@ -522,18 +517,18 @@ internal partial class FlexLayoutEngine {
                     SetAxis(
                         ref request,
                         !horizontal,
-                        child.FlexScratch.Stretch
-                        ? FlexConstraint.Exact(lineCross - margins.Sum(!horizontal)) : child.FlexScratch.CrossRequest
+                        item.Stretch
+                        ? FlexConstraint.Exact(lineCross - margins.Sum(!horizontal)) : item.CrossRequest
                     )
-                    request.Baseline = isBaseline || child.FlexScratch.Align == AlignSelf.Baseline
-                    let contentMain = arrange && child.FlexScratch.IntrinsicBasis && mainSize == child.FlexScratch.Base
+                    request.Baseline = isBaseline || item.Align == AlignSelf.Baseline
+                    let contentMain = arrange && item.IntrinsicBasis && mainSize == item.Base
                     ? (horizontal ? 1 : 2) : 0
-                    let measured = Solve(child, ref request, arrange, frame, contentMain)
+                    let measured = Solve(child, ref request, arrange, frame, state, contentMain)
                     let crossSize = cross.Select(measured.Width, measured.Height)
                     let childBaseline = measured.Baseline
                     let freeCross = lineCross - crossSize - margins.Sum(!horizontal)
                     let crossMargin = margins.Start(cross)
-                    let align = child.FlexScratch.Align
+                    let align = item.Align
                     let offset = if crossAutoStart || crossAutoEnd {
                         crossAutoStart ? MathF.Max(0.0F, freeCross) / (crossAutoEnd ? 2.0F : 1.0F) : 0.0F
                     } else if align == AlignSelf.FlexEnd {
@@ -541,9 +536,7 @@ internal partial class FlexLayoutEngine {
                     } else if align == AlignSelf.Center {
                         freeCross * 0.5F
                     } else if align == AlignSelf.Baseline {
-                        first
-                            .FlexScratch
-                            .Ascent - crossMargin - (cross.Reversed ? crossSize - childBaseline : childBaseline)
+                        lineAscent - crossMargin - (cross.Reversed ? crossSize - childBaseline : childBaseline)
                     } else {
                         0.0F
                     }
@@ -560,7 +553,6 @@ internal partial class FlexLayoutEngine {
                     if arrange {
                         child.LogicalLayout.Raw.X = x
                         child.LogicalLayout.Raw.Y = y
-                        child.LogicalLayout.Line = line
                     }
                     if isBaseline {
                         result.Baseline = y + childBaseline
@@ -574,8 +566,7 @@ internal partial class FlexLayoutEngine {
                 return
             }
             lineStart += lineCross + crossGap + lineSpacing
-            line++
-            index = end
+            lineSlot = end
         }
     }
 }

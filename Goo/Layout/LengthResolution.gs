@@ -49,6 +49,7 @@ internal class LengthDeclarations {
     internal prop Active bool { get -> values != nil }
 
     internal func Get(node Node) LengthNode? {
+      if !node.HasRelativeLengths { return nil }
       if let table = values {
         if table.TryGetValue(node, out var result) { return result }
       }
@@ -70,9 +71,14 @@ internal class LengthDeclarations {
     }
 
     internal func Remove(node Node) {
-      guard let state = Get(node) else { return }
+      if !node.HasRelativeLengths { return }
+      guard let state = Get(node) else {
+        node.HasRelativeLengths = false
+        return
+      }
       state.Layout?.RemoveLengths(state)
       values?.Remove(node)
+      node.HasRelativeLengths = false
       Invalidate(node)
     }
 
@@ -84,6 +90,7 @@ internal class LengthDeclarations {
         state = LengthNode{Node: node, Resolver: resolver}
         values ??= ConditionalWeakTable[Node, LengthNode]()
         values!!.Add(node, state)
+        node.HasRelativeLengths = true
       }
       let list = state.Values
       for i in 0 ... list.Count {
@@ -92,7 +99,14 @@ internal class LengthDeclarations {
           if sameLength(list[i].Value, declaration.Value) { return false }
           list[i].Value = declaration.Value
           list[i].Pixels = Single.NaN
-        } else { list.RemoveAt(i) }
+        } else {
+          list.RemoveAt(i)
+          if list.Count == 0 {
+            state.Layout?.RemoveLengths(state)
+            values?.Remove(node)
+            node.HasRelativeLengths = false
+          }
+        }
         Invalidate(node)
         return true
       }

@@ -123,14 +123,30 @@ internal struct LayoutResult {
     internal var Margin FlexInsets
     internal var Padding FlexInsets
     internal var Border FlexInsets
-    internal var Direction Direction
     internal var Baseline float32
-    internal var TextBaseline bool
-    internal var Line int32
-    internal var Valid bool
-    internal var ContentAxes uint8
     internal var Density float32
     internal var Generation uint64
+    private var flags uint8
+
+    internal prop Direction Direction {
+        get -> Direction(int32(flags & uint8(3)))
+        set -> flags = (flags & ~uint8(3)) | (uint8(int32(value)) & uint8(3))
+    }
+
+    internal prop Valid bool {
+        get -> (flags & uint8(4)) != uint8(0)
+        set -> flags = value ? flags | uint8(4) : flags & ~uint8(4)
+    }
+
+    internal prop TextBaseline bool {
+        get -> (flags & uint8(8)) != uint8(0)
+        set -> flags = value ? flags | uint8(8) : flags & ~uint8(8)
+    }
+
+    internal prop ContentAxes uint8 {
+        get -> (flags >> 4) & uint8(3)
+        set -> flags = (flags & ~uint8(48)) | ((value & uint8(3)) << 4)
+    }
 }
 
 internal struct FlexProbe {
@@ -140,69 +156,147 @@ internal struct FlexProbe {
 
 internal struct FlexCache {
     internal var Committed FlexKey
-    internal var HasCommitted bool
-    internal var Count int32
-    internal var OwnerIndependent uint8
-    private var next int32
-    private var probe0 FlexProbe
-    private var probe1 FlexProbe
-    private var probe2 FlexProbe
-    private var probe3 FlexProbe
+    internal var ProbeEpoch uint64
+    internal var ProbeSlot int32
+    private var flags uint8
 
-    internal func TryMeasure(in key FlexKey, out size FlexSize) bool {
-        if Count > 0 && probe0.Key.Matches(in key) {
-            size = probe0.Size
+    internal prop HasCommitted bool {
+        get -> (flags & uint8(1)) != uint8(0)
+        set -> flags = value ? flags | uint8(1) : flags & ~uint8(1)
+    }
+
+    internal prop HasProbes bool { get -> ProbeSlot != 0 }
+
+    internal prop OwnerIndependent uint8 {
+        get -> (flags >> 1) & uint8(3)
+        set -> flags = (flags & ~uint8(6)) | ((value & uint8(3)) << 1)
+    }
+
+    internal func Clear() {
+        ProbeSlot = 0
+        ProbeEpoch = 0uL
+        flags = uint8(0)
+    }
+}
+
+internal struct FlexProbeBucket {
+    internal var Epoch uint64
+    internal var EngineId uint32
+    internal var Count uint8
+    internal var Next uint8
+    internal var P0 FlexProbe
+    internal var P1 FlexProbe
+    internal var P2 FlexProbe
+    internal var P3 FlexProbe
+}
+
+internal sealed class FlexProbeStore {
+    shared {
+        private const InitialCapacity int32 = 256
+        private const MaxCapacity int32 = 16384
+    }
+
+    private var buckets []FlexProbeBucket = [InitialCapacity]FlexProbeBucket
+    private var nextSlot int32
+    private var nextEpoch uint64 = 1uL
+
+    private func TryMatch(in bucket FlexProbeBucket, engineId uint32, epoch uint64, in key FlexKey, out size FlexSize) bool {
+        if bucket.Epoch != epoch || bucket.EngineId != engineId {
+            size = FlexSize{}
+            return false
+        }
+        let count = int32(bucket.Count)
+        if count > 0 && bucket.P0.Key.Matches(in key) {
+            size = bucket.P0.Size
             return true
         }
-        if Count > 1 && probe1.Key.Matches(in key) {
-            size = probe1.Size
+        if count > 1 && bucket.P1.Key.Matches(in key) {
+            size = bucket.P1.Size
             return true
         }
-        if Count > 2 && probe2.Key.Matches(in key) {
-            size = probe2.Size
+        if count > 2 && bucket.P2.Key.Matches(in key) {
+            size = bucket.P2.Size
             return true
         }
-        if Count > 3 && probe3.Key.Matches(in key) {
-            size = probe3.Size
+        if count > 3 && bucket.P3.Key.Matches(in key) {
+            size = bucket.P3.Size
             return true
         }
         size = FlexSize{}
         return false
     }
 
-    internal func Store(in key FlexKey, size FlexSize) {
-        let value = FlexProbe{Key: key, Size: size}
+    private func AppendProbe(ref bucket FlexProbeBucket, value FlexProbe) {
+        let next = int32(bucket.Next)
         switch next {
-            case 0 {
-                probe0 = value
-            }
-            case 1 {
-                probe1 = value
-            }
-            case 2 {
-                probe2 = value
-            }
-            case _ {
-                probe3 = value
-            }
+            case 0 { bucket.P0 = value }
+            case 1 { bucket.P1 = value }
+            case 2 { bucket.P2 = value }
+            case _ { bucket.P3 = value }
         }
-        next = (next + 1) & 3
-        if Count < 4 {
-            Count++
+        bucket.Next = uint8((next + 1) & 3)
+        if bucket.Count < uint8(4) {
+            bucket.Count = uint8(int32(bucket.Count) + 1)
         }
     }
 
-    internal func Clear() {
-        HasCommitted = false
-        Count = 0
-        next = 0
-        OwnerIndependent = 0
+    internal func TryMeasure(node Node, engineId uint32, in key FlexKey, out size FlexSize) bool {
+        let slot = node.FlexMeasures.ProbeSlot
+        if slot <= 0 || slot > buckets.Length {
+            size = FlexSize{}
+            return false
+        }
+        return TryMatch(in buckets[slot - 1], engineId, node.FlexMeasures.ProbeEpoch, in key, out size)
+    }
+
+    internal func Store(node Node, engineId uint32, in key FlexKey, size FlexSize) {
+        let value = FlexProbe{Key: key, Size: size}
+        let slot = node.FlexMeasures.ProbeSlot
+        if slot > 0 && slot <= buckets.Length {
+            let index = slot - 1
+            if buckets[index].Epoch == node.FlexMeasures.ProbeEpoch && buckets[index].EngineId == engineId {
+                AppendProbe(ref buckets[index], value)
+                return
+            }
+        }
+        if nextSlot >= buckets.Length && buckets.Length < MaxCapacity {
+            let next = [buckets.Length * 2]FlexProbeBucket
+            Array.Copy(buckets, next, buckets.Length)
+            buckets = next
+        }
+        let index = nextSlot & (buckets.Length - 1)
+        if buckets.Length == MaxCapacity {
+            nextSlot = (nextSlot + 1) & (MaxCapacity - 1)
+        } else {
+            nextSlot++
+        }
+        let epoch = nextEpoch
+        nextEpoch++
+        if nextEpoch == 0uL { nextEpoch = 1uL }
+        buckets[index] = FlexProbeBucket{
+            EngineId: engineId,
+            Epoch: epoch,
+            Count: uint8(1),
+            Next: uint8(1),
+            P0: value
+        }
+        node.FlexMeasures.ProbeSlot = index + 1
+        node.FlexMeasures.ProbeEpoch = epoch
+    }
+
+    internal func Count(node Node, engineId uint32) int32 {
+        let slot = node.FlexMeasures.ProbeSlot
+        if slot <= 0 || slot > buckets.Length { return 0 }
+        let index = slot - 1
+        if buckets[index].Epoch != node.FlexMeasures.ProbeEpoch || buckets[index].EngineId != engineId {
+            return 0
+        }
+        return int32(buckets[index].Count)
     }
 }
 
-// Only the owning parent writes an item's scratch, including its line record.
 internal struct FlexItem {
-    internal var Frame uint64
+    internal var ChildIndex int32
     internal var Base float32
     internal var Decoration float32
     internal var Hypothetical float32
@@ -219,8 +313,45 @@ internal struct FlexItem {
     internal var IntrinsicBasis bool
     internal var Violation int32
     internal var End int32
-    internal var Count int32
     internal var Occupied float32
     internal var LineCross float32
     internal var Ascent float32
+}
+
+internal sealed class FlexScratchArena {
+    internal var Items []FlexItem = [256]FlexItem
+    internal var Top int32
+
+    internal func Reserve(count int32) int32 {
+        let start = Top
+        let needed = start + count
+        if needed > Items.Length {
+            var cap = Items.Length * 2
+            while cap < needed { cap *= 2 }
+            let next = [cap]FlexItem
+            if start > 0 { Array.Copy(Items, next, start) }
+            Items = next
+        }
+        Top = needed
+        return start
+    }
+
+    internal func Release(savedTop int32) {
+        Top = savedTop
+    }
+}
+
+internal sealed class FlexThreadState {
+    shared {
+        @ThreadStatic
+        private var current FlexThreadState?
+
+        internal func Current() FlexThreadState {
+            current ??= FlexThreadState()
+            return current!!
+        }
+    }
+
+    internal let Probes FlexProbeStore = FlexProbeStore()
+    internal let Arena FlexScratchArena = FlexScratchArena()
 }

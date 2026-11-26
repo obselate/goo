@@ -21,6 +21,7 @@ internal class Node {
   private var transitionSelection StyleMask
   private var nodeState int32
   private var lifecycleState uint16
+  private var layoutFlags uint32
   private var scenePaintVersion uint64
   private var mountGeneration uint64 = 1uL
   private var rect Rect
@@ -123,7 +124,8 @@ internal class Node {
     Rect = Rect{}
     LogicalLayout = LayoutResult{}
     FlexMeasures.Clear()
-    FlexScratch = FlexItem{}
+    layoutFlags = 0u
+    HasRelativeLengths = false
     BaseStyle = nil
     HoverStyle = nil
     FocusStyle = nil
@@ -265,6 +267,10 @@ internal class Node {
     get -> (lifecycleState & uint16(2048)) != uint16(0)
     set -> lifecycleState = value ? lifecycleState | uint16(2048) : lifecycleState & ~uint16(2048)
   }
+  internal prop HasRelativeLengths bool {
+    get -> (lifecycleState & uint16(4096)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(4096) : lifecycleState & ~uint16(4096)
+  }
   internal prop HasCustomLayout bool{ get; set; }
   internal prop Key string? { get; set; }
   internal prop Parent Node? {
@@ -281,7 +287,7 @@ internal class Node {
     }
   }
   internal var Context ContextFrame?
-  internal prop Children IList[Node]{ get; init; }
+  internal prop Children List[Node]{ get; init; }
   internal prop Content string{ get; set; }
   internal prop Rect Rect {
     get -> rect
@@ -296,20 +302,17 @@ internal class Node {
   }
   internal var LogicalLayout LayoutResult
   internal var FlexMeasures FlexCache
-  internal var FlexScratch FlexItem
   internal prop Width NodeLength{ get; set; }
   internal prop Height NodeLength{ get; set; }
   internal prop MinWidth NodeLength{ get; set; }
   internal prop MinHeight NodeLength{ get; set; }
   internal prop MaxWidth NodeLength{ get; set; }
   internal prop MaxHeight NodeLength{ get; set; }
-  internal prop AspectRatio float64{ get; set; }
-  internal prop Padding NodeLength{ get; set; }
+  internal prop AspectRatio float32{ get; set; }
   internal prop PaddingLeft NodeLength{ get; set; }
   internal prop PaddingTop NodeLength{ get; set; }
   internal prop PaddingRight NodeLength{ get; set; }
   internal prop PaddingBottom NodeLength{ get; set; }
-  internal prop Margin NodeLength{ get; set; }
   internal prop MarginLeft NodeLength{ get; set; }
   internal prop MarginTop NodeLength{ get; set; }
   internal prop MarginRight NodeLength{ get; set; }
@@ -317,16 +320,37 @@ internal class Node {
   internal prop Gap NodeLength{ get; set; }
   internal prop RowGap NodeLength{ get; set; }
   internal prop ColumnGap NodeLength{ get; set; }
-  internal prop FlexDirection FlexDirection{ get; set; }
-  internal prop FlexWrap FlexWrap{ get; set; }
-  internal prop JustifyContent JustifyContent{ get; set; }
-  internal prop AlignItems AlignItems{ get; set; }
-  internal prop AlignSelf AlignSelf{ get; set; }
-  internal prop AlignContent AlignContent{ get; set; }
-  internal prop FlexGrow float64{ get; set; }
-  internal prop FlexShrink float64{ get; set; }
+  internal prop FlexDirection FlexDirection{
+    get -> FlexDirection(int32(layoutFlags & 3u))
+    set -> layoutFlags = (layoutFlags & ~3u) | (uint32(int32(value)) & 3u)
+  }
+  internal prop FlexWrap FlexWrap{
+    get -> FlexWrap(int32((layoutFlags >> 2) & 3u))
+    set -> layoutFlags = (layoutFlags & ~(3u << 2)) | ((uint32(int32(value)) & 3u) << 2)
+  }
+  internal prop JustifyContent JustifyContent{
+    get -> JustifyContent(int32((layoutFlags >> 4) & 7u))
+    set -> layoutFlags = (layoutFlags & ~(7u << 4)) | ((uint32(int32(value)) & 7u) << 4)
+  }
+  internal prop AlignItems AlignItems{
+    get -> AlignItems(int32((layoutFlags >> 7) & 7u))
+    set -> layoutFlags = (layoutFlags & ~(7u << 7)) | ((uint32(int32(value)) & 7u) << 7)
+  }
+  internal prop AlignSelf AlignSelf{
+    get -> AlignSelf(int32((layoutFlags >> 10) & 7u))
+    set -> layoutFlags = (layoutFlags & ~(7u << 10)) | ((uint32(int32(value)) & 7u) << 10)
+  }
+  internal prop AlignContent AlignContent{
+    get -> AlignContent(int32((layoutFlags >> 13) & 7u))
+    set -> layoutFlags = (layoutFlags & ~(7u << 13)) | ((uint32(int32(value)) & 7u) << 13)
+  }
+  internal prop FlexGrow float32{ get; set; }
+  internal prop FlexShrink float32{ get; set; }
   internal prop FlexBasis NodeLength{ get; set; }
-  internal prop Position PositionType{ get; set; }
+  internal prop Position PositionType{
+    get -> PositionType(int32((layoutFlags >> 16) & 3u))
+    set -> layoutFlags = (layoutFlags & ~(3u << 16)) | ((uint32(int32(value)) & 3u) << 16)
+  }
   internal prop Left NodeLength{ get; set; }
   internal prop Top NodeLength{ get; set; }
   internal prop Right NodeLength{ get; set; }
@@ -344,8 +368,14 @@ internal class Node {
       nodeState = (nodeState & ~int32(3072)) | ((int32(value) & int32(3)) << 10)
     }
   }
-  internal prop OverflowX Overflow{ get; set; }
-  internal prop OverflowY Overflow{ get; set; }
+  internal prop OverflowX Overflow{
+    get -> Overflow(int32((layoutFlags >> 18) & 3u))
+    set -> layoutFlags = (layoutFlags & ~(3u << 18)) | ((uint32(int32(value)) & 3u) << 18)
+  }
+  internal prop OverflowY Overflow{
+    get -> Overflow(int32((layoutFlags >> 20) & 3u))
+    set -> layoutFlags = (layoutFlags & ~(3u << 20)) | ((uint32(int32(value)) & 3u) << 20)
+  }
   internal prop BackgroundColor Color{ get; set; }
   internal prop BackgroundGradient Gradient? { get; set; }
   internal prop BorderRadius NodeLength{ get; set; }

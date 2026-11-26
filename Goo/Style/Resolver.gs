@@ -919,13 +919,13 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.MinHeight { n.MinHeight = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.MaxWidth { n.MaxWidth = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.MaxHeight { n.MaxHeight = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
-    case StyleField.AspectRatio { n.AspectRatio = float64(e.A) }
-    case StyleField.Padding { n.Padding = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
+    case StyleField.AspectRatio { n.AspectRatio = e.A }
+    case StyleField.Padding {}
     case StyleField.PaddingLeft { n.PaddingLeft = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.PaddingTop { n.PaddingTop = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.PaddingRight { n.PaddingRight = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.PaddingBottom { n.PaddingBottom = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
-    case StyleField.Margin { n.Margin = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
+    case StyleField.Margin {}
     case StyleField.MarginLeft { n.MarginLeft = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.MarginTop { n.MarginTop = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.MarginRight { n.MarginRight = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
@@ -939,8 +939,8 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.AlignItems { n.AlignItems = AlignItems(int32(e.A)) }
     case StyleField.AlignSelf { n.AlignSelf = AlignSelf(int32(e.A)) }
     case StyleField.AlignContent { n.AlignContent = AlignContent(int32(e.A)) }
-    case StyleField.FlexGrow { n.FlexGrow = float64(e.A) }
-    case StyleField.FlexShrink { n.FlexShrink = float64(e.A) }
+    case StyleField.FlexGrow { n.FlexGrow = e.A }
+    case StyleField.FlexShrink { n.FlexShrink = e.A }
     case StyleField.FlexBasis { n.FlexBasis = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.Position { n.Position = PositionType(int32(e.A)) }
     case StyleField.Left { n.Left = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
@@ -1103,13 +1103,13 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.MinHeight { return StyleEntry{ Field: f, A: n.MinHeight.Value, B: float32(int32(n.MinHeight.Unit)) } }
     case StyleField.MaxWidth { return StyleEntry{ Field: f, A: n.MaxWidth.Value, B: float32(int32(n.MaxWidth.Unit)) } }
     case StyleField.MaxHeight { return StyleEntry{ Field: f, A: n.MaxHeight.Value, B: float32(int32(n.MaxHeight.Unit)) } }
-    case StyleField.AspectRatio { return StyleEntry{ Field: f, A: float32(n.AspectRatio) } }
-    case StyleField.Padding { return StyleEntry{ Field: f, A: n.Padding.Value, B: float32(int32(n.Padding.Unit)) } }
+    case StyleField.AspectRatio { return StyleEntry{ Field: f, A: n.AspectRatio } }
+    case StyleField.Padding { return StyleEntry{ Field: f, B: float32(int32(LengthUnit.Unset)) } }
     case StyleField.PaddingLeft { return StyleEntry{ Field: f, A: n.PaddingLeft.Value, B: float32(int32(n.PaddingLeft.Unit)) } }
     case StyleField.PaddingTop { return StyleEntry{ Field: f, A: n.PaddingTop.Value, B: float32(int32(n.PaddingTop.Unit)) } }
     case StyleField.PaddingRight { return StyleEntry{ Field: f, A: n.PaddingRight.Value, B: float32(int32(n.PaddingRight.Unit)) } }
     case StyleField.PaddingBottom { return StyleEntry{ Field: f, A: n.PaddingBottom.Value, B: float32(int32(n.PaddingBottom.Unit)) } }
-    case StyleField.Margin { return StyleEntry{ Field: f, A: n.Margin.Value, B: float32(int32(n.Margin.Unit)) } }
+    case StyleField.Margin { return StyleEntry{ Field: f, B: float32(int32(LengthUnit.Unset)) } }
     case StyleField.MarginLeft { return StyleEntry{ Field: f, A: n.MarginLeft.Value, B: float32(int32(n.MarginLeft.Unit)) } }
     case StyleField.MarginTop { return StyleEntry{ Field: f, A: n.MarginTop.Value, B: float32(int32(n.MarginTop.Unit)) } }
     case StyleField.MarginRight { return StyleEntry{ Field: f, A: n.MarginRight.Value, B: float32(int32(n.MarginRight.Unit)) } }
@@ -1123,8 +1123,8 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.AlignItems { return StyleEntry{ Field: f, A: float32(int32(n.AlignItems)) } }
     case StyleField.AlignSelf { return StyleEntry{ Field: f, A: float32(int32(n.AlignSelf)) } }
     case StyleField.AlignContent { return StyleEntry{ Field: f, A: float32(int32(n.AlignContent)) } }
-    case StyleField.FlexGrow { return StyleEntry{ Field: f, A: float32(n.FlexGrow) } }
-    case StyleField.FlexShrink { return StyleEntry{ Field: f, A: float32(n.FlexShrink) } }
+    case StyleField.FlexGrow { return StyleEntry{ Field: f, A: n.FlexGrow } }
+    case StyleField.FlexShrink { return StyleEntry{ Field: f, A: n.FlexShrink } }
     case StyleField.FlexBasis { return StyleEntry{ Field: f, A: n.FlexBasis.Value, B: float32(int32(n.FlexBasis.Unit)) } }
     case StyleField.Position { return StyleEntry{ Field: f, A: float32(int32(n.Position)) } }
     case StyleField.Left { return StyleEntry{ Field: f, A: n.Left.Value, B: float32(int32(n.Left.Unit)) } }

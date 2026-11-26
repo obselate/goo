@@ -263,12 +263,12 @@ internal class DiagnosticTreeState {
     result.MinHeight = lengthText(n.MinHeight)
     result.MaxWidth = lengthText(n.MaxWidth)
     result.MaxHeight = lengthText(n.MaxHeight)
-    result.Padding = lengthText(n.Padding)
+    result.Padding = ""
     result.PaddingLeft = lengthText(n.PaddingLeft)
     result.PaddingTop = lengthText(n.PaddingTop)
     result.PaddingRight = lengthText(n.PaddingRight)
     result.PaddingBottom = lengthText(n.PaddingBottom)
-    result.Margin = lengthText(n.Margin)
+    result.Margin = ""
     result.MarginLeft = lengthText(n.MarginLeft)
     result.MarginTop = lengthText(n.MarginTop)
     result.MarginRight = lengthText(n.MarginRight)
