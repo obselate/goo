@@ -62,7 +62,7 @@ internal class CustomLayoutState {
         Children.Add(CustomLayoutChild{Node: child})
       }
     }
-    Invalidate()
+    version++
   }
 
   internal func ChildInvalidated() {
@@ -83,6 +83,18 @@ internal class CustomLayoutState {
   internal func EffectiveDensity() float64 {
     RequireActive()
     return float64(CustomLayouts.Density)
+  }
+
+  internal func RowGap() float64 {
+    RequireActive()
+    let basis = Double.IsFinite(availableSize.Height) ? float32(availableSize.Height) : Single.NaN
+    return float64(FlexLayoutEngine.Shared.Gap(Node, false, basis))
+  }
+
+  internal func ColumnGap() float64 {
+    RequireActive()
+    let basis = Double.IsFinite(availableSize.Width) ? float32(availableSize.Width) : Single.NaN
+    return float64(FlexLayoutEngine.Shared.Gap(Node, true, basis))
   }
 
   internal func ChildDisplay(index int32) Display -> Child(index).Node.Display
@@ -314,11 +326,28 @@ internal class CustomLayouts {
 
     internal func State(node Node) CustomLayoutState? -> node.RetainedCustomLayout
 
+    private func algorithmsMatch(current LayoutAlgorithm, selected LayoutAlgorithm) bool {
+      if Object.ReferenceEquals(current, selected) { return true }
+      if let g1 = current as Grid {
+        if let g2 = selected as Grid { return g1.MatchesLayout(g2) }
+        return false
+      }
+      if let o1 = current as Overlay {
+        if let o2 = selected as Overlay { return o1.MatchesLayout(o2) }
+        return false
+      }
+      if let d1 = current as Dock {
+        if let d2 = selected as Dock { return d1.MatchesLayout(d2) }
+        return false
+      }
+      return false
+    }
+
     internal func Configure(node Node, algorithm LayoutAlgorithm?) bool {
       let current = node.RetainedCustomLayout
       if let selected = algorithm {
         if let state = current {
-          if Object.ReferenceEquals(state.Algorithm, selected) { return false }
+          if algorithmsMatch(state.Algorithm, selected) { return false }
           state.Algorithm = selected
           state.Invalidate()
         } else {
