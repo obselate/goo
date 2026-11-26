@@ -161,6 +161,23 @@ def main():
     cases = list(seeded_cases(args.seed))
     table["seed"] = args.seed
     table["cases"] = [case for case in table["cases"] if "features" not in case] + cases
+    overlaps = {
+        "seeded-aspect-ratio-00", "seeded-aspect-ratio-08", "seeded-aspect-ratio-10",
+        "seeded-aspect-ratio-11", "seeded-aspect-ratio-16", "seeded-aspect-ratio-19", "seeded-aspect-ratio-24",
+        "seeded-nested-02", "seeded-nested-06", "seeded-nested-10", "seeded-nested-14", "seeded-nested-22",
+    }
+    compatibility = {}
+    for case in table["cases"]:
+        name = case["name"]
+        old = previous.get(name, case)
+        if old["tree"] != case["tree"]:
+            continue
+        reason = old.get("deviation", {}).get("reason", "")
+        if name in overlaps:
+            compatibility[name] = {"reason": "Overlaps definite-size minimum"}
+        elif reason.startswith(("Documented Goo policy:", "The deliberate visible definite-size minimum")):
+            compatibility[name] = {"reason": "Retains the definite main size as the visible automatic minimum"}
+    table["gooAutomaticMinimum"] = compatibility
     font = args.font.read_bytes()
     digest = hashlib.sha256(font).hexdigest()
     if digest != table["fontSha256"]:
@@ -169,7 +186,7 @@ def main():
 const table = TABLE;
 const lengths = new Set(['width','height','minWidth','minHeight','maxWidth','maxHeight','flexBasis','padding','margin','borderWidth','gap','rowGap','columnGap','fontSize','left','right','top','bottom']);
 function cssLength(value) { return typeof value === 'number' ? value + 'px' : value; }
-function build(spec) {
+function build(spec, gooMinimum = false, parentMain = '') {
   const el = document.createElement('div');
   el.style.cssText = 'box-sizing:border-box;position:relative;border:0 solid;min-width:auto;min-height:auto;font-weight:400;font-variation-settings:\"wght\" 400;';
   if (spec.text === undefined) el.style.cssText += 'display:flex;flex-direction:column;align-content:flex-start;';
@@ -196,7 +213,16 @@ function build(spec) {
   if (spec.text !== undefined && spec.style.TextTrimming === 'Ellipsis' && !('MinWidth' in spec.style)) {
     el.style.minWidth = '0px';
   }
-  for (const child of spec.children || []) el.append(build(child));
+  const style = spec.style;
+  const preferred = style[parentMain];
+  if (gooMinimum && parentMain && style.Position !== 'Absolute' &&
+      (style.Overflow ?? 'Visible') === 'Visible' && !Object.hasOwn(style, 'Min' + parentMain) &&
+      !(parentMain === 'Width' && style.TextTrimming === 'Ellipsis') &&
+      (typeof preferred === 'number' || preferred?.endsWith('%'))) {
+    el.style['min' + parentMain] = cssLength(preferred);
+  }
+  const main = style.FlexDirection?.startsWith('Row') ? 'Width' : 'Height';
+  for (const child of spec.children || []) el.append(build(child, gooMinimum, main));
   return el;
 }
 function boxes(root) {
@@ -216,6 +242,12 @@ function boxes(root) {
     host.append(root);
     document.body.append(host);
     test.boxes = boxes(root);
+    const policy = table.gooAutomaticMinimum[test.name];
+    if (policy) {
+      const control = build(test.tree, true);
+      host.replaceChildren(control);
+      policy.boxes = boxes(control);
+    }
     host.remove();
   }
   document.body.textContent = JSON.stringify(table);

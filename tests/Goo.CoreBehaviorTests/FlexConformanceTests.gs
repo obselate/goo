@@ -69,6 +69,15 @@ class FlexConformanceTests(output ITestOutputHelper) {
 
     @Fact
     func BorderBoxesMatchChromium() {
+        RunCorpus(false)
+    }
+
+    @Fact
+    func InternalEngineBorderBoxesMatchChromium() {
+        RunCorpus(true)
+    }
+
+    private func RunCorpus(useManaged bool) {
         let clock = Stopwatch.StartNew()
         using let table = JsonDocument.Parse(
             File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Layout/flex-conformance.json"))
@@ -88,7 +97,7 @@ class FlexConformanceTests(output ITestOutputHelper) {
         )
         font.Register()
         let failures = List[string]()
-        let count = FlexConformanceFixtures().Run(table.RootElement, failures, line -> output.WriteLine(line))
+        let count = FlexConformanceFixtures().Run(table.RootElement, failures, line -> output.WriteLine(line), useManaged)
         output.WriteLine("$count flex cases in ${clock.Elapsed.TotalMilliseconds:F1} ms")
         Assert.True(failures.Count == 0, String.Join(Environment.NewLine, failures))
     }

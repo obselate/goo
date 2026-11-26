@@ -127,6 +127,9 @@ internal class Node {
     CallbackOwner = nil
     Content = ""
     Rect = Rect{}
+    LogicalLayout = LayoutResult{}
+    FlexMeasures.Clear()
+    FlexScratch = FlexItem{}
     BaseStyle = nil
     HoverStyle = nil
     FocusStyle = nil
@@ -299,6 +302,9 @@ internal class Node {
   }
   internal prop Yoga Facebook.Yoga.Node? { get; set; }
   internal prop YogaStyleMask StyleMask{ get; set; }
+  internal var LogicalLayout LayoutResult
+  internal var FlexMeasures FlexCache
+  internal var FlexScratch FlexItem
   internal prop Width NodeLength{ get; set; }
   internal prop Height NodeLength{ get; set; }
   internal prop MinWidth NodeLength{ get; set; }

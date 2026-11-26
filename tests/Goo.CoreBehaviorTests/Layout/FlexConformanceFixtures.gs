@@ -83,19 +83,36 @@ internal class FlexConformanceFixtures {
         }
         return true
     }
-    func Run(table JsonElement, failures List[string], output Action[string]) int32 {
+    func Run(table JsonElement, failures List[string], output Action[string], useManaged bool) int32 {
+        let engine = FlexLayoutEngine()
+        let policies = table.GetProperty("gooAutomaticMinimum")
+        let useGooMinimum = useManaged && !FlexLayoutEngine.UsesChromiumAutomaticMinimum
+        var policyMatches = 0
+        var chromiumMatches = 0
         var count = 0
         for test in table.GetProperty("cases").EnumerateArray() {
             let name = test.GetProperty("name").GetString()!!
             let root = Reconciler{Res: Resolver{}}.Mount(Build(test.GetProperty("tree")))
             try {
                 let viewport = test.GetProperty("viewport")
-                Layout().Calculate(root, viewport[0].GetSingle(), viewport[1].GetSingle())
                 let actual = List[[]float32]()
-                Collect(root, actual)
+                if useManaged {
+                    let width = viewport[0].GetSingle()
+                    let height = viewport[1].GetSingle()
+                    engine.ArrangeSubtree(root, FlexRequest{Width: FlexConstraint.Cap(width),
+                        Height: FlexConstraint.Cap(height), OwnerWidth: width, OwnerHeight: height, Root: true})
+                    CollectRaw(root, actual, 0.0F, 0.0F)
+                } else {
+                    Layout().Calculate(root, viewport[0].GetSingle(), viewport[1].GetSingle())
+                    Collect(root, actual)
+                }
                 let reference = test.GetProperty("boxes")
-                let expected = if test.TryGetProperty("deviation", out var deviation) {
+                let hasDeviation = test.TryGetProperty("deviation", out var deviation)
+                let hasControl = policies.TryGetProperty(name, out var control)
+                let expected = if !useManaged && hasDeviation {
                     deviation.GetProperty("boxes")
+                } else if useGooMinimum && hasControl {
+                    control.GetProperty("boxes")
                 } else {
                     reference
                 }
@@ -104,32 +121,40 @@ internal class FlexConformanceFixtures {
                 } else {
                     0.0F
                 }
-                var matches = actual.Count == expected.GetArrayLength()
-                for i in 0 ... Math.Min(actual.Count, expected.GetArrayLength()) {
-                    for axis in 0 ... 4 {
-                        if !Single.IsFinite(actual[i][axis]) || MathF.Abs(
-                            actual[i][axis] - expected[i][axis].GetSingle()
-                        ) > tolerance {
-                            matches = false
-                        }
-                    }
-                }
-                if !matches || name.StartsWith("font-width-", StringComparison.Ordinal) {
-                    let boxes = JsonSerializer.Serialize(actual)
-                    if matches {
-                        output("$name Chromium=${JsonSerializer.Serialize(reference)} Goo=$boxes")
-                    } else {
-                        failures.Add(
-                            "$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=$boxes"
-                        )
-                    }
+                let matches = Matches(actual, expected, tolerance)
+                if useManaged && Matches(actual, reference, tolerance) { chromiumMatches++ }
+                if matches && useGooMinimum && hasControl { policyMatches++ }
+                if !matches {
+                    failures.Add(
+                        "$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=${JsonSerializer.Serialize(actual)}"
+                    )
+                } else if useGooMinimum && hasControl {
+                    output("$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=${JsonSerializer.Serialize(actual)}")
+                } else if name.StartsWith("font-width-", StringComparison.Ordinal) {
+                    output("$name Chromium=${JsonSerializer.Serialize(reference)} Goo=${JsonSerializer.Serialize(actual)}")
                 }
                 count++
             } finally {
                 NodeLifecycle.DisposeTree(root)
             }
         }
+        if useManaged {
+            output("$chromiumMatches/$count unmodified Chromium cases matched; $policyMatches strict Chromium policy controls matched")
+        }
         return count
+    }
+
+    private func Matches(actual List[[]float32], expected JsonElement, tolerance float32) bool {
+        if actual.Count != expected.GetArrayLength() { return false }
+        for i in 0 ... actual.Count {
+            for axis in 0 ... 4 {
+                let coordinate = actual[i][axis]
+                if !Single.IsFinite(coordinate) || MathF.Abs(coordinate - expected[i][axis].GetSingle()) > tolerance {
+                    return false
+                }
+            }
+        }
+        return true
     }
 
     private func Build(spec JsonElement) Blob {
@@ -197,6 +222,16 @@ internal class FlexConformanceFixtures {
         boxes.Add([]float32{node.Rect.X, node.Rect.Y, node.Rect.W, node.Rect.H})
         for child in node.Children {
             Collect(child, boxes)
+        }
+    }
+
+    private func CollectRaw(node Node, boxes List[[]float32], x float32, y float32) {
+        let raw = node.LogicalLayout.Raw
+        let left = node.LogicalLayout.Valid ? x + raw.X : 0.0F
+        let top = node.LogicalLayout.Valid ? y + raw.Y : 0.0F
+        boxes.Add([]float32{left, top, raw.W, raw.H})
+        for index in 0 ... node.Children.Count {
+            CollectRaw(node.Children[index], boxes, left, top)
         }
     }
 }
