@@ -198,6 +198,7 @@ func RunPixelEdgeSmoke() {
       }
     }
   }
+  RunContentSizedTextSmoke()
   Console.SetError(originalError)
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Require(failures == 0, "Pixel edge gate found partial coverage at integer device edges in "

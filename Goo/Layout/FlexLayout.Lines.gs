@@ -80,6 +80,7 @@ internal partial class FlexLayoutEngine {
         let minimum = horizontal ? box.MinWidth : box.MinHeight
         let maximum = horizontal ? box.MaxWidth : box.MaxHeight
         var basis = ProjectedValue(child.FlexBasis, StyleField.FlexBasis, LengthDeclarations.Get(child), mainBasis)
+        var intrinsicBasis = false
         if !Known(basis) {
             basis = Known(preferred) ? preferred : transfer
             if !Known(basis) {
@@ -93,6 +94,7 @@ internal partial class FlexLayoutEngine {
                 probe.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
                 let size = Solve(child, ref probe, false, frame)
                 basis = axis.Select(size.Width, size.Height)
+                intrinsicBasis = (size.ContentAxes & (horizontal ? 1 : 2)) != 0
             }
         }
         var usedMin = MathF.Max(decorations, minimum)
@@ -148,6 +150,7 @@ internal partial class FlexLayoutEngine {
             AutoMargins: box.AutoMargins,
             Align: align,
             Stretch: stretch,
+            IntrinsicBasis: intrinsicBasis,
             CrossRequest: crossRequest
         }
     }
@@ -250,7 +253,17 @@ internal partial class FlexLayoutEngine {
             widest = MathF.Max(widest, occupied)
             lines++
         }
-        let usedMain = Known(ownMain) ? ownMain : Used(widest + mainDecorations, mainConstraint, box, horizontal)
+        let mainAxis = uint8(horizontal ? 1 : 2)
+        var contentAxes uint8
+        let usedMain = if Known(ownMain) {
+            ownMain
+        } else {
+            let content = widest + mainDecorations
+            let capped = mainConstraint.Mode == FlexMeasureMode.AtMost ? MathF.Min(content, mainConstraint.Size) : content
+            let used = box.Clamp(capped, horizontal)
+            if used == capped { contentAxes = mainAxis }
+            used
+        }
         let availableMain = Inner(usedMain, mainDecorations)
         var totalCross = 0.0F
         var baselineIndex = firstIndex
@@ -296,13 +309,20 @@ internal partial class FlexLayoutEngine {
             index = end
         }
         totalCross += crossGap * Math.Max(0, lines - 1)
-        let usedCross = Known(ownCross) ? ownCross : Used(
-            totalCross + crossDecorations,
-            crossConstraint,
-            box,
-            !horizontal
-        )
-        var size = FlexSize{Width: horizontal ? usedMain : usedCross, Height: horizontal ? usedCross : usedMain}
+        let usedCross = if Known(ownCross) {
+            ownCross
+        } else {
+            let content = totalCross + crossDecorations
+            let capped = crossConstraint.Mode == FlexMeasureMode.AtMost ? MathF.Min(content, crossConstraint.Size) : content
+            let used = box.Clamp(capped, !horizontal)
+            if used == capped { contentAxes |= uint8(3 ^ mainAxis) }
+            used
+        }
+        var size = FlexSize{
+            Width: horizontal ? usedMain : usedCross,
+            Height: horizontal ? usedCross : usedMain,
+            ContentAxes: contentAxes
+        }
         size.Baseline = size.Height
         if arrange || request.Baseline {
             PlaceLines(
@@ -506,7 +526,9 @@ internal partial class FlexLayoutEngine {
                         ? FlexConstraint.Exact(lineCross - margins.Sum(!horizontal)) : child.FlexScratch.CrossRequest
                     )
                     request.Baseline = isBaseline || child.FlexScratch.Align == AlignSelf.Baseline
-                    let measured = Solve(child, ref request, arrange, frame)
+                    let contentMain = arrange && child.FlexScratch.IntrinsicBasis && mainSize == child.FlexScratch.Base
+                    ? (horizontal ? 1 : 2) : 0
+                    let measured = Solve(child, ref request, arrange, frame, contentMain)
                     let crossSize = cross.Select(measured.Width, measured.Height)
                     let childBaseline = measured.Baseline
                     let freeCross = lineCross - crossSize - margins.Sum(!horizontal)

@@ -406,5 +406,88 @@ internal partial class FlexLayoutEngine {
             }
             FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block)
         }
+        if density != 0.0F && !node.HasCustomLayout && node.Kind != NodeKind.Editor
+        && node.OverflowX != Overflow.Scroll && node.OverflowY != Overflow.Scroll {
+            let axes = node.LogicalLayout.ContentAxes
+            let horizontal = (axes & 1) != 0 && node.OverflowX == Overflow.Hidden
+            let vertical = (axes & 2) != 0 && node.OverflowY == Overflow.Hidden
+            if horizontal || vertical {
+                ExpandContentClip(node, left, top, snappedX, snappedY, density, horizontal, vertical)
+            }
+        }
+    }
+
+    private func ExpandContentClip(
+        node Node, x float64, y float64, parentX float64, parentY float64, density float32,
+        horizontal bool, vertical bool
+    ) {
+        let snapped = node.LogicalLayout.Snapped
+        let border = node.LogicalLayout.Border
+        var left = float64(border.Left)
+        var top = float64(border.Top)
+        var right = float64(snapped.W) - float64(border.Right)
+        var bottom = float64(snapped.H) - float64(border.Bottom)
+        CollectContentBounds(node, 0.0, 0.0, horizontal, vertical, ref left, ref top, ref right, ref bottom)
+        left -= border.Left
+        top -= border.Top
+        right += border.Right
+        bottom += border.Bottom
+        if left >= 0.0 && top >= 0.0 && right <= snapped.W && bottom <= snapped.H {
+            return
+        }
+        let dx = left < 0.0 ? PixelRound(x + left, density, floor: true) - x : 0.0
+        let dy = top < 0.0 ? PixelRound(y + top, density, floor: true) - y : 0.0
+        let endX = right > snapped.W ? PixelRound(x + right, density, ceil: true) - x : float64(snapped.W)
+        let endY = bottom > snapped.H ? PixelRound(y + bottom, density, ceil: true) - y : float64(snapped.H)
+        let shiftedX = x + dx
+        let shiftedY = y + dy
+        node.LogicalLayout.Snapped = Rect{
+            X: dx == 0.0 ? snapped.X : float32(shiftedX - parentX),
+            Y: dy == 0.0 ? snapped.Y : float32(shiftedY - parentY),
+            W: float32(endX - dx),
+            H: float32(endY - dy)
+        }
+        if dx != 0.0 || dy != 0.0 {
+            for index in 0 ... node.Children.Count {
+                let child = node.Children[index]
+                if !child.IsPortal && child.LogicalLayout.Valid {
+                    // Rebase from placed coordinates so the clip's new start does not move glyphs.
+                    if dx != 0.0 {
+                        child.LogicalLayout.Snapped.X = (float32(x) + child.LogicalLayout.Snapped.X) - float32(shiftedX)
+                    }
+                    if dy != 0.0 {
+                        child.LogicalLayout.Snapped.Y = (float32(y) + child.LogicalLayout.Snapped.Y) - float32(shiftedY)
+                    }
+                }
+            }
+        }
+    }
+
+    private func CollectContentBounds(
+        node Node, x float64, y float64, horizontal bool, vertical bool,
+        ref left float64, ref top float64, ref right float64, ref bottom float64
+    ) {
+        for index in 0 ... node.Children.Count {
+            let child = node.Children[index]
+            if child.IsPortal || !child.LogicalLayout.Valid || child.Position == PositionType.Absolute {
+                continue
+            }
+            let box = child.LogicalLayout.Snapped
+            let childX = x + box.X
+            let childY = y + box.Y
+            if horizontal {
+                left = Math.Min(left, childX)
+                right = Math.Max(right, childX + box.W)
+            }
+            if vertical {
+                top = Math.Min(top, childY)
+                bottom = Math.Max(bottom, childY + box.H)
+            }
+            let visibleX = horizontal && child.OverflowX == Overflow.Visible
+            let visibleY = vertical && child.OverflowY == Overflow.Visible
+            if (visibleX || visibleY) && child.Children.Count != 0 && !IsMeasured(child) && !child.HasCustomLayout {
+                CollectContentBounds(child, childX, childY, visibleX, visibleY, ref left, ref top, ref right, ref bottom)
+            }
+        }
     }
 }
