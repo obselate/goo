@@ -1,3 +1,4 @@
+absent|generated-package-containers|member|AutoKey
 android-type|Goo.Android.AndroidDocuments
 android-type|Goo.Android.DocumentAccess
 android-type|Goo.Android.DocumentOperationResult
@@ -8,6 +9,9 @@ android-type|Goo.Android.DocumentStreamResult
 android-type|Goo.Android.GooActivity
 android-type|Goo.Android.GooView
 android-type|Goo.Android.Resource
+android-type|Goo.AndroidNotifications
+android-type|Goo.Printing.AndroidPrinting
+android-type|Goo.SpellCheck.AndroidSpellingService
 ctor|Goo.AccessibilityActionRequest|public|(action:Goo.AccessibilityAction)
 ctor|Goo.AccessibilityAttachment|public|()
 ctor|Goo.AccessibilityId|public|(Value:System.Int64)
@@ -1206,6 +1210,13 @@ field|Goo.Dock|Edge|Goo.LayoutKey`1<Goo.DockEdge>|static|public|readonly
 field|Goo.Grid|Placement|Goo.LayoutKey`1<Goo.GridPlacement>|static|public|readonly
 field|Goo.Overlay|Default|Goo.Overlay|static|public|readonly
 field|Goo.Overlay|Placement|Goo.LayoutKey`1<Goo.OverlayPlacement>|static|public|readonly
+function|Goo|Each|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0?>,itemKey:System.Func`2<!!0?,System.String>,itemBuilder:System.Func`2<!!0?,Goo.Blob>)->Goo.Blob[]
+function|Goo|Em|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Rem|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Sized|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
+function|Goo|Vh|public|generic:|(value:System.Double)->Goo.Length
+function|Goo|Vw|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32,caret:System.Int32)->Goo.AccessibilityActionRequest
