@@ -525,13 +525,9 @@ internal class DiagnosticTreeState {
   +value.B.ToString(CultureInfo.InvariantCulture) + ","
   +value.A.ToString(CultureInfo.InvariantCulture)
 
-  private func resolvedBorder(n Node, edge PhysicalEdge) float32 {
-    return n.LogicalLayout.Valid ? finiteEdge(n.LogicalLayout.Border.Get(edge)) : 0.0F
-  }
+  private func resolvedBorder(n Node, edge PhysicalEdge) float32 -> n.LogicalLayout.Valid ? finiteEdge(n.LogicalLayout.Border.Get(edge)) : 0.0F
 
-  private func resolvedMargin(n Node, edge PhysicalEdge) float32 {
-    return n.LogicalLayout.Valid ? finiteEdge(n.LogicalLayout.Margin.Get(edge)) : 0.0F
-  }
+  private func resolvedMargin(n Node, edge PhysicalEdge) float32 -> n.LogicalLayout.Valid ? finiteEdge(n.LogicalLayout.Margin.Get(edge)) : 0.0F
 
   private func finiteEdge(value float32) float32 -> if Single.IsNaN(value) || Single.IsInfinity(value) { 0.0F } else { value }
 

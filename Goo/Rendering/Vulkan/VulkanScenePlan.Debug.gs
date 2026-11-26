@@ -148,17 +148,11 @@ internal partial class SceneFrame {
     }
   }
 
-  private func DebugBorder(node Node, edge PhysicalEdge) float32 {
-    return node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Border.Get(edge)) : 0.0F
-  }
+  private func DebugBorder(node Node, edge PhysicalEdge) float32 -> node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Border.Get(edge)) : 0.0F
 
-  private func DebugPadding(node Node, edge PhysicalEdge) float32 {
-    return node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Padding.Get(edge)) : 0.0F
-  }
+  private func DebugPadding(node Node, edge PhysicalEdge) float32 -> node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Padding.Get(edge)) : 0.0F
 
-  private func DebugMargin(node Node, edge PhysicalEdge) float32 {
-    return node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Margin.Get(edge)) : 0.0F
-  }
+  private func DebugMargin(node Node, edge PhysicalEdge) float32 -> node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Margin.Get(edge)) : 0.0F
 
   private func DebugEdge(value float32) float32 -> if !finiteVulkanSceneValue(value) { 0.0F } else { value }
 }
