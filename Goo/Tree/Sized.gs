@@ -24,6 +24,10 @@ internal sealed class SizedBlob : Blob {
 }
 
 internal sealed class SizedNodeState : IDisposable {
+  shared {
+    internal var ActiveCount int32
+  }
+
   internal var Builder (LayoutSize) -> Blob
   internal var Context ContextFrame?
   internal let Owner Window?
@@ -38,6 +42,7 @@ internal sealed class SizedNodeState : IDisposable {
   internal var ContentWidth float32 = -1.0F
   internal var ContentHeight float32 = -1.0F
   internal var Scale float32
+  private var disposed bool
   private let invalidated Action[ReconcileEffects]?
 
   internal init(blob SizedBlob, frame ContextFrame?, owner Window?, declaring Cell?, invalidated Action[ReconcileEffects]?) {
@@ -48,6 +53,7 @@ internal sealed class SizedNodeState : IDisposable {
     this.invalidated = invalidated
     Reads = StateReadScope(CallbackOwner, Invalidate)
     ContextReads = ContextReader{Window: owner, Frame: frame, Invalidated: Invalidate}
+    ActiveCount++
   }
 
   internal func Invalidate() {
@@ -75,6 +81,10 @@ internal sealed class SizedNodeState : IDisposable {
   }
 
   public func Dispose() {
+    if !disposed {
+      disposed = true
+      if ActiveCount > 0 { ActiveCount-- }
+    }
     Reads.Dispose()
     ContextReads.Dispose()
     Verifier = nil
@@ -151,6 +161,12 @@ internal partial class Layout {
   internal func MarkPortalStructureDirty() { portalStructureDirty = true }
 
   internal func HasSized(root Node) bool {
+    if SizedNodeState.ActiveCount == 0 {
+      sizedNodes.Clear()
+      sizedRoot = root
+      sizedListDirty = false
+      return false
+    }
     if sizedListDirty || sizedRoot != root {
       sizedNodes.Clear()
       collectSized(root)
@@ -253,7 +269,6 @@ internal partial class Layout {
       if !hidden && (resized || !child.FlexMeasures.HasCommitted) {
         let request = Engine.RootRequest(width, height, Density, child.Direction)
         Engine.ArrangeSubtree(child, request)
-        resolveFinalIntrinsic(child, request)
       }
       readRect(child, x, y, hidden: hidden)
     }

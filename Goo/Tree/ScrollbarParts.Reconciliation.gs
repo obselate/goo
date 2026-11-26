@@ -72,7 +72,6 @@ internal partial class ScrollbarParts {
                 if let root = state.VerticalThumb {
                     state.Parts.Add(root)
                 }
-                partLayout.MarkStructureDirty()
                 FlexLayoutEngine.Invalidate(owner)
                 reconciler.MarkEffects(
                     ReconcileEffects.Structure | ReconcileEffects.Layout

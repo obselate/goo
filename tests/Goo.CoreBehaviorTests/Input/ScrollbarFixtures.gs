@@ -733,7 +733,7 @@ internal class ScrollbarEditorCell(controller TextEditorController, padded bool 
 
 internal partial class ScrollbarParts {
   shared {
-    internal func LayoutRootForTest() Node? -> partLayout.lastRoot
+    internal func LayoutRootForTest() Node? -> nil
   }
 }
 

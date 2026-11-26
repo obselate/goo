@@ -35,7 +35,8 @@ internal enum FlexOverride {
     HeightIntrinsic;
     AssignedBox;
     Viewport;
-    Capped
+    Capped;
+    BothIntrinsic
 }
 
 internal struct FlexConstraint {

@@ -56,7 +56,10 @@ internal partial class FlexLayoutEngine {
         crossMode FlexMeasureMode,
         frame uint64
     ) {
-        let box = ResolveBox(child, in request)
+        var box = ResolveBox(child, in request)
+        if child.HasRelativeLengths {
+            ResolveIntrinsicBox(ref box, child, in request, frame, state)
+        }
         let horizontal = axis.Horizontal
         let mainBasis = axis.Select(request.OwnerWidth, request.OwnerHeight)
         let preferred = axis.Select(box.Width, box.Height)
@@ -82,7 +85,13 @@ internal partial class FlexLayoutEngine {
         ? Transfer(box, box.Clamp(definiteCross, !horizontal), horizontal, replaced) : Single.NaN
         let minimum = horizontal ? box.MinWidth : box.MinHeight
         let maximum = horizontal ? box.MaxWidth : box.MaxHeight
-        var basis = ProjectedValue(child.FlexBasis, StyleField.FlexBasis, LengthDeclarations.Get(child), mainBasis)
+        var basis = if child.HasRelativeLengths && child.FlexBasis.Unit >= LengthUnit.MinContent {
+            ResolveIntrinsicAxisLength(
+                child, child.FlexBasis, StyleField.FlexBasis, LengthDeclarations.Get(child), horizontal, in request, frame, state
+            )
+        } else {
+            ProjectedValue(child.FlexBasis, StyleField.FlexBasis, LengthDeclarations.Get(child), mainBasis)
+        }
         var intrinsicBasis = false
         if !Known(basis) {
             basis = Known(preferred) ? preferred : transfer
