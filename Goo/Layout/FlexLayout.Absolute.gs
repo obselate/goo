@@ -47,7 +47,10 @@ internal partial class FlexLayoutEngine {
             Direction: direction,
             Density: density
         }
-        let box = ResolveBox(child, in key)
+        var box = ResolveBox(child, in key)
+        if child.HasRelativeLengths {
+            ResolveIntrinsicBox(ref box, child, in key, frame, state)
+        }
         let entries = LengthDeclarations.Get(child)
         let left = ProjectedValue(child.Left, StyleField.Left, entries, block.Width)
         let right = ProjectedValue(child.Right, StyleField.Right, entries, block.Width)

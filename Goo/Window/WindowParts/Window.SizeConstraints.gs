@@ -120,7 +120,7 @@ public partial class Window {
     let basis = percentageSize ?? LayoutSize(float64(LayoutWidth), float64(LayoutHeight))
     let engine = layout.Engine
     var request = engine.RootRequest(float32(basis.Width), float32(basis.Height), layout.Density, tree.Direction)
-    let margin = engine.ResolveBox(tree, in request).Margin
+    let margin = engine.ResolveMargins(tree, in request)
     request.Override = FlexOverride.Capped
     request.Width = measureWidth ? FlexConstraint.Cap(float32(availableWidth) - margin.Sum(true))
       : FlexConstraint.Exact(float32(basis.Width) - margin.Sum(true))

@@ -93,16 +93,42 @@ internal partial class FlexLayoutEngine {
     }
 
     internal func MeasureIntrinsic(node Node, horizontal bool, minimum bool, request FlexRequest) float32 {
-        var key = request
+        let state = FlexThreadState.Current()
+        let savedTop = state.Arena.Top
+        try {
+            return MeasureIntrinsicWithState(
+                node,
+                horizontal,
+                minimum,
+                request,
+                horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic,
+                uint64(Interlocked.Increment(ref frames)),
+                state
+            )
+        } finally {
+            state.Arena.Release(savedTop)
+        }
+    }
+
+    internal func MeasureIntrinsicWithState(
+        node Node,
+        horizontal bool,
+        minimum bool,
+        request FlexRequest,
+        overrideMode FlexOverride,
+        frame uint64,
+        state FlexThreadState
+    ) float32 {
+        var key = Normalize(request)
         let mode = minimum ? FlexConstraint.Minimum() : FlexConstraint{}
         if horizontal {
             key.Width = mode
         } else {
             key.Height = mode
         }
-        key.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
+        key.Override = overrideMode
         key.Baseline = false
-        let result = MeasureSubtree(node, key)
+        let result = Solve(node, ref key, false, frame, state)
         return horizontal ? result.Width : result.Height
     }
 
@@ -112,17 +138,28 @@ internal partial class FlexLayoutEngine {
         let state = FlexThreadState.Current()
         let savedTop = state.Arena.Top
         try {
-            let result = Solve(node, ref key, true, frame, state)
-            if node.LogicalLayout.Valid {
-                let margin = node.LogicalLayout.Margin
-                node.LogicalLayout.Raw.X = x + margin.Left + RelativeOffset(node, true, key.OwnerWidth, key.Direction)
-                node.LogicalLayout.Raw.Y = y + margin.Top + RelativeOffset(node, false, key.OwnerHeight, key.Direction)
-                FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, key.Density, frame, AbsoluteBlock{}, state, true)
-            }
-            return result
+            return ArrangeSubtreeWithState(node, ref key, frame, state, x, y)
         } finally {
             state.Arena.Release(savedTop)
         }
+    }
+
+    internal func ArrangeSubtreeWithState(
+        node Node,
+        ref request FlexRequest,
+        frame uint64,
+        state FlexThreadState,
+        x float32 = 0.0F,
+        y float32 = 0.0F
+    ) FlexSize {
+        let result = Solve(node, ref request, true, frame, state)
+        if node.LogicalLayout.Valid {
+            let margin = node.LogicalLayout.Margin
+            node.LogicalLayout.Raw.X = x + margin.Left + RelativeOffset(node, true, request.OwnerWidth, request.Direction)
+            node.LogicalLayout.Raw.Y = y + margin.Top + RelativeOffset(node, false, request.OwnerHeight, request.Direction)
+            FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, request.Density, frame, AbsoluteBlock{}, state, true)
+        }
+        return result
     }
 
     private func Normalize(request FlexRequest) FlexRequest {
@@ -199,7 +236,8 @@ internal partial class FlexLayoutEngine {
     }
 
     private func DependsOnOwner(length NodeLength) bool -> length.Unit == LengthUnit.Percent ||
-        length.Unit == LengthUnit.Relative
+        length.Unit == LengthUnit.Relative ||
+        length.Unit == LengthUnit.FitContent
 
     private func OwnerIndependent(node Node) bool {
         if node.FlexMeasures.OwnerIndependent != 0 {
@@ -238,15 +276,20 @@ internal partial class FlexLayoutEngine {
         if !arrange && node.FlexMeasures.HasProbes && state.Probes.TryMeasure(node, EngineId, in key, out var cached) {
             return cached
         }
-        let box = ResolveBox(node, in request)
+        var box = ResolveBox(node, in request)
+        if node.HasRelativeLengths {
+            ResolveIntrinsicBox(ref box, node, in request, frame, state)
+        }
         let direction = EffectiveDirection(node, request.Direction)
         let viewport = request.Override == FlexOverride.Viewport
         var width = Preferred(box, request.Width, true, viewport)
         var height = Preferred(box, request.Height, false, viewport)
         if box.Ratio > 0.0F {
-            if !Known(width) && Known(height) && request.Override != FlexOverride.WidthIntrinsic {
+            if !Known(width) && Known(height) && request.Override != FlexOverride.WidthIntrinsic
+                && request.Override != FlexOverride.BothIntrinsic {
                 width = Used(Transfer(box, height, true, node.Kind == NodeKind.Image), request.Width, box, true)
-            } else if !Known(height) && Known(width) && request.Override != FlexOverride.HeightIntrinsic {
+            } else if !Known(height) && Known(width) && request.Override != FlexOverride.HeightIntrinsic
+                && request.Override != FlexOverride.BothIntrinsic {
                 height = Used(Transfer(box, width, false, node.Kind == NodeKind.Image), request.Height, box, false)
             }
         }

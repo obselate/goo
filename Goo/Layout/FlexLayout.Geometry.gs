@@ -131,6 +131,67 @@ internal partial class FlexLayoutEngine {
         ? float32(Math.Max(1.0, Math.Round(float64(width) * density, MidpointRounding.AwayFromZero)) / density) : width
     }
 
+    internal func ResolveMargins(node Node, in request FlexRequest) FlexInsets {
+        let ownerWidth = request.OwnerWidth
+        let entries = LengthDeclarations.Get(node)
+        return FlexInsets{
+            Left: Zero(ProjectedValue(node.MarginLeft, StyleField.MarginLeft, entries, ownerWidth, true)),
+            Top: Zero(ProjectedValue(node.MarginTop, StyleField.MarginTop, entries, ownerWidth, true)),
+            Right: Zero(ProjectedValue(node.MarginRight, StyleField.MarginRight, entries, ownerWidth, true)),
+            Bottom: Zero(ProjectedValue(node.MarginBottom, StyleField.MarginBottom, entries, ownerWidth, true))
+        }
+    }
+
+    private func ResolveIntrinsicAxisLength(
+        node Node,
+        length NodeLength,
+        field StyleField,
+        entries LengthNode?,
+        horizontal bool,
+        in request FlexRequest,
+        frame uint64,
+        state FlexThreadState
+    ) float32 {
+        let intrinsicReq = FlexRequest{
+            OwnerWidth: request.OwnerWidth,
+            OwnerHeight: request.OwnerHeight,
+            Direction: EffectiveDirection(node, request.Direction),
+            Density: request.Density
+        }
+        let overrideMode = if horizontal {
+            request.Override == FlexOverride.HeightIntrinsic ? FlexOverride.BothIntrinsic : FlexOverride.WidthIntrinsic
+        } else {
+            request.Override == FlexOverride.WidthIntrinsic ? FlexOverride.BothIntrinsic : FlexOverride.HeightIntrinsic
+        }
+        let minimum = length.Unit == LengthUnit.MaxContent ? 0.0F : MeasureIntrinsicWithState(
+            node, horizontal, true, intrinsicReq, overrideMode, frame, state
+        )
+        if length.Unit == LengthUnit.MinContent { return minimum }
+        let maximum = MeasureIntrinsicWithState(
+            node, horizontal, false, intrinsicReq, overrideMode, frame, state
+        )
+        if length.Unit == LengthUnit.MaxContent { return maximum }
+        var pixels = length.Value
+        var percentPart = 0.0F
+        if let lengthState = entries {
+            for index in 0 ... lengthState.Values.Count {
+                let candidate = lengthState.Values[index]
+                if candidate.Field == field {
+                    if Known(candidate.Pixels) { pixels = candidate.Pixels }
+                    percentPart = candidate.Value.PercentPart
+                    break
+                }
+            }
+        }
+        let basis = horizontal ? request.OwnerWidth : request.OwnerHeight
+        let limit = if percentPart != 0.0F {
+            Known(basis) ? pixels + percentPart * basis * 0.01F : (pixels == 0.0F ? maximum : pixels)
+        } else {
+            pixels
+        }
+        return MathF.Min(maximum, MathF.Max(minimum, limit))
+    }
+
     internal func ResolveBox(node Node, in request FlexRequest) FlexBox {
         let ownerWidth = request.OwnerWidth
         let ownerHeight = request.OwnerHeight
@@ -151,8 +212,10 @@ internal partial class FlexLayoutEngine {
             ratio = node.ImageIntrinsicWidth / node.ImageIntrinsicHeight
         }
         let ignoreWidth = request.Override == FlexOverride.WidthIntrinsic ||
+            request.Override == FlexOverride.BothIntrinsic ||
             request.Override == FlexOverride.AssignedBox
         let ignoreHeight = request.Override == FlexOverride.HeightIntrinsic ||
+            request.Override == FlexOverride.BothIntrinsic ||
             request.Override == FlexOverride.AssignedBox
         var maxWidth = ignoreWidth ? Single.NaN : ProjectedValue(
             node.MaxWidth,
@@ -372,7 +435,13 @@ internal partial class FlexLayoutEngine {
             W: SnappedLength(absoluteX, raw.W, left, density, measured),
             H: SnappedLength(absoluteY, raw.H, top, density, measured)
         }
-        if node.Children.Count == 0 || IsMeasured(node) {
+        if IsMeasured(node) {
+            if node.HasCustomLayout || node.Children.Count > 0 {
+                FinalizeMeasuredChildren(node, density, frame, state)
+            }
+            return
+        }
+        if node.Children.Count == 0 {
             return
         }
         let direction = node.LogicalLayout.Direction
@@ -496,6 +565,148 @@ internal partial class FlexLayoutEngine {
             if (visibleX || visibleY) && child.Children.Count != 0 && !IsMeasured(child) && !child.HasCustomLayout {
                 CollectContentBounds(child, childX, childY, rawChildX, rawChildY, in rawClip,
                     visibleX, visibleY, ref left, ref top, ref right, ref bottom)
+            }
+        }
+    }
+
+    private func FinalizeMeasuredChildren(
+        node Node,
+        density float32,
+        frame uint64,
+        state FlexThreadState
+    ) {
+        if node.Kind == NodeKind.Image {
+            let dir = node.LogicalLayout.Direction
+            let w = node.LogicalLayout.Snapped.W
+            let h = node.LogicalLayout.Snapped.H
+            for index in 0 ... node.Children.Count {
+                let child = node.Children[index]
+                if child.IsPortal { continue }
+                var childReq = Normalize(RootRequest(w, h, density, dir))
+                ArrangeSubtreeWithState(child, ref childReq, frame, state)
+            }
+            return
+        }
+        if let custom = CustomLayouts.State(node) {
+            custom.Arrange(state, frame)
+            return
+        }
+        if node.Kind == NodeKind.Editor {
+            let logical = node.LogicalLayout
+            let contentW = MathF.Max(0.0F, logical.Snapped.W - logical.Border.Sum(true) - logical.Padding.Sum(true))
+            let contentH = MathF.Max(0.0F, logical.Snapped.H - logical.Border.Sum(false) - logical.Padding.Sum(false))
+            let contentWidth = TextEditorLayouts.For(node, contentW, contentH).ParagraphWidth
+            let dir = logical.Direction
+            for index in 0 ... node.Children.Count {
+                let child = node.Children[index]
+                if child.IsPortal { continue }
+                let availableWidth = child.EditorSlotBlock ? contentWidth : Single.NaN
+                var childReq = Normalize(RootRequest(availableWidth, Single.NaN, density, dir))
+                childReq.Baseline = true
+                ArrangeSubtreeWithState(child, ref childReq, frame, state)
+            }
+            return
+        }
+        if let sized = node.RetainedSizedState {
+            if !sized.Dirty && sized.Width == node.LogicalLayout.Snapped.W
+                && sized.Height == node.LogicalLayout.Snapped.H && sized.Scale == density {
+                let logical = node.LogicalLayout
+                let contentW = MathF.Max(0.0F, logical.Snapped.W - logical.Border.Sum(true) - logical.Padding.Sum(true))
+                let contentH = MathF.Max(0.0F, logical.Snapped.H - logical.Border.Sum(false) - logical.Padding.Sum(false))
+                let resized = sized.ContentWidth != contentW || sized.ContentHeight != contentH
+                for index in 0 ... node.Children.Count {
+                    let child = node.Children[index]
+                    if child.IsPortal { continue }
+                    if resized || !child.FlexMeasures.HasCommitted {
+                        var childReq = Normalize(RootRequest(contentW, contentH, density, child.Direction))
+                        ArrangeSubtreeWithState(child, ref childReq, frame, state)
+                    }
+                }
+                sized.ContentWidth = contentW
+                sized.ContentHeight = contentH
+            }
+        }
+    }
+
+    private func ResolveIntrinsicBox(
+        ref box FlexBox,
+        node Node,
+        in request FlexRequest,
+        frame uint64,
+        state FlexThreadState
+    ) {
+        if node.Width.Unit < LengthUnit.MinContent
+            && node.Height.Unit < LengthUnit.MinContent
+            && node.MinWidth.Unit < LengthUnit.MinContent
+            && node.MinHeight.Unit < LengthUnit.MinContent
+            && node.MaxWidth.Unit < LengthUnit.MinContent
+            && node.MaxHeight.Unit < LengthUnit.MinContent {
+            return
+        }
+        let ignoreWidth = request.Override == FlexOverride.WidthIntrinsic ||
+            request.Override == FlexOverride.BothIntrinsic ||
+            request.Override == FlexOverride.AssignedBox
+        let ignoreHeight = request.Override == FlexOverride.HeightIntrinsic ||
+            request.Override == FlexOverride.BothIntrinsic ||
+            request.Override == FlexOverride.AssignedBox
+        let entries = LengthDeclarations.Get(node)
+        if !ignoreWidth {
+            if node.Width.Unit >= LengthUnit.MinContent {
+                box.Width = ResolveIntrinsicAxisLength(
+                    node, node.Width, StyleField.Width, entries, true, in request, frame, state
+                )
+            }
+            if node.MaxWidth.Unit >= LengthUnit.MinContent {
+                var mw = ResolveIntrinsicAxisLength(
+                    node, node.MaxWidth, StyleField.MaxWidth, entries, true, in request, frame, state
+                )
+                if request.Override == FlexOverride.Capped && request.Width.Mode == FlexMeasureMode.AtMost {
+                    mw = Known(mw) ? MathF.Min(mw, request.Width.Size) : request.Width.Size
+                }
+                box.MaxWidth = Known(mw) ? mw : Single.PositiveInfinity
+            }
+            if node.MinWidth.Unit >= LengthUnit.MinContent {
+                var minw = Zero(
+                    ResolveIntrinsicAxisLength(
+                        node, node.MinWidth, StyleField.MinWidth, entries, true, in request, frame, state
+                    )
+                )
+                if request.Override == FlexOverride.Capped && request.Width.Mode == FlexMeasureMode.AtMost {
+                    minw = MathF.Min(minw, box.MaxWidth)
+                }
+                box.MinWidth = minw
+            }
+        }
+        if !ignoreHeight {
+            if node.Height.Unit >= LengthUnit.MinContent {
+                box.Height = ResolveIntrinsicAxisLength(
+                    node, node.Height, StyleField.Height, entries, false, in request, frame, state
+                )
+            }
+            if node.MaxHeight.Unit >= LengthUnit.MinContent {
+                var mh = ResolveIntrinsicAxisLength(
+                    node, node.MaxHeight, StyleField.MaxHeight, entries, false, in request, frame, state
+                )
+                if request.Override == FlexOverride.Capped && request.Height.Mode == FlexMeasureMode.AtMost {
+                    mh = Known(mh) ? MathF.Min(mh, request.Height.Size) : request.Height.Size
+                }
+                box.MaxHeight = Known(mh) ? mh : Single.PositiveInfinity
+            }
+            if node.MinHeight.Unit >= LengthUnit.MinContent {
+                var minh = Zero(
+                    ResolveIntrinsicAxisLength(
+                        node, node.MinHeight, StyleField.MinHeight, entries, false, in request, frame, state
+                    )
+                )
+                if request.Override == FlexOverride.Capped && request.Height.Mode == FlexMeasureMode.AtMost {
+                    minh = MathF.Min(minh, box.MaxHeight)
+                }
+                box.MinHeight = minh
+            }
+        }
+        if node.Kind == NodeKind.Shape && node.AspectRatio <= 0.0F && !request.Root {
+            if Known(box.Width) && Known(box.Height) {
+                box.Ratio = 0.0F
             }
         }
     }

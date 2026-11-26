@@ -42,7 +42,6 @@ internal partial class Layout {
   internal var NormalPasses int32
   internal var PopupMeasuredWidth float32?
   internal var PopupMeasuredHeight float32?
-  internal var structureDirty bool
   internal var scrollNodes List[Node]
   internal var scrollListDirty bool
   internal var scrollSeen int64
@@ -82,10 +81,6 @@ internal partial class Layout {
     CustomLayouts.ViewportWidth = width
     CustomLayouts.ViewportHeight = height
     CustomLayouts.Density = Density
-    if structureDirty {
-      FlexLayoutEngine.Invalidate(root)
-      structureDirty = false
-    }
     if let overlays = overlayRoot { overlays.Rect = Rect{W: width, H: height} }
     resolveLengths(root, width, height)
     if !root.IsPortal && NormalNeedsLayout(root, width, height) {
@@ -99,7 +94,6 @@ internal partial class Layout {
         request.Height = FlexConstraint.Exact(measuredHeight)
       }
       Engine.ArrangeSubtree(root, request)
-      resolveFinalIntrinsic(root, request)
       if overlayRoot == nil {
         standaloneTransitions = false
         TransitionPhase = LayoutTransitionPhase.StandaloneSizes
@@ -113,7 +107,6 @@ internal partial class Layout {
       } else {
         readRect(root, 0.0F, 0.0F)
       }
-      ScrollbarParts.Arrange(root)
     }
     lastRoot = root
     lastWidth = width
@@ -129,7 +122,6 @@ internal partial class Layout {
       if portal.PortalAnchor != nil { continue }
       let request = Engine.RootRequest(width, height, Density, portal.Direction)
       Engine.ArrangeSubtree(portal, request)
-      resolveFinalIntrinsic(portal, request)
     }
     portalStructureDirty = false
     placePortals(sourceRoot, overlayRoot, width, height)
@@ -142,10 +134,9 @@ internal partial class Layout {
   // Raised on every reconcile (and by structural test edits); style-only
   // frames never walk.
   internal func MarkStructureDirty() {
-    structureDirty = true
     portalStructureDirty = true
     scrollListDirty = true
-    lengthRoot = nil
+    if LengthDeclarations.Active { lengthRoot = nil }
     sizedListDirty = true
   }
 
@@ -195,7 +186,7 @@ internal partial class Layout {
   }
 
   private func NormalNeedsLayout(root Node, width float32, height float32) bool {
-    if structureDirty || root != lastRoot || !laidOut
+    if root != lastRoot || !laidOut
       || width != lastWidth || height != lastHeight {
         return true
       }
@@ -205,7 +196,6 @@ internal partial class Layout {
   internal func RefreshRects(root Node) {
     if laidOut && !root.IsPortal {
       readRect(root, 0.0F, 0.0F)
-      ScrollbarParts.Arrange(root)
     }
   }
 
@@ -215,7 +205,6 @@ internal partial class Layout {
     }
     if !root.IsPortal {
       readRect(root, 0.0F, 0.0F)
-      ScrollbarParts.Arrange(root)
     }
     if portalLaidOut {
       placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
@@ -235,7 +224,9 @@ internal partial class Layout {
       if scroller.Kind == NodeKind.Editor {
         readEditorSlotRects(scroller, scroller.PaintInputHidden, false)
       }
-      ScrollbarParts.Arrange(scroller, false)
+      if scroller.ScrollbarPartState != nil {
+        ScrollbarParts.ArrangeOwner(scroller, this)
+      }
     }
     if portalLaidOut && overlayRoot == portalRoot {
       placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
@@ -273,7 +264,6 @@ internal partial class Layout {
             portal.PortalPlacementHidden = false
             portal.PortalAnchorClipped = false
             readRect(portal, 0.0F, 0.0F)
-            ScrollbarParts.Arrange(portal)
             placedPortals.Add(portal)
             progressed = true
             continue
@@ -308,7 +298,6 @@ internal partial class Layout {
             request.Width = FlexConstraint.Cap(space)
           }
           Engine.ArrangeSubtree(portal, request)
-          resolveFinalIntrinsic(portal, request)
           let origin = portalOrigin(portal, placement, bounds, width, height)
           portal.PortalAnchorBounds = Rect{
             X: bounds.X, Y: bounds.Y, W: bounds.W, H: bounds.H,
@@ -317,7 +306,6 @@ internal partial class Layout {
           portal.PortalPlacementHidden = false
           portal.PortalAnchorClipped = portalAnchorClipped(portal, anchor, bounds)
           readPortalRect(portal, origin.X, origin.Y)
-          ScrollbarParts.Arrange(portal)
           placedPortals.Add(portal)
           progressed = true
         }
@@ -502,7 +490,6 @@ internal partial class Layout {
       let hiddenSubtree = hidden || n.Display == Display.None
       let editor = n.Kind == NodeKind.Editor
       let custom = CustomLayouts.State(n)
-      if !hiddenSubtree { custom?.Arrange() }
       ScrollState.RefreshAxes(n)
       if editor {
         ScrollState.SyncEditor(n)
@@ -516,6 +503,9 @@ internal partial class Layout {
           n.EditorState?.AcceptPresentation()
         }
         readEditorSlotRects(n, hiddenSubtree)
+        if !hiddenSubtree && n.ScrollbarPartState != nil {
+          ScrollbarParts.ArrangeOwner(n, this)
+        }
         n.HitContained = true
         return
       }
@@ -523,11 +513,10 @@ internal partial class Layout {
         for i in 0 ... n.Children.Count {
           let child = n.Children[i]
           if child.IsPortal { continue }
-          if !hiddenSubtree {
-            Engine.ArrangeSubtree(child, Engine.RootRequest(n.LogicalLayout.Snapped.W,
-              n.LogicalLayout.Snapped.H, Density, n.LogicalLayout.Direction))
-          }
           readRect(child, visual.X, visual.Y, hidden: hiddenSubtree)
+        }
+        if !hiddenSubtree && n.ScrollbarPartState != nil {
+          ScrollbarParts.ArrangeOwner(n, this)
         }
         n.HitContained = false
         return
@@ -570,6 +559,9 @@ internal partial class Layout {
           break
         }
       }
+      if !hiddenSubtree && n.ScrollbarPartState != nil {
+        ScrollbarParts.ArrangeOwner(n, this)
+      }
     }
 
   private func snapPlacement(origin float32, offset float32, density float32) float32 ->
@@ -581,7 +573,7 @@ internal partial class Layout {
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       if child.IsPortal { continue }
-      if (calculate || !child.FlexMeasures.HasCommitted) && !hidden {
+      if !child.FlexMeasures.HasCommitted && !hidden {
         let availableWidth = child.EditorSlotBlock ? contentWidth : Single.NaN
         var request = Engine.RootRequest(availableWidth, Single.NaN, Density, n.LogicalLayout.Direction)
         request.Baseline = true

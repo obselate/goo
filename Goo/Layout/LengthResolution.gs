@@ -33,7 +33,6 @@ internal class ResolvedLength {
 internal class LengthNode {
   internal var Node Node
   internal var Resolver Resolver
-  internal var IntrinsicLevel int32
   internal var Layout Layout?
   internal let Values List[ResolvedLength] = List[ResolvedLength]()
 }
@@ -46,7 +45,8 @@ internal class LengthDeclarations {
   shared {
     private var values ConditionalWeakTable[Node, LengthNode]?
     private let revisions ConditionalWeakTable[Node, LengthRevision] = ConditionalWeakTable[Node, LengthRevision]()
-    internal prop Active bool { get -> values != nil }
+    private var count int32
+    internal prop Active bool { get -> count > 0 }
 
     internal func Get(node Node) LengthNode? {
       if !node.HasRelativeLengths { return nil }
@@ -77,7 +77,7 @@ internal class LengthDeclarations {
         return
       }
       state.Layout?.RemoveLengths(state)
-      values?.Remove(node)
+      if values?.Remove(node) == true && count > 0 { count-- }
       node.HasRelativeLengths = false
       Invalidate(node)
     }
@@ -90,6 +90,7 @@ internal class LengthDeclarations {
         state = LengthNode{Node: node, Resolver: resolver}
         values ??= ConditionalWeakTable[Node, LengthNode]()
         values!!.Add(node, state)
+        count++
         node.HasRelativeLengths = true
       }
       let list = state.Values
@@ -99,11 +100,19 @@ internal class LengthDeclarations {
           if sameLength(list[i].Value, declaration.Value) { return false }
           list[i].Value = declaration.Value
           list[i].Pixels = Single.NaN
+          if declaration.Value.IsIntrinsic {
+            writeDirectWithInvalidation(
+              node,
+              StyleEntry{Field: entry.Field, A: declaration.Value.Value, B: float32(int32(declaration.Value.Unit))},
+              nil,
+              resolver.Owner
+            )
+          }
         } else {
           list.RemoveAt(i)
           if list.Count == 0 {
             state.Layout?.RemoveLengths(state)
-            values?.Remove(node)
+            if values?.Remove(node) == true && count > 0 { count-- }
             node.HasRelativeLengths = false
           }
         }
@@ -112,6 +121,14 @@ internal class LengthDeclarations {
       }
       if let declaration = source {
         list.Add(ResolvedLength{Field: entry.Field, Value: declaration.Value})
+        if declaration.Value.IsIntrinsic {
+          writeDirectWithInvalidation(
+            node,
+            StyleEntry{Field: entry.Field, A: declaration.Value.Value, B: float32(int32(declaration.Value.Unit))},
+            nil,
+            resolver.Owner
+          )
+        }
         Invalidate(node)
         return true
       }
@@ -135,37 +152,52 @@ internal partial class Layout {
   private var lengthRevision int64 = -1L
   private var lengthRoot Node?
   private var lengthNodes List[LengthNode]?
-  private var maximumIntrinsicLevel int32 = -1
-  private var intrinsicPending bool
   internal func RemoveLengths(state LengthNode) {
     lengthNodes?.Remove(state)
     state.Layout = nil
   }
 
-  private func collectLengths(node Node, level int32 = 0) {
-    var nextLevel = level
+  private func collectLengths(node Node) {
     if let state = LengthDeclarations.Get(node) {
       state.Layout = this
-      state.IntrinsicLevel = level
-      var intrinsic = false
-      for entry in state.Values { if entry.Value.IsIntrinsic { intrinsic = true } }
-      if intrinsic {
-        maximumIntrinsicLevel = Math.Max(maximumIntrinsicLevel, level)
-        nextLevel++
-      }
       lengthNodes ??= List[LengthNode]()
       if state.Values.Count > 0 { lengthNodes!!.Add(state) }
     }
-    for child in node.Children { collectLengths(child, nextLevel) }
+    for child in node.Children { collectLengths(child) }
+  }
+
+  internal func resolveSubtreeLengths(node Node, width float32, height float32) {
+    if !LengthDeclarations.Active { return }
+    resolveSubtreeLengthsWalk(node, width, height)
+  }
+
+  private func resolveSubtreeLengthsWalk(node Node, width float32, height float32) {
+    if let state = LengthDeclarations.Get(node) {
+      for entry in state.Values {
+        if entry.Field == StyleField.FontSize { resolveLength(state, entry, width, height) }
+      }
+      for entry in state.Values {
+        if entry.Field != StyleField.FontSize
+          && entry.Value.Unit != LengthUnit.MinContent
+          && entry.Value.Unit != LengthUnit.MaxContent {
+          resolveLength(state, entry, width, height)
+        }
+      }
+    }
+    for child in node.Children { resolveSubtreeLengthsWalk(child, width, height) }
   }
 
   internal func resolveLengths(root Node, width float32, height float32) {
+    if !LengthDeclarations.Active {
+      lengthNodes?.Clear()
+      lengthRoot = root
+      return
+    }
     let revision = LengthDeclarations.Revision(root)
     let declarationsChanged = lengthRevision != revision || lengthRoot != root
     if declarationsChanged {
       lengthNodes?.Clear()
-      maximumIntrinsicLevel = -1
-      if LengthDeclarations.Active { collectLengths(root) }
+      collectLengths(root)
       lengthRevision = revision
       lengthRoot = root
     }
@@ -177,65 +209,32 @@ internal partial class Layout {
     }
     for state in nodes {
       for entry in state.Values {
-        if entry.Field != StyleField.FontSize && !entry.Value.IsIntrinsic {
+        if entry.Field != StyleField.FontSize
+          && entry.Value.Unit != LengthUnit.MinContent
+          && entry.Value.Unit != LengthUnit.MaxContent {
           resolveLength(state, entry, width, height)
         }
       }
     }
-    if maximumIntrinsicLevel < 0 {
-      intrinsicPending = false
-      return
-    }
-    intrinsicPending = declarationsChanged || !laidOut || root != lastRoot || width != lastWidth
-      || height != lastHeight || !root.FlexMeasures.HasCommitted
-    if !intrinsicPending {
-      for state in nodes {
-        if state.Node.Display == Display.None || state.Node.FlexMeasures.HasCommitted { continue }
-        for entry in state.Values {
-          if entry.Value.IsIntrinsic {
-            intrinsicPending = true
-            break
-          }
-        }
-        if intrinsicPending { break }
-      }
-    }
-    if !intrinsicPending { return }
-    for var i = nodes.Count - 1; i >= 0; i-- {
-      let state = nodes[i]
-      for entry in state.Values {
-        if entry.Value.IsIntrinsic { resolveIntrinsic(state, entry, width, height, true) }
-      }
-    }
-  }
-
-  private func resolveFinalIntrinsic(root Node, request FlexRequest) {
-    if !intrinsicPending { return }
-    guard let nodes = lengthNodes else { return }
-    for level in 0 ... maximumIntrinsicLevel + 1 {
-      for state in nodes {
-        if state.IntrinsicLevel != level { continue }
-        if !belongsToLayout(state.Node, root) { continue }
-        for entry in state.Values {
-          if entry.Value.IsIntrinsic { resolveIntrinsic(state, entry, request.OwnerWidth, request.OwnerHeight, false) }
-        }
-      }
-      if !root.FlexMeasures.HasCommitted { Engine.ArrangeSubtree(root, request) }
-    }
-  }
-
-  private func belongsToLayout(node Node, root Node) bool {
-    var current = node
-    while current != root {
-      if current.IsPortal { return false }
-      guard let parent = current.Parent else { return false }
-      current = parent
-    }
-    return true
   }
 
   private func resolveLength(state LengthNode, entry ResolvedLength, width float32, height float32) {
     let node = state.Node
+    if entry.Value.Unit == LengthUnit.FitContent {
+      let pixels = LengthDeclarations.Pixels(entry.Value, node, width, height, false)
+      let percent = entry.Value.PercentPart
+      if pixels == entry.Pixels && percent == entry.Percent { return }
+      entry.Pixels = pixels
+      entry.Percent = percent
+      writeDirectWithInvalidation(
+        node,
+        StyleEntry{Field: entry.Field, A: pixels, B: float32(int32(LengthUnit.FitContent))},
+        nil,
+        state.Resolver.Owner
+      )
+      FlexLayoutEngine.Invalidate(node)
+      return
+    }
     let pixels = LengthDeclarations.Pixels(entry.Value, node, width, height, entry.Field == StyleField.FontSize)
     let percent = entry.Value.PercentPart
     if pixels == entry.Pixels && percent == entry.Percent { return }
@@ -265,35 +264,5 @@ internal partial class Layout {
     if writeDirectWithInvalidation(node, packed, nil, state.Resolver.Owner) && entry.Field == StyleField.FontSize {
       state.Resolver.propagateInherited(node, StyleField.FontSize)
     }
-  }
-  private func resolveIntrinsic(state LengthNode, entry ResolvedLength, width float32, height float32, provisional bool) {
-    let node = state.Node
-    var ownerWidth = width
-    var ownerHeight = height
-    if !provisional {
-      if let parent = node.Parent && parent.LogicalLayout.Valid {
-        ownerWidth = MathF.Max(0.0F, parent.LogicalLayout.Raw.W - parent.LogicalLayout.Padding.Sum(true) - parent.LogicalLayout.Border.Sum(true))
-        ownerHeight = MathF.Max(0.0F, parent.LogicalLayout.Raw.H - parent.LogicalLayout.Padding.Sum(false) - parent.LogicalLayout.Border.Sum(false))
-      }
-    }
-    let horizontal = entry.Field == StyleField.Width || entry.Field == StyleField.MinWidth
-      || entry.Field == StyleField.MaxWidth || entry.Field == StyleField.FlexBasis
-      && (node.Parent?.FlexDirection == FlexDirection.Row || node.Parent?.FlexDirection == FlexDirection.RowReverse)
-    let request = FlexRequest{OwnerWidth: ownerWidth, OwnerHeight: ownerHeight, Direction: node.Direction, Density: Density}
-    let minimum = entry.Value.Unit == LengthUnit.MaxContent ? 0.0F : Engine.MeasureIntrinsic(node, horizontal, true, request)
-    var result = minimum
-    if entry.Value.Unit != LengthUnit.MinContent {
-      let maximum = Engine.MeasureIntrinsic(node, horizontal, false, request)
-      result = maximum
-      if entry.Value.Unit == LengthUnit.FitContent {
-        let pixels = LengthDeclarations.Pixels(entry.Value, node, width, height, false)
-        let limit = pixels + (provisional ? 0.0F : entry.Value.PercentPart * (horizontal ? ownerWidth : ownerHeight) / 100.0F)
-        result = provisional && entry.Value.PercentPart != 0.0F && pixels == 0.0F
-          ? maximum : MathF.Min(maximum, MathF.Max(minimum, limit))
-      }
-    }
-    entry.Pixels = result
-    writeDirectWithInvalidation(node,
-      StyleEntry{Field: entry.Field, A: result, B: float32(int32(LengthUnit.Px))}, nil, state.Resolver.Owner)
   }
 }

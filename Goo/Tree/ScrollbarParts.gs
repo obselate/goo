@@ -21,7 +21,6 @@ internal class ScrollbarPartState {
 internal partial class ScrollbarParts {
     shared {
         private let empty List[Node] = List[Node]()
-        private let partLayout Layout = Layout()
         private var layoutDepth int32
 
         internal func Dispose(owner Node) {
@@ -188,52 +187,38 @@ internal partial class ScrollbarParts {
             }
         }
 
-        internal func Arrange(root Node, descendants bool = true) {
+        internal func ArrangeOwner(node Node, layout Layout) {
             if layoutDepth != 0 {
                 return
             }
             layoutDepth++
             try {
-                if descendants { layoutTree(root) }
-                else { layoutOwner(root) }
+                layoutOwner(node, layout)
             } finally {
                 layoutDepth--
             }
         }
 
-        private func layoutTree(node Node) {
-            layoutOwner(node)
-            for i in 0 ... node.Children.Count {
-                let child = node.Children[i]
-                if !child.IsPortal {
-                    layoutTree(child)
-                }
-            }
-        }
-
-        private func layoutOwner(node Node) {
+        private func layoutOwner(node Node, layout Layout) {
             if let state = stateFor(node, false) {
                 var geometry ScrollThumbGeometry
                 if (state.HorizontalTrack != nil || state.HorizontalThumb != nil)
                     && horizontalScrollThumb(node, out geometry) {
                     if let track = state.HorizontalTrack {
-                        layoutPart(track, geometry.TrackBounds)
+                        layoutPart(track, geometry.TrackBounds, layout)
                     }
                     if let thumb = state.HorizontalThumb {
-                        layoutPart(thumb, thumbBounds(thumb, geometry.Bounds, false))
+                        layoutPart(thumb, thumbBounds(thumb, geometry.Bounds, false), layout)
                     }
                 }
                 if (state.VerticalTrack != nil || state.VerticalThumb != nil)
                     && verticalScrollThumb(node, out geometry) {
                     if let track = state.VerticalTrack {
-                        layoutPart(track, geometry.TrackBounds)
+                        layoutPart(track, geometry.TrackBounds, layout)
                     }
                     if let thumb = state.VerticalThumb {
-                        layoutPart(thumb, thumbBounds(thumb, geometry.Bounds, true))
+                        layoutPart(thumb, thumbBounds(thumb, geometry.Bounds, true), layout)
                     }
-                }
-                for part in state.Parts {
-                    layoutTree(part)
                 }
             }
         }
@@ -266,7 +251,6 @@ internal partial class ScrollbarParts {
 
         private func disposePart(root Node?, failure Exception?) Exception? {
             if let node = root {
-                if partLayout.lastRoot == node { partLayout.lastRoot = nil }
                 try { NodeLifecycle.DisposeTree(node) }
                 catch (error Exception) { return failure ?? error }
             }
@@ -285,34 +269,35 @@ internal partial class ScrollbarParts {
                 : Rect{ X: bounds.X, Y: bounds.Y + offset, W: bounds.W, H: cross }
         }
 
-        private func layoutPart(root Node, bounds Rect) {
+        private func layoutPart(root Node, bounds Rect, layout Layout) {
             root.HitContained = false
             if bounds.W <= 0.0F || bounds.H <= 0.0F {
                 root.Rect = bounds
                 return
             }
-            let density = root.Parent?.LogicalLayout.Density ?? 1.0F
-            let engine = partLayout.Engine
+            let density = root.Parent?.LogicalLayout.Density ?? layout.Density
+            let engine = layout.Engine
             var request = engine.RootRequest(bounds.W, bounds.H, density, root.Direction)
             request.Override = FlexOverride.AssignedBox
             request.Width = FlexConstraint.Exact(bounds.W)
             request.Height = FlexConstraint.Exact(bounds.H)
-            partLayout.SetPixelDensity(density)
-            partLayout.resolveLengths(root, CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight)
+            layout.resolveSubtreeLengths(root, CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight)
             engine.ArrangeSubtree(root, request)
-            partLayout.readRect(root, 0.0F, 0.0F)
-            let origin = root.Rect
-            offset(root, bounds.X - origin.X, bounds.Y - origin.Y)
+            let previousPhase = layout.TransitionPhase
+            layout.TransitionPhase = LayoutTransitionPhase.Immediate
+            try {
+                layout.readRect(
+                    root,
+                    bounds.X,
+                    bounds.Y,
+                    placementX: -root.LogicalLayout.Snapped.X,
+                    placementY: -root.LogicalLayout.Snapped.Y
+                )
+            } finally {
+                layout.TransitionPhase = previousPhase
+            }
             root.Rect = bounds
             root.HitContained = false
-        }
-
-        private func offset(node Node, x float32, y float32) {
-            let rect = node.Rect
-            node.Rect = Rect{X: rect.X + x, Y: rect.Y + y, W: rect.W, H: rect.H}
-            for child in node.Children {
-                offset(child, x, y)
-            }
         }
     }
 }

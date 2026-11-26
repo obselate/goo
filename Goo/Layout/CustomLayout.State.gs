@@ -137,7 +137,7 @@ internal class CustomLayoutState {
     let height = CustomLayouts.Constraint(available.Height)
     var request = engine.RootRequest(width, height, CustomLayouts.Density, Node.Direction)
     request.Override = FlexOverride.Capped
-    let margin = engine.ResolveBox(n, in request).Margin
+    let margin = engine.ResolveMargins(n, in request)
     request.Width = FlexConstraint.Cap(width - margin.Sum(true))
     request.Height = FlexConstraint.Cap(height - margin.Sum(false))
     let measured = engine.MeasureSubtree(n, request)
@@ -158,11 +158,12 @@ internal class CustomLayoutState {
     child.Arranged = true
   }
 
-  internal func Arrange() {
+  internal func Arrange(state FlexThreadState, frame uint64) {
     SyncChildren()
-    let width = BoxGeometry.ContentWidth(Node, true)
-    let height = BoxGeometry.ContentHeight(Node, true)
-    let density = Node.LogicalLayout.Density
+    let logical = Node.LogicalLayout
+    let width = MathF.Max(0.0F, logical.Snapped.W - logical.Border.Sum(true) - logical.Padding.Sum(true))
+    let height = MathF.Max(0.0F, logical.Snapped.H - logical.Border.Sum(false) - logical.Padding.Sum(false))
+    let density = logical.Density
     if arrangedVersion == version && arrangedWidth == float64(width)
       && arrangedHeight == float64(height) && arrangedDensity == density { return }
     Begin(true)
@@ -175,7 +176,7 @@ internal class CustomLayoutState {
       ContentHeight = 0.0F
       for child in Children {
         if !child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.Arrange omitted a child with key '${child.Node.Key ?? "<unkeyed>"}': call ArrangeChild once for every child.") }
-        CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction, density)
+        CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction, density, state, frame)
         let rect = child.Node.LogicalLayout.Snapped
         ContentWidth = Math.Max(ContentWidth, float32(child.Bounds.X) + rect.X + rect.W)
         ContentHeight = Math.Max(ContentHeight, float32(child.Bounds.Y) + rect.Y + rect.H)
@@ -260,16 +261,23 @@ internal class CustomLayouts {
 
     private func ValidDimension(value float64, unbounded bool) bool -> value >= 0.0 && (value <= float64(Single.MaxValue) || (unbounded && Double.IsPositiveInfinity(value)))
     internal func Constraint(value float64) float32 -> if Double.IsPositiveInfinity(value) { Single.NaN } else { float32(value) }
-    internal func ArrangeRoot(node Node, bounds ElementRect, direction Direction, density float32) {
+    internal func ArrangeRoot(
+      node Node,
+      bounds ElementRect,
+      direction Direction,
+      density float32,
+      state FlexThreadState,
+      frame uint64
+    ) {
       let engine = FlexLayoutEngine.Shared
       let width = float32(bounds.Width)
       let height = float32(bounds.Height)
       var request = engine.RootRequest(width, height, density, direction)
-      let margin = engine.ResolveBox(node, in request).Margin
+      let margin = engine.ResolveMargins(node, in request)
       request.Override = FlexOverride.AssignedBox
       request.Width = FlexConstraint.Exact(width - margin.Sum(true))
       request.Height = FlexConstraint.Exact(height - margin.Sum(false))
-      engine.ArrangeSubtree(node, request)
+      engine.ArrangeSubtreeWithState(node, ref request, frame, state)
     }
   }
 }
