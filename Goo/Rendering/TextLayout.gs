@@ -415,9 +415,12 @@ internal class TextLayouts {
         for element in 1 ... elements.Length + 1 {
           let index = element < elements.Length ? elements[element] : text.Length
           if breakAfter(text, index) {
-            result.MinWidth = MathF.Max(result.MinWidth, if result.Rich != nil {
-              measureRichRange(n, paragraph, wordStart, index)
-            } else { TextFlow.MeasureBase(paragraph, wordStart, index, measurements) })
+            let end = isWhitespace(text[index - 1]) ? elements[element - 1] : index
+            if end > wordStart {
+              result.MinWidth = MathF.Max(result.MinWidth, if result.Rich != nil {
+                measureRichRange(n, paragraph, wordStart, end)
+              } else { TextFlow.MeasureBase(paragraph, wordStart, end, measurements) })
+            }
             wordStart = index
           }
         }
@@ -429,18 +432,24 @@ internal class TextLayouts {
           var overflowed = false
           while next <= elements.Length {
             let nextIndex = next < elements.Length ? elements[next] : text.Length
-            let startIndex = elements[cursor]
-            let width = if result.Rich != nil {
-              measureRichRange(n, paragraph, startIndex, nextIndex)
+            // Preserve hanging spaces in the shaped line without letting them consume another line.
+            if isWhitespace(text[nextIndex - 1]) {
+              fit = next
+              opportunity = next
             } else {
-              TextFlow.MeasureBase(paragraph, startIndex, nextIndex, measurements)
+              let startIndex = elements[cursor]
+              let width = if result.Rich != nil {
+                measureRichRange(n, paragraph, startIndex, nextIndex)
+              } else {
+                TextFlow.MeasureBase(paragraph, startIndex, nextIndex, measurements)
+              }
+              let decision = TextFlow.Consider(cursor, fit, opportunity, overflowed, next,
+                width, maxWidth, breakAfter(text, nextIndex))
+              fit = decision.Fit
+              opportunity = decision.Preferred
+              overflowed = decision.Overflowed
+              if decision.Stop { break }
             }
-            let decision = TextFlow.Consider(cursor, fit, opportunity, overflowed, next,
-              width, maxWidth, breakAfter(text, nextIndex))
-            fit = decision.Fit
-            opportunity = decision.Preferred
-            overflowed = decision.Overflowed
-            if decision.Stop { break }
             if next == elements.Length {
               break
             }
