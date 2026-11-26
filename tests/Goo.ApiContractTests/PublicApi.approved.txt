@@ -1520,6 +1520,7 @@ method|Goo.KeyModifiers|op_Inequality|static|public|generic:|(left:Goo.KeyModifi
 method|Goo.LayoutAlgorithm|Arrange|abstract|public|generic:|(context:Goo.LayoutContext,finalSize:Goo.LayoutSize)->System.Void
 method|Goo.LayoutAlgorithm|Measure|abstract|public|generic:|(context:Goo.LayoutContext,available:Goo.LayoutSize)->Goo.LayoutSize
 method|Goo.LayoutConstraint|AtMost|static|public|generic:|(size:System.Double)->Goo.LayoutConstraint
+method|Goo.LayoutConstraint|Deconstruct|instance|public|generic:|(out mode:Goo.LayoutMeasureMode&,out size:System.Double&)->System.Void
 method|Goo.LayoutConstraint|Equals|instance|public|generic:|(other:Goo.LayoutConstraint)->System.Boolean
 method|Goo.LayoutConstraint|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.LayoutConstraint|Exactly|static|public|generic:|(size:System.Double)->Goo.LayoutConstraint
@@ -3361,7 +3362,7 @@ type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:
 type|Goo.LayoutAxis|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayoutConstraint|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutConstraint>|generic:
 type|Goo.LayoutContext|sealed-class|public|base:System.Object|interfaces:|generic:
-type|Goo.LayoutKey`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
+type|Goo.LayoutKey`1|class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.LayoutMeasureMode|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutSize>|generic:
 type|Goo.LayoutTransition|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutTransition>|generic:

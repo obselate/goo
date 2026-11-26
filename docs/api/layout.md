@@ -202,6 +202,43 @@ Uses the available content width.
 
 Uses the available content height.
 
+## `LayoutConstraint`
+
+
+Specifies a single-axis measurement constraint for LayoutContext.MeasureChild.
+
+### `AtMost(float64)`
+
+Returns a constraint that caps the child to at most the given finite, nonnegative size.
+
+- `size`: Maximum size in layout units, or positive infinity for Unbounded.
+
+Returns: A LayoutConstraint for the axis.
+
+### `Exactly(float64)`
+
+Returns a constraint that forces the child to the exact finite, nonnegative size.
+
+- `size`: Exact size in layout units.
+
+Returns: A LayoutConstraint for the axis.
+
+### `MinContent`
+
+Returns a minimum-content intrinsic measurement constraint.
+
+### `Mode`
+
+Gets the constraint mode.
+
+### `Size`
+
+Gets the constraint size in layout units when Mode is AtMost or Exactly.
+
+### `Unbounded`
+
+Returns an unconstrained measurement constraint.
+
 ## `LayoutContext`
 
 
@@ -214,6 +251,34 @@ Places a child margin box relative to the container's content origin. Every non-
 - `index`: The zero-based child index, excluding Portals.
 - `bounds`: A finite, nonnegative-size margin box; offsets may be negative.
 
+### `ChildDisplay(int32)`
+
+Gets the Display mode of a retained child. Access outside a layout callback throws.
+
+- `index`: The zero-based child index, excluding Portals.
+
+Returns: The child's Display value.
+
+### `ChildTrait``1(int32,LayoutKey{T})`
+
+Reads a typed layout trait attached to a retained child, or returns the key's default value when absent.
+
+- `T`: The trait value type.
+- `index`: The zero-based child index, excluding Portals.
+- `key`: The trait key.
+
+Returns: The attached trait value or the key default.
+
+### `MeasureChild(int32,LayoutConstraint,LayoutConstraint)`
+
+Measures a retained child subtree with explicit per-axis constraints. Root margins are included in the returned size.
+
+- `index`: The zero-based child index, excluding Portals.
+- `width`: Horizontal measurement constraint.
+- `height`: Vertical measurement constraint.
+
+Returns: The child's desired margin-box size under these constraints.
+
 ### `MeasureChild(int32,LayoutSize)`
 
 Measures a retained child subtree without rebuilding it. Root margins are included in the returned size.
@@ -222,6 +287,16 @@ Measures a retained child subtree without rebuilding it. Root margins are includ
 - `available`: Maximum width and height; positive infinity means unconstrained.
 
 Returns: The child's desired margin-box size under these constraints.
+
+### `MeasureChildBaseline(int32,LayoutConstraint,LayoutConstraint)`
+
+Measures a retained child subtree and returns its first text baseline offset from its margin box top, when available.
+
+- `index`: The zero-based child index, excluding Portals.
+- `width`: Horizontal measurement constraint.
+- `height`: Vertical measurement constraint.
+
+Returns: Baseline offset from margin-box top, or nil when the child has no text baseline.
 
 ### `ResolveLength(Length,LayoutAxis)`
 
@@ -232,9 +307,68 @@ Resolves a length to layout units during the current callback. Em uses this cont
 
 Returns: Layout units, or nil for automatic or intrinsic values, or a nonzero percentage part without a finite basis.
 
+### `TryGetChildTrait``1(int32,LayoutKey{T},T@)`
+
+Tries to read a typed layout trait attached to a retained child.
+
+- `T`: The trait value type.
+- `index`: The zero-based child index, excluding Portals.
+- `key`: The trait key.
+- `value`: Receives the attached value, or the key default when absent.
+
+Returns: True when the child declared the trait.
+
 ### `ChildCount`
 
 Gets the number of retained direct children, excluding Portals. Access outside a layout callback throws.
+
+### `Direction`
+
+Gets the effective reading direction of the container during the current callback.
+
+### `PixelDensity`
+
+Gets the pixel density used for layout rounding during the current callback.
+
+## `LayoutKey<T>`
+
+
+Identifies a typed child layout trait attached to a Blob and queried from LayoutContext during custom layout.
+
+### `new`
+
+Creates a layout trait key whose default value is the default of T.
+
+### `new(T)`
+
+Creates a layout trait key with an explicit fallback value used when a child omits the trait.
+
+- `defaultValue`: The value returned when a child does not declare this trait.
+
+### `Default`
+
+Gets the fallback value returned when a child does not declare this trait.
+
+## `LayoutMeasureMode`
+
+
+Selects how a custom layout constrains a child along one axis.
+
+### `AtMost`
+
+Caps the child to at most the specified size.
+
+### `Exactly`
+
+Forces the child to exactly the specified size.
+
+### `MinContent`
+
+Measures the child's minimum intrinsic content size.
+
+### `Unbounded`
+
+Allows the child to take its unconstrained natural size.
 
 ## `LayoutSize`
 
