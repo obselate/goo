@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Diagnostics
 import System.Text
@@ -38,7 +37,7 @@ internal class ScrollbarFixtures {
         || viewport.Rect.W != 200.0F || viewport.Rect.H != 160.0F
         || thumb.AttachedNode()!!.BackgroundColor != magenta { return false }
       for index in 0 ... 3 {
-        if YGNodeAPI.YGNodeIsDirty(viewport.Yoga!!) || window.UpdateTree(0.0) { return false }
+        if !viewport.FlexMeasures.HasCommitted || window.UpdateTree(0.0) { return false }
       }
       return true
     } finally { window.Close() }

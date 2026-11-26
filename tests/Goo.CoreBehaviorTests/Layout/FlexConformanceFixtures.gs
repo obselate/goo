@@ -83,10 +83,11 @@ internal class FlexConformanceFixtures {
         }
         return true
     }
-    func Run(table JsonElement, failures List[string], output Action[string], useManaged bool) int32 {
-        let engine = FlexLayoutEngine()
+    func Run(table JsonElement, failures List[string], output Action[string]) int32 {
+        let layout = Layout()
+        layout.SetPixelDensity(0.0F)
         let policies = table.GetProperty("gooAutomaticMinimum")
-        let useGooMinimum = useManaged && !FlexLayoutEngine.UsesChromiumAutomaticMinimum
+        let useGooMinimum = !FlexLayoutEngine.UsesChromiumAutomaticMinimum
         var policyMatches = 0
         var chromiumMatches = 0
         var count = 0
@@ -96,22 +97,11 @@ internal class FlexConformanceFixtures {
             try {
                 let viewport = test.GetProperty("viewport")
                 let actual = List[[]float32]()
-                if useManaged {
-                    let width = viewport[0].GetSingle()
-                    let height = viewport[1].GetSingle()
-                    engine.ArrangeSubtree(root, FlexRequest{Width: FlexConstraint.Cap(width),
-                        Height: FlexConstraint.Cap(height), OwnerWidth: width, OwnerHeight: height, Root: true})
-                    CollectRaw(root, actual, 0.0F, 0.0F)
-                } else {
-                    Layout().Calculate(root, viewport[0].GetSingle(), viewport[1].GetSingle())
-                    Collect(root, actual)
-                }
+                layout.Calculate(root, viewport[0].GetSingle(), viewport[1].GetSingle())
+                CollectRaw(root, actual, -root.LogicalLayout.Raw.X, -root.LogicalLayout.Raw.Y)
                 let reference = test.GetProperty("boxes")
-                let hasDeviation = test.TryGetProperty("deviation", out var deviation)
                 let hasControl = policies.TryGetProperty(name, out var control)
-                let expected = if !useManaged && hasDeviation {
-                    deviation.GetProperty("boxes")
-                } else if useGooMinimum && hasControl {
+                let expected = if useGooMinimum && hasControl {
                     control.GetProperty("boxes")
                 } else {
                     reference
@@ -122,7 +112,7 @@ internal class FlexConformanceFixtures {
                     0.0F
                 }
                 let matches = Matches(actual, expected, tolerance)
-                if useManaged && Matches(actual, reference, tolerance) { chromiumMatches++ }
+                if Matches(actual, reference, tolerance) { chromiumMatches++ }
                 if matches && useGooMinimum && hasControl { policyMatches++ }
                 if !matches {
                     failures.Add(
@@ -138,9 +128,7 @@ internal class FlexConformanceFixtures {
                 NodeLifecycle.DisposeTree(root)
             }
         }
-        if useManaged {
-            output("$chromiumMatches/$count unmodified Chromium cases matched; $policyMatches strict Chromium policy controls matched")
-        }
+        output("$chromiumMatches/$count unmodified Chromium cases matched; $policyMatches strict Chromium policy controls matched")
         return count
     }
 
@@ -216,13 +204,6 @@ internal class FlexConformanceFixtures {
         let text = value.GetString() ?? throw InvalidOperationException("Expected an auto or percentage length")
         if text == "auto" { return Length.Auto }
         return Percent(Double.Parse(text.TrimEnd('%'), CultureInfo.InvariantCulture))
-    }
-
-    private func Collect(node Node, boxes List[[]float32]) {
-        boxes.Add([]float32{node.Rect.X, node.Rect.Y, node.Rect.W, node.Rect.H})
-        for child in node.Children {
-            Collect(child, boxes)
-        }
     }
 
     private func CollectRaw(node Node, boxes List[[]float32], x float32, y float32) {

@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 
 internal data struct TransformPoint {
@@ -58,11 +57,11 @@ internal class TransformGeometry {
           rect.Y += parentRect.Y - parent.Rect.Y
         }
       }
-      if let yoga = n.Yoga {
-        rect.X += yoga.Layout.RawLeft - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga)
-        rect.Y += yoga.Layout.RawTop - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
-        rect.W = yoga.Layout.RawDimension(Dimension.Width)
-        rect.H = yoga.Layout.RawDimension(Dimension.Height)
+      if n.LogicalLayout.Valid {
+        rect.X += n.LogicalLayout.Raw.X - n.LogicalLayout.Snapped.X
+        rect.Y += n.LogicalLayout.Raw.Y - n.LogicalLayout.Snapped.Y
+        rect.W = n.LogicalLayout.Raw.W
+        rect.H = n.LogicalLayout.Raw.H
       }
       var local = matrix(n, rect, parentRect)
       if n.HasVisualTransform {
@@ -184,15 +183,7 @@ internal class TransformGeometry {
       return result
     }
 
-    internal func PixelDensity(n Node) float32 {
-      if let yoga = n.Yoga {
-        if let config = YGNodeAPI.YGNodeGetConfig(yoga) {
-          let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
-          if scale > 0.0F && finite(scale) { return scale }
-        }
-      }
-      return 1.0F
-    }
+    internal func PixelDensity(n Node) float32 -> n.LogicalLayout.Density > 0.0F ? n.LogicalLayout.Density : 1.0F
 
     internal func ScrollOffset(n Node, window Affine2D) ScrollTranslation ->
       ScrollOffset(n, window, n.PlacedScrollX, n.PlacedScrollY)

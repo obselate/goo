@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 import System.Threading
@@ -84,11 +83,21 @@ internal class TextLayouts {
     private let sharedOrder Queue[TextLayout] = Queue[TextLayout]()
 
     internal func For(n Node, requestedWidth float32, geometry bool = false, measuring bool = false) TextLayout {
-      let maxWidth = !measuring && n.RetainedLayoutTransition != nil
-        ? BoxGeometry.ContentWidth(n, true) : requestedWidth
+      let maxWidth = if n.TextWrap == TextWrap.NoWrap && n.TextTrimming != TextTrimming.Ellipsis {
+        -1.0F
+      } else {
+        !measuring && n.RetainedLayoutTransition != nil ? BoxGeometry.ContentWidth(n, true) : requestedWidth
+      }
       if let cached = n.TextLayout {
         if matches(cached, n, maxWidth) && (!geometry || cached.Geometry != nil) {
           return cached
+        }
+      }
+      if let prior = n.PriorTextLayout {
+        if matches(prior, n, maxWidth) && (!geometry || prior.Geometry != nil) {
+          n.PriorTextLayout = n.TextLayout
+          n.TextLayout = prior
+          return prior
         }
       }
       if let cache = n.TextLayoutCache {
@@ -102,7 +111,17 @@ internal class TextLayouts {
       }
       let layout = sharedLayout(n, maxWidth, geometry)
       if n.TextLayoutCache == nil {
-        n.TextLayoutCache = List[TextLayout]()
+        if let previous = n.TextLayout {
+          if let prior = n.PriorTextLayout {
+            let cache = List[TextLayout](4)
+            cache.Add(prior)
+            cache.Add(previous)
+            n.TextLayoutCache = cache
+            n.PriorTextLayout = nil
+          } else {
+            n.PriorTextLayout = previous
+          }
+        }
       }
       if let cache = n.TextLayoutCache {
         if cache.Count == 4 {
@@ -153,6 +172,9 @@ internal class TextLayouts {
       if let layout = n.TextLayout {
         if matches(layout, n, width) { return layout }
       }
+      if let prior = n.PriorTextLayout {
+        if matches(prior, n, width) { return prior }
+      }
       if let cache = n.TextLayoutCache {
         for i in 0 ... cache.Count {
           let item = cache[i]
@@ -162,16 +184,9 @@ internal class TextLayouts {
       return nil
     }
 
-    internal func Invalidate(n Node) {
-      disposeCached(n)
-      // Fixed-Px size cannot depend on content, so skip the Yoga dirty and
-      // spare content-only frames a full relayout pass.
-      if n.Width.Unit == LengthUnit.Px && n.Height.Unit == LengthUnit.Px {
-        return
-      }
-      if let yoga = n.Yoga {
-        YGNodeAPI.YGNodeMarkDirty(yoga)
-      }
+    internal func Invalidate(n Node, retainContentCache bool = false) {
+      if !retainContentCache { disposeCached(n) }
+      FlexLayoutEngine.Invalidate(n)
     }
 
     internal func RefreshRich(n Node) {
@@ -189,6 +204,10 @@ internal class TextLayouts {
           return
         }
         refreshRichLayout(n, layout)
+        if let prior = n.PriorTextLayout {
+          if prior.Rich == nil { disposeCached(n) }
+          else { refreshRichLayout(n, prior) }
+        }
       }
     }
 
@@ -211,7 +230,9 @@ internal class TextLayouts {
       } else if let cached = n.TextLayout {
         dispose(cached)
       }
+      if let prior = n.PriorTextLayout { dispose(prior) }
       n.TextLayout = nil
+      n.PriorTextLayout = nil
       n.TextLayoutCache = nil
     }
 
@@ -237,44 +258,13 @@ internal class TextLayouts {
       if let layout = n.TextLayout {
         layout.Geometry = nil
       }
+      if let prior = n.PriorTextLayout { prior.Geometry = nil }
       if let cache = n.TextLayoutCache {
         for layout in cache {
           layout.Geometry = nil
         }
       }
     }
-
-    internal func Measure(yoga Facebook.Yoga.Node, width float32, widthMode MeasureMode,
-      height float32, heightMode MeasureMode) YGSize{
-        let n = nodeFromYoga(yoga)
-        let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
-        var layout = For(n, constraint, measuring: true)
-        let minContent = widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None
-          && n.TextWrap != TextWrap.NoWrap ? layout.MinWidth : 0.0F
-        if minContent > width {
-          layout = For(n, minContent, measuring: true)
-        }
-        let size = clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
-        return widthMode == MeasureMode.AtMost && n.TextTrimming == TextTrimming.None
-          ? YGSize{ Width: minContent > 0.0F ? MathF.Max(minContent, width) : layout.Width, Height: size.Height } : size
-      }
-
-    internal func clampMeasuredSize(measuredWidth float32, measuredHeight float32, width float32,
-      widthMode MeasureMode, height float32, heightMode MeasureMode) YGSize{
-        var w = measuredWidth
-        var h = measuredHeight
-        if widthMode == MeasureMode.Exactly {
-          w = width
-        } else if widthMode == MeasureMode.AtMost && w > width {
-          w = width
-        }
-        if heightMode == MeasureMode.Exactly {
-          h = height
-        } else if heightMode == MeasureMode.AtMost && h > height {
-          h = height
-        }
-        return YGSize{ Width: w, Height: h }
-      }
 
     internal func lineOffset(n Node, line TextLine, contentWidth float32) float32 {
       let rtl = if let shaped = line.Shape { shaped.RightToLeft } else { false }
@@ -404,7 +394,7 @@ internal class TextLayouts {
         let wholeWidth = if result.Rich != nil {
           measureRichRange(n, paragraph, 0, text.Length)
         } else { whole.Width }
-        if wholeWidth <= maxWidth {
+        if wholeWidth <= maxWidth + 0.0001F {
           appendLine(result, geometry, n, whole, start, start + text.Length, start + text.Length)
           return false
         }
@@ -728,7 +718,8 @@ internal class TextLayouts {
       && layout.Policy == textPolicy(n) && layout.LetterSpacing == letterSpacing(n)
       && layout.TextMaxLines == n.TextMaxLines
       && layout.LineHeight == n.LineHeight
-      && (layout.MaxWidth == maxWidth || (n.TextWrap == TextWrap.NoWrap && !layout.Clamped
+      && (layout.MaxWidth == maxWidth || n.TextWrap == TextWrap.NoWrap && n.TextTrimming != TextTrimming.Ellipsis
+        || (n.TextWrap == TextWrap.NoWrap && !layout.Clamped
         && layout.Rich == nil && maxWidth >= layout.MinWidth && maxWidth < layout.WidthLimit))
 
     internal func textPolicy(n Node) int32 -> int32(n.FontStyle) | (int32(n.TextWrap) << 2) | (int32(n.TextTrimming) << 3)

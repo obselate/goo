@@ -23,242 +23,376 @@ import System
 import System.Threading
 
 internal partial class FlexLayoutEngine {
-  shared {
-    private var frames int64
-    private let entryMetrics TextMetrics = TextMetrics()
+    shared {
+        internal let Shared FlexLayoutEngine = FlexLayoutEngine()
+        private var frames int64
+        private let entryMetrics TextMetrics = TextMetrics()
 
-    internal func Invalidate(node Node) {
-      var current Node? = node
-      while let item = current {
-        let hadCache = item.FlexMeasures.HasCommitted || item.FlexMeasures.Count > 0
-        item.FlexMeasures.Clear()
-        if item.IsPortal || (!hadCache && item != node) { break }
-        current = item.Parent
-      }
+        internal func Invalidate(node Node) {
+            var current Node? = node
+            while let item = current {
+                let hadCache = item.FlexMeasures.HasCommitted || item.FlexMeasures.Count > 0
+                item.FlexMeasures.Clear()
+                if item.IsPortal || (!hadCache && item != node) {
+                    break
+                }
+                let parent = item.Parent
+                if let owner = parent {
+                    if let custom = CustomLayouts.State(owner) {
+                        custom.ChildInvalidated()
+                    }
+                    if let editor = owner.EditorState {
+                        editor.ClearParagraphs()
+                        editor.Dirty = true
+                        editor.Layout = nil
+                    }
+                    if owner.RetainedSizedState != nil {
+                        break
+                    }
+                }
+                current = parent
+            }
+        }
+
+        private func IsMeasured(node Node) bool -> node.Kind == NodeKind.Text || node.Kind == NodeKind.Entry
+        ||
+            node.Kind == NodeKind.Editor ||
+            node.Kind == NodeKind.Image ||
+            node.HasCustomLayout ||
+            node.RetainedSizedState != nil
+    }
+    internal func RootRequest(width float32, height float32, density float32, direction Direction) FlexRequest ->
+    FlexRequest{
+        Width: FlexConstraint.Cap(width),
+        Height: FlexConstraint.Cap(height),
+        OwnerWidth: width,
+        OwnerHeight: height,
+        Density: density,
+        Direction: direction,
+        Root: true,
+        Override: FlexOverride.Viewport
     }
 
-    private func IsMeasured(node Node) bool -> node.Kind == NodeKind.Text || node.Kind == NodeKind.Entry
-      || node.Kind == NodeKind.Editor || node.Kind == NodeKind.Image || node.HasCustomLayout || node.RetainedSizedState != nil
-  }
-  internal var MeasureContent ((Node, FlexConstraint, FlexConstraint) -> FlexSize)?
-  internal var MeasureBaseline ((Node, float32, float32) -> float32)?
+    internal var MeasureContent((Node, FlexConstraint, FlexConstraint) -> FlexSize)?
+    internal var MeasureBaseline((Node, float32, float32) -> float32)?
 
-  internal func MeasureSubtree(node Node, request FlexRequest) FlexSize {
-    var key = Normalize(request)
-    return Solve(node, ref key, false, uint64(Interlocked.Increment(ref frames)))
-  }
-
-  internal func MeasureIntrinsic(node Node, horizontal bool, minimum bool, request FlexRequest) float32 {
-    var key = request
-    let mode = minimum ? FlexConstraint.Minimum() : FlexConstraint{}
-    if horizontal { key.Width = mode } else { key.Height = mode }
-    key.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
-    key.Baseline = false
-    let result = MeasureSubtree(node, key)
-    return horizontal ? result.Width : result.Height
-  }
-
-  internal func ArrangeSubtree(node Node, request FlexRequest, x float32 = 0.0F, y float32 = 0.0F) FlexSize {
-    var key = Normalize(request)
-    let frame = uint64(Interlocked.Increment(ref frames))
-    let result = Solve(node, ref key, true, frame)
-    if node.LogicalLayout.Valid {
-      node.LogicalLayout.Raw.X = x
-      node.LogicalLayout.Raw.Y = y
-      node.LogicalLayout.Line = 0
-      FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, key.Density, frame, AbsoluteBlock{}, true)
+    internal func MeasureSubtree(node Node, request FlexRequest) FlexSize {
+        var key = Normalize(request)
+        return Solve(node, ref key, false, uint64(Interlocked.Increment(ref frames)))
     }
-    return result
-  }
 
-  private func Normalize(request FlexRequest) FlexRequest {
-    var key = request
-    key.OwnerWidth = Known(key.OwnerWidth) ? Zero(key.OwnerWidth) + 0.0F : Single.NaN
-    key.OwnerHeight = Known(key.OwnerHeight) ? Zero(key.OwnerHeight) + 0.0F : Single.NaN
-    return key
-  }
-
-  private func Hide(node Node, frame uint64) {
-    if !node.LogicalLayout.Valid && node.LogicalLayout.Generation != 0uL && node.FlexMeasures.Count == 0 { return }
-    node.LogicalLayout = LayoutResult{Generation: frame}
-    node.FlexMeasures.Clear()
-    if IsMeasured(node) { return }
-    for index in 0 ... node.Children.Count {
-      let child = node.Children[index]
-      if !child.IsPortal { Hide(child, frame) }
+    internal func MeasureIntrinsic(node Node, horizontal bool, minimum bool, request FlexRequest) float32 {
+        var key = request
+        let mode = minimum ? FlexConstraint.Minimum() : FlexConstraint{}
+        if horizontal {
+            key.Width = mode
+        } else {
+            key.Height = mode
+        }
+        key.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
+        key.Baseline = false
+        let result = MeasureSubtree(node, key)
+        return horizontal ? result.Width : result.Height
     }
-  }
 
-  private func ChildRequest(in parent FlexRequest, w float32, h float32, direction Direction) FlexRequest ->
+    internal func ArrangeSubtree(node Node, request FlexRequest, x float32 = 0.0F, y float32 = 0.0F) FlexSize {
+        var key = Normalize(request)
+        let frame = uint64(Interlocked.Increment(ref frames))
+        let result = Solve(node, ref key, true, frame)
+        if node.LogicalLayout.Valid {
+            let margin = node.LogicalLayout.Margin
+            node.LogicalLayout.Raw.X = x + margin.Left + RelativeOffset(node, true, key.OwnerWidth, key.Direction)
+            node.LogicalLayout.Raw.Y = y + margin.Top + RelativeOffset(node, false, key.OwnerHeight, key.Direction)
+            node.LogicalLayout.Line = 0
+            FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, key.Density, frame, AbsoluteBlock{}, true)
+        }
+        return result
+    }
+
+    private func Normalize(request FlexRequest) FlexRequest {
+        var key = request
+        key.OwnerWidth = Known(key.OwnerWidth) ? Zero(key.OwnerWidth) + 0.0F : Single.NaN
+        key.OwnerHeight = Known(key.OwnerHeight) ? Zero(key.OwnerHeight) + 0.0F : Single.NaN
+        return key
+    }
+
+    private func Hide(node Node, frame uint64) {
+        if !node.LogicalLayout.Valid && node.LogicalLayout.Generation != 0uL && node.FlexMeasures.Count == 0 {
+            return
+        }
+        node.LogicalLayout = LayoutResult{Generation: frame}
+        node.FlexMeasures.Clear()
+        if IsMeasured(node) {
+            return
+        }
+        for index in 0 ... node.Children.Count {
+            let child = node.Children[index]
+            if !child.IsPortal {
+                Hide(child, frame)
+            }
+        }
+    }
+
+    private func ChildRequest(in parent FlexRequest, w float32, h float32, direction Direction) FlexRequest ->
     FlexRequest{OwnerWidth: w, OwnerHeight: h, Density: parent.Density, Direction: direction}
 
-  private func Transfer(box FlexBox, value float32, horizontal bool, replaced bool) float32 {
-    if !replaced { return horizontal ? value * box.Ratio : value / box.Ratio }
-    let content = MathF.Max(0.0F, value - box.Decorations(!horizontal))
-    return box.Decorations(horizontal) + (horizontal ? content * box.Ratio : content / box.Ratio)
-  }
-
-  private func Preferred(box FlexBox, constraint FlexConstraint, horizontal bool) float32 {
-    if constraint.Mode == FlexMeasureMode.Exactly { return box.Clamp(constraint.Size, horizontal) }
-    let style = horizontal ? box.Width : box.Height
-    if Known(style) { return box.Clamp(style, horizontal) }
-    let minimum = horizontal ? box.MinWidth : box.MinHeight
-    let maximum = horizontal ? box.MaxWidth : box.MaxHeight
-    return minimum == maximum ? box.Clamp(minimum, horizontal) : Single.NaN
-  }
-
-  private func Used(value float32, constraint FlexConstraint, box FlexBox, horizontal bool) float32 {
-    let limited = constraint.Mode == FlexMeasureMode.AtMost ? MathF.Min(value, constraint.Size) : value
-    return box.Clamp(limited, horizontal)
-  }
-
-  private func ContentConstraint(constraint FlexConstraint, definite float32, maximum float32, decorations float32) FlexConstraint {
-    if Known(definite) { return FlexConstraint.Exact(definite - decorations) }
-    if constraint.Mode == FlexMeasureMode.MinContent { return FlexConstraint.Minimum() }
-    let limit = constraint.Mode == FlexMeasureMode.AtMost ? MathF.Min(constraint.Size, maximum) : maximum
-    return FlexConstraint.Cap(limit - decorations)
-  }
-
-  private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64) FlexSize {
-    if node.Display == Display.None {
-      if arrange { Hide(node, frame) }
-      return FlexSize{}
+    private func Transfer(box FlexBox, value float32, horizontal bool, replaced bool) float32 {
+        if !replaced {
+            return horizontal ? value * box.Ratio : value / box.Ratio
+        }
+        let content = MathF.Max(0.0F, value - box.Decorations(!horizontal))
+        return box.Decorations(horizontal) + (horizontal ? content * box.Ratio : content / box.Ratio)
     }
-    if node.FlexMeasures.HasCommitted && node.FlexMeasures.Committed.Matches(in request) {
-      return FlexSize{Width: node.LogicalLayout.Raw.W, Height: node.LogicalLayout.Raw.H,
-        Baseline: node.LogicalLayout.Baseline, TextBaseline: node.LogicalLayout.TextBaseline}
-    }
-    if !arrange && node.FlexMeasures.TryMeasure(in request, out var cached) { return cached }
-    let box = ResolveBox(node, in request)
-    let direction = EffectiveDirection(node, request.Direction)
-    var width = Preferred(box, request.Width, true)
-    var height = Preferred(box, request.Height, false)
-    if box.Ratio > 0.0F {
-      if !Known(width) && Known(height) && request.Override != FlexOverride.WidthIntrinsic {
-        width = Used(Transfer(box, height, true, node.Kind == NodeKind.Image), request.Width, box, true)
-      } else if !Known(height) && Known(width) && request.Override != FlexOverride.HeightIntrinsic {
-        height = Used(Transfer(box, width, false, node.Kind == NodeKind.Image), request.Height, box, false)
-      }
-    }
-    let result = if IsMeasured(node) {
-      if arrange && node.FlexMeasures.TryMeasure(in request, out var measured) { measured }
-      else { MeasureLeaf(node, in request, box, width, height) }
-    } else if !arrange && !request.Baseline && Known(width) && Known(height) {
-      FlexSize{Width: width, Height: height, Baseline: height}
-    } else if node.Children.Count == 0 {
-      let w = Known(width) ? width : box.Clamp(0.0F, true)
-      let h = Known(height) ? height : box.Clamp(0.0F, false)
-      FlexSize{Width: w, Height: h, Baseline: h}
-    } else {
-      SolveFlex(node, ref request, box, direction, width, height, arrange, frame)
-    }
-    if arrange {
-      node.LogicalLayout.Raw.W = result.Width
-      node.LogicalLayout.Raw.H = result.Height
-      node.LogicalLayout.Margin = box.Margin
-      node.LogicalLayout.Padding = box.Padding
-      node.LogicalLayout.Border = box.Border
-      node.LogicalLayout.Direction = direction
-      node.LogicalLayout.Baseline = result.Baseline
-      node.LogicalLayout.TextBaseline = result.TextBaseline
-      node.LogicalLayout.Valid = true
-      node.LogicalLayout.Generation = frame
-      node.FlexMeasures.Committed = request
-      node.FlexMeasures.HasCommitted = true
-    } else {
-      node.FlexMeasures.Store(in request, result)
-    }
-    return result
-  }
 
-  private func MeasureLeaf(node Node, in request FlexRequest, box FlexBox, width float32, height float32) FlexSize {
-    let horizontal = box.Decorations(true)
-    let vertical = box.Decorations(false)
-    let w = ContentConstraint(request.Width, width, box.MaxWidth, horizontal)
-    let h = ContentConstraint(request.Height, height, box.MaxHeight, vertical)
-    var size FlexSize
-    if !Known(width) || !Known(height) {
-      let measured = if let callback = MeasureContent { callback(node, w, h) } else { DefaultMeasure(node, w, h) }
-      size.Width = Known(width) ? width : Used(MathF.Max(0.0F, Zero(measured.Width)) + horizontal, request.Width, box, true)
-      size.Height = Known(height) ? height : Used(MathF.Max(0.0F, Zero(measured.Height)) + vertical, request.Height, box, false)
-    } else {
-      size.Width = width
-      size.Height = height
+    private func Preferred(box FlexBox, constraint FlexConstraint, horizontal bool, viewport bool) float32 {
+        if constraint.Mode == FlexMeasureMode.Exactly {
+            return box.Clamp(constraint.Size, horizontal)
+        }
+        let style = horizontal ? box.Width : box.Height
+        if Known(style) {
+            return box.Clamp(style, horizontal)
+        }
+        let minimum = horizontal ? box.MinWidth : box.MinHeight
+        let maximum = horizontal ? box.MaxWidth : box.MaxHeight
+        if minimum == maximum {
+            return box.Clamp(minimum, horizontal)
+        }
+        return viewport && constraint.Mode == FlexMeasureMode.AtMost && !Known(maximum)
+        ? box.Clamp(constraint.Size - box.Margin.Sum(horizontal), horizontal) : Single.NaN
     }
-    let baseline = if request.Baseline {
-      let contentWidth = MathF.Max(0.0F, size.Width - horizontal)
-      let contentHeight = MathF.Max(0.0F, size.Height - vertical)
-      if let callback = MeasureBaseline { callback(node, contentWidth, contentHeight) }
-      else { DefaultBaseline(node, contentWidth, contentHeight) }
-    } else { Single.NaN }
-    size.TextBaseline = Known(baseline)
-    size.Baseline = size.TextBaseline ? box.Border.Top + box.Padding.Top + baseline : size.Height
-    return size
-  }
 
-  private func TextConstraint(constraint FlexConstraint) float32 ->
+    private func Used(value float32, constraint FlexConstraint, box FlexBox, horizontal bool) float32 {
+        let limited = constraint.Mode == FlexMeasureMode.AtMost ? MathF.Min(value, constraint.Size) : value
+        return box.Clamp(limited, horizontal)
+    }
+
+    private func ContentConstraint(
+        constraint FlexConstraint,
+        definite float32,
+        maximum float32,
+        decorations float32
+    ) FlexConstraint {
+        if Known(definite) {
+            return FlexConstraint.Exact(definite - decorations)
+        }
+        if constraint.Mode == FlexMeasureMode.MinContent {
+            return FlexConstraint.Minimum()
+        }
+        let limit = constraint.Mode == FlexMeasureMode.AtMost ? MathF.Min(constraint.Size, maximum) : maximum
+        return FlexConstraint.Cap(limit - decorations)
+    }
+
+    private func DependsOnOwner(length NodeLength) bool -> length.Unit == LengthUnit.Percent ||
+        length.Unit == LengthUnit.Relative
+
+    private func OwnerIndependent(node Node) bool {
+        if node.FlexMeasures.OwnerIndependent != 0 {
+            return node.FlexMeasures.OwnerIndependent == 1
+        }
+        let independent = node.Children.Count == 0 && node.Kind != NodeKind.Editor && !node.HasCustomLayout
+        && !DependsOnOwner(node.Width) && !DependsOnOwner(node.Height)
+        && !DependsOnOwner(node.MinWidth) && !DependsOnOwner(node.MinHeight)
+        && !DependsOnOwner(node.MaxWidth) && !DependsOnOwner(node.MaxHeight)
+        && !DependsOnOwner(node.Margin) && !DependsOnOwner(node.MarginLeft) && !DependsOnOwner(node.MarginTop)
+        && !DependsOnOwner(node.MarginRight) && !DependsOnOwner(node.MarginBottom)
+        && !DependsOnOwner(node.Padding) && !DependsOnOwner(node.PaddingLeft) && !DependsOnOwner(node.PaddingTop)
+        && !DependsOnOwner(node.PaddingRight) && !DependsOnOwner(node.PaddingBottom)
+        node.FlexMeasures.OwnerIndependent = independent ? uint8(1) : uint8(2)
+        return independent
+    }
+
+    private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64) FlexSize {
+        if node.Display == Display.None {
+            if arrange {
+                Hide(node, frame)
+            }
+            return FlexSize{}
+        }
+        let key = request.CacheKey(OwnerIndependent(node))
+        if node.FlexMeasures.HasCommitted && node.FlexMeasures.Committed.Matches(in key) {
+            return FlexSize{
+                Width: node.LogicalLayout.Raw.W,
+                Height: node.LogicalLayout.Raw.H,
+                Baseline: node.LogicalLayout.Baseline,
+                TextBaseline: node.LogicalLayout.TextBaseline
+            }
+        }
+        if !arrange && node.FlexMeasures.TryMeasure(in key, out var cached) {
+            return cached
+        }
+        let box = ResolveBox(node, in request)
+        let direction = EffectiveDirection(node, request.Direction)
+        let viewport = request.Override == FlexOverride.Viewport
+        var width = Preferred(box, request.Width, true, viewport)
+        var height = Preferred(box, request.Height, false, viewport)
+        if box.Ratio > 0.0F {
+            if !Known(width) && Known(height) && request.Override != FlexOverride.WidthIntrinsic {
+                width = Used(Transfer(box, height, true, node.Kind == NodeKind.Image), request.Width, box, true)
+            } else if !Known(height) && Known(width) && request.Override != FlexOverride.HeightIntrinsic {
+                height = Used(Transfer(box, width, false, node.Kind == NodeKind.Image), request.Height, box, false)
+            }
+        }
+        let result = if IsMeasured(node) {
+            if arrange && node.FlexMeasures.TryMeasure(in key, out var measured) {
+                measured
+            } else {
+                MeasureLeaf(node, in request, box, width, height)
+            }
+        } else if !arrange && !request.Baseline && Known(width) && Known(height) {
+            FlexSize{Width: width, Height: height, Baseline: height}
+        } else if node.Children.Count == 0 {
+            let w = Known(width) ? width : box.Clamp(0.0F, true)
+            let h = Known(height) ? height : box.Clamp(0.0F, false)
+            FlexSize{Width: w, Height: h, Baseline: h}
+        } else {
+            SolveFlex(node, ref request, box, direction, width, height, arrange, frame)
+        }
+        if arrange {
+            node.LogicalLayout.Raw.W = result.Width
+            node.LogicalLayout.Raw.H = result.Height
+            node.LogicalLayout.Margin = box.Margin
+            node.LogicalLayout.Padding = box.Padding
+            node.LogicalLayout.Border = box.Border
+            node.LogicalLayout.Direction = direction
+            node.LogicalLayout.Density = request.Density
+            node.LogicalLayout.Baseline = result.Baseline
+            node.LogicalLayout.TextBaseline = result.TextBaseline
+            node.LogicalLayout.Valid = true
+            node.LogicalLayout.Generation = frame
+            node.FlexMeasures.Committed = key
+            node.FlexMeasures.HasCommitted = true
+        } else {
+            node.FlexMeasures.Store(in key, result)
+        }
+        return result
+    }
+
+    private func MeasureLeaf(node Node, in request FlexRequest, box FlexBox, width float32, height float32) FlexSize {
+        let horizontal = box.Decorations(true)
+        let vertical = box.Decorations(false)
+        let w = ContentConstraint(request.Width, width, box.MaxWidth, horizontal)
+        let h = ContentConstraint(request.Height, height, box.MaxHeight, vertical)
+        var size FlexSize
+        if !Known(width) || !Known(height) {
+            let measured = if let callback = MeasureContent {
+                callback(node, w, h)
+            } else {
+                DefaultMeasure(node, w, h)
+            }
+            size.Width = Known(width) ? width : Used(
+                MathF.Max(0.0F, Zero(measured.Width)) + horizontal,
+                request.Width,
+                box,
+                true
+            )
+            size.Height = Known(height) ? height : Used(
+                MathF.Max(0.0F, Zero(measured.Height)) + vertical,
+                request.Height,
+                box,
+                false
+            )
+        } else {
+            size.Width = width
+            size.Height = height
+        }
+        let baseline = if request.Baseline {
+            let contentWidth = MathF.Max(0.0F, size.Width - horizontal)
+            let contentHeight = MathF.Max(0.0F, size.Height - vertical)
+            if let callback = MeasureBaseline {
+                callback(node, contentWidth, contentHeight)
+            } else {
+                DefaultBaseline(node, contentWidth, contentHeight)
+            }
+        } else {
+            Single.NaN
+        }
+        size.TextBaseline = Known(baseline)
+        size.Baseline = size.TextBaseline ? box.Border.Top + box.Padding.Top + baseline : size.Height
+        return size
+    }
+
+    private func TextConstraint(constraint FlexConstraint) float32 ->
     constraint.Mode == FlexMeasureMode.Unbounded ? -1.0F : constraint.Size
 
-  private func CustomConstraint(constraint FlexConstraint) float64 ->
+    private func CustomConstraint(constraint FlexConstraint) float64 ->
     constraint.Mode == FlexMeasureMode.Unbounded ? Double.PositiveInfinity : float64(constraint.Size)
 
-  private func DefaultMeasure(node Node, width FlexConstraint, height FlexConstraint) FlexSize {
-    if let custom = CustomLayouts.State(node) {
-      let measured = custom.Measure(LayoutSize(CustomConstraint(width), CustomConstraint(height)))
-      return FlexSize{Width: float32(measured.Width), Height: float32(measured.Height)}
-    }
-    if node.RetainedSizedState != nil { return FlexSize{} }
-    switch node.Kind {
-      case NodeKind.Text {
-        let text = TextLayouts.For(node, TextConstraint(width), measuring: true)
-        let w = width.Mode == FlexMeasureMode.MinContent ? text.MinWidth : text.Width
-        return FlexSize{Width: w, Height: text.Height}
-      }
-      case NodeKind.Entry { return FlexSize{Height: TextLayouts.resolvedLineHeight(node)} }
-      case NodeKind.Editor {
-        let editor = TextEditorLayouts.For(node, TextConstraint(width),
-          height.Mode == FlexMeasureMode.Exactly ? height.Size : -1.0F, true)
-        return FlexSize{Width: editor.Width, Height: editor.Height}
-      }
-      case NodeKind.Image {
-        var w = node.ImageIntrinsicWidth
-        var h = node.ImageIntrinsicHeight
-        if w > 0.0F && h > 0.0F {
-          var scale = 1.0F
-          if width.Mode == FlexMeasureMode.AtMost { scale = MathF.Min(scale, width.Size / w) }
-          if height.Mode == FlexMeasureMode.AtMost { scale = MathF.Min(scale, height.Size / h) }
-          w *= scale
-          h *= scale
+    private func DefaultMeasure(node Node, width FlexConstraint, height FlexConstraint) FlexSize {
+        if let custom = CustomLayouts.State(node) {
+            let blockLimit = height.Mode == FlexMeasureMode.MinContent ? Double.PositiveInfinity : CustomConstraint(
+                height
+            )
+            let measured = custom.Measure(LayoutSize(CustomConstraint(width), blockLimit))
+            return FlexSize{Width: float32(measured.Width), Height: float32(measured.Height)}
         }
-        return FlexSize{Width: w, Height: h}
-      }
-      case _ { return FlexSize{} }
+        if node.RetainedSizedState != nil {
+            return FlexSize{}
+        }
+        switch node.Kind {
+            case NodeKind.Text {
+                let text = TextLayouts.For(node, TextConstraint(width), measuring: true)
+                let w = width.Mode == FlexMeasureMode.MinContent ? text.MinWidth : text.Width
+                return FlexSize{Width: w, Height: text.Height}
+            }
+            case NodeKind.Entry {
+                return FlexSize{Height: TextLayouts.resolvedLineHeight(node)}
+            }
+            case NodeKind.Editor {
+                let editor = TextEditorLayouts.For(
+                    node,
+                    TextConstraint(width),
+                    height.Mode == FlexMeasureMode.Exactly ? height.Size : -1.0F,
+                    true
+                )
+                return FlexSize{Width: editor.Width, Height: editor.Height}
+            }
+            case NodeKind.Image {
+                var w = node.ImageIntrinsicWidth
+                var h = node.ImageIntrinsicHeight
+                if w > 0.0F && h > 0.0F {
+                    var scale = 1.0F
+                    if width.Mode == FlexMeasureMode.AtMost {
+                        scale = MathF.Min(scale, width.Size / w)
+                    }
+                    if height.Mode == FlexMeasureMode.AtMost {
+                        scale = MathF.Min(scale, height.Size / h)
+                    }
+                    w *= scale
+                    h *= scale
+                }
+                return FlexSize{Width: w, Height: h}
+            }
+            case _ {
+                return FlexSize{}
+            }
+        }
     }
-  }
 
-  private func DefaultBaseline(node Node, width float32, height float32) float32 {
-    if node.Kind == NodeKind.Text {
-      let text = TextLayouts.For(node, width, measuring: true)
-      if let rich = text.Rich {
-        if rich.Lines.Count > 0 {
-          let first = rich.Lines[0]
-          return (first.Height - (first.Descent - first.Ascent)) * 0.5F - first.Ascent
+    private func DefaultBaseline(node Node, width float32, height float32) float32 {
+        if node.Kind == NodeKind.Text {
+            let text = TextLayouts.For(node, width, measuring: true)
+            if let rich = text.Rich {
+                if rich.Lines.Count > 0 {
+                    let first = rich.Lines[0]
+                    return (first.Height - (first.Descent - first.Ascent)) * 0.5F - first.Ascent
+                }
+            }
+            if text.Lines.Count == 0 {
+                return Single.NaN
+            }
+            return (TextLayouts.resolvedLineHeight(node) - (text.Descent - text.Ascent)) * 0.5F - text.Ascent
         }
-      }
-      if text.Lines.Count == 0 { return Single.NaN }
-      return (TextLayouts.resolvedLineHeight(node) - (text.Descent - text.Ascent)) * 0.5F - text.Ascent
+        if node.Kind == NodeKind.Entry {
+            let shape = entryMetrics.BufferShape(node)
+            return (height - (shape.Descent - shape.Ascent)) * 0.5F - shape.Ascent
+        }
+        if node.Kind == NodeKind.Editor {
+            let editor = TextEditorLayouts.For(node, width, height, true)
+            if editor.Lines.Count > 0 {
+                let first = editor.Lines[0]
+                return first.Top + (first.Height - (first.Descent - first.Ascent)) * 0.5F - first.Ascent
+            }
+        }
+        return Single.NaN
     }
-    if node.Kind == NodeKind.Entry {
-      let shape = entryMetrics.BufferShape(node)
-      return (height - (shape.Descent - shape.Ascent)) * 0.5F - shape.Ascent
-    }
-    if node.Kind == NodeKind.Editor {
-      let editor = TextEditorLayouts.For(node, width, height, true)
-      if editor.Lines.Count > 0 {
-        let first = editor.Lines[0]
-        return first.Top + (first.Height - (first.Descent - first.Ascent)) * 0.5F - first.Ascent
-      }
-    }
-    return Single.NaN
-  }
 }

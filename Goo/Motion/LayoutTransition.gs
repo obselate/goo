@@ -125,13 +125,12 @@ internal sealed class LayoutTransitionState : MotionParticle {
       }
       if phase == LayoutTransitionPhase.Staged && !hasBounds { stagedFresh = true }
       hasBounds = true
-      let yoga = node.Yoga
       let previous = target
       target = Rect{X: localX, Y: localY, W: width, H: height}
       idealPosition = Vector2(localX + idealX, localY + idealY)
-      if let measured = yoga {
-        idealPosition.X += measured.Layout.RawLeft - Facebook.Yoga.YGNodeLayoutAPI.YGNodeLayoutGetLeft(measured)
-        idealPosition.Y += measured.Layout.RawTop - Facebook.Yoga.YGNodeLayoutAPI.YGNodeLayoutGetTop(measured)
+      if node.LogicalLayout.Valid {
+        idealPosition.X += node.LogicalLayout.Raw.X - node.LogicalLayout.Snapped.X
+        idealPosition.Y += node.LogicalLayout.Raw.Y - node.LogicalLayout.Snapped.Y
       }
       placement = Vector2(placementX, placementY)
       if phase == LayoutTransitionPhase.StandaloneSizes { commitSize(previous) }

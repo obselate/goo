@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Runtime.CompilerServices
 
@@ -295,7 +294,7 @@ internal class ImageLayouts {
       n.ImageIntrinsicWidth = float32(width)
       n.ImageIntrinsicHeight = float32(height)
       n.BumpScenePaintVersion()
-      if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
+      FlexLayoutEngine.Invalidate(n)
       return true
     }
 
@@ -308,39 +307,9 @@ internal class ImageLayouts {
       n.ImageIntrinsicHeight = 0.0F
       if hadDimensions {
         n.BumpScenePaintVersion()
-        if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
+        FlexLayoutEngine.Invalidate(n)
       }
     }
-
-    internal func Measure(yoga Facebook.Yoga.Node, width float32, widthMode MeasureMode,
-      height float32, heightMode MeasureMode) YGSize{
-        let n = nodeFromYoga(yoga)
-        if n.ImageIntrinsicWidth <= 0.0F || n.ImageIntrinsicHeight <= 0.0F { return YGSize{} }
-        let naturalWidth = n.ImageIntrinsicWidth
-        let naturalHeight = n.ImageIntrinsicHeight
-        var measuredWidth = naturalWidth
-        var measuredHeight = naturalHeight
-        if widthMode == MeasureMode.Exactly && heightMode != MeasureMode.Exactly {
-          measuredWidth = width
-          measuredHeight = naturalHeight * width / naturalWidth
-        } else if heightMode == MeasureMode.Exactly && widthMode != MeasureMode.Exactly {
-          measuredHeight = height
-          measuredWidth = naturalWidth * height / naturalHeight
-        } else if widthMode == MeasureMode.Exactly && heightMode == MeasureMode.Exactly {
-          measuredWidth = width
-          measuredHeight = height
-        } else {
-          if widthMode == MeasureMode.AtMost && measuredWidth > width {
-            measuredWidth = width
-            measuredHeight = naturalHeight * width / naturalWidth
-          }
-          if heightMode == MeasureMode.AtMost && measuredHeight > height {
-            measuredHeight = height
-            measuredWidth = naturalWidth * height / naturalHeight
-          }
-        }
-        return YGSize{ Width: measuredWidth, Height: measuredHeight }
-      }
 
     private func sourceState(n Node) ImageSourceBinding? {
       if !n.HasDirectImageSourceState { return nil }

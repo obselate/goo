@@ -7,6 +7,7 @@ import System.Runtime.CompilerServices
 
 internal enum LayoutPass {
     First;
+    MountFirst;
     TextChange;
     Resize
 }
@@ -28,13 +29,29 @@ internal class LayoutSubject {
             throw InvalidOperationException("Expected a measured leaf")
         }
         leaf.Content = content
-        TextLayouts.Invalidate(leaf)
+        TextLayouts.Invalidate(leaf, retainContentCache: true)
     }
 }
 
 func Main(args[]string) {
-    if args.Length != 0 {
-        Console.WriteLine("Usage: dotnet run -c Release --project tools/Goo.LayoutBenchmark")
+    if args.Length == 1 && args[0] == "--storage" {
+        GC.KeepAlive(Node())
+        let start = GC.GetAllocatedBytesForCurrentThread()
+        for _ in 0 ... 16384 {
+            GC.KeepAlive(Node())
+        }
+        let nodeBytes = (GC.GetAllocatedBytesForCurrentThread() - start) / 16384
+        Console.WriteLine("Node and empty child list: $nodeBytes B")
+        Console.WriteLine(
+            "LayoutResult: ${Unsafe.SizeOf[LayoutResult]()} B; FlexCache: ${Unsafe.SizeOf[FlexCache]()} B; FlexItem: ${Unsafe.SizeOf[FlexItem]()} B"
+        )
+        return
+    }
+    let sample = args.Length > 0 && args[0] == "--sample"
+    if args.Length > 3 || args.Length != 0 && !sample {
+        Console.WriteLine(
+            "Usage: dotnet run -c Release --project tools/Goo.LayoutBenchmark -- [--storage | --sample [matrix|deep|wide [First|TextChange|Resize|MountFirst]]]"
+        )
         Console.WriteLine(
             "On Linux, put Goo's packaged runtime libraries on LD_LIBRARY_PATH if they are not in the output directory."
         )
@@ -50,13 +67,24 @@ func Main(args[]string) {
         []FontVariation{FontVariation("wght", 400.0F)}
     )
     font.Register()
-    let runtime = RuntimeFeature.IsDynamicCodeSupported ? "JIT": "NativeAOT"
-    Console.WriteLine("$runtime; 10 measured runs per row after one warmup run; mount, mutation and disposal excluded")
+    let runtime = RuntimeFeature.IsDynamicCodeSupported ? "JIT" : "NativeAOT"
+    let runs = sample ? 1 : 10
+    Console.WriteLine("$runtime; $runs measured runs per row after one warmup; mount included only in MountFirst")
     Console.WriteLine("tree\tnodes\tpass\tpasses/run\tus/pass\tB/pass")
-    for pass in[]LayoutPass{LayoutPass.First, LayoutPass.TextChange, LayoutPass.Resize} {
-        Measure("matrix", 126, 32, pass, pass == LayoutPass.First ? 8: 64)
-        Measure("deep", 505, 4, pass, pass == LayoutPass.First ? 16: 96)
-        Measure("wide", 1025, 8, pass, pass == LayoutPass.First ? 8: 48)
+    for pass in[]LayoutPass{LayoutPass.First, LayoutPass.TextChange, LayoutPass.Resize, LayoutPass.MountFirst} {
+        let first = pass == LayoutPass.First || pass == LayoutPass.MountFirst
+        if args.Length == 3 && args[2] != pass.ToString() {
+            continue
+        }
+        if args.Length < 2 || args[1] == "matrix" {
+            Measure("matrix", 126, sample ? 4 : 32, pass, first ? 8 : (sample ? 32 : 64), runs)
+        }
+        if args.Length < 2 || args[1] == "deep" {
+            Measure("deep", 505, 4, pass, first ? 16 : (sample ? 32 : 96), runs)
+        }
+        if args.Length < 2 || args[1] == "wide" {
+            Measure("wide", 1025, sample ? 4 : 8, pass, first ? 8 : (sample ? 32 : 48), runs)
+        }
     }
 }
 
@@ -84,7 +112,7 @@ func BuildTree(shape string, variant int32) Blob {
     let root = Container{Width: Percent(100), Height: Percent(100), Gap: 2}
     if shape == "wide" {
         for row in 0 ... 512 {
-            let label = row == 0 ? specimen: Text{
+            let label = row == 0 ? specimen : Text{
                 Content: "Visible list slot",
                 FontFamily: "LayoutBenchmark",
                 FontWeight: 400,
@@ -126,38 +154,48 @@ func BuildTree(shape string, variant int32) Blob {
     return root
 }
 
-func Measure(shape string, nodes int32, batchSize int32, pass LayoutPass, batches int32) {
+func Measure(shape string, nodes int32, batchSize int32, pass LayoutPass, batches int32, runs int32) {
+    let mount = pass == LayoutPass.MountFirst
+    let first = mount || pass == LayoutPass.First
     let blobs = [batchSize]Blob{}
     let subjects = [batchSize]LayoutSubject{}
-    let micros = [10]float64{}
-    let allocations = [10]float64{}
+    let micros = [runs]float64{}
+    let allocations = [runs]float64{}
     for index in 0 ... batchSize {
         blobs[index] = BuildTree(shape, index)
     }
-    for run in 0 ... 11 {
+    for run in 0 ... runs + 1 {
         var elapsed int64
         var allocated int64
         for batch in 0 ... batches {
-            let width = pass == LayoutPass.Resize && batch % 2 == 0 ? 590.0F: 640.0F
+            let width = pass == LayoutPass.Resize && batch % 2 == 0 ? 590.0F : 640.0F
             for index in 0 ... batchSize {
-                if pass == LayoutPass.First || batch == 0 {
+                if !mount && (first || batch == 0) {
                     subjects[index] = LayoutSubject(blobs[index])
-                    if pass != LayoutPass.First {
+                    if !first {
                         subjects[index].Engine.Calculate(subjects[index].Root, 640.0F, 480.0F)
                     }
                 }
                 if pass == LayoutPass.TextChange {
-                    subjects[index].ChangeText(batch % 2 == 0 ? "Changed layout specimen": "Flex layout")
+                    subjects[index].ChangeText(batch % 2 == 0 ? "Changed layout specimen" : "Flex layout")
                 }
             }
             let before = GC.GetAllocatedBytesForCurrentThread()
             let start = Stopwatch.GetTimestamp()
-            for subject in subjects {
-                subject.Engine.Calculate(subject.Root, width, 480.0F)
+            if mount {
+                for index in 0 ... batchSize {
+                    let subject = LayoutSubject(blobs[index])
+                    subjects[index] = subject
+                    subject.Engine.Calculate(subject.Root, width, 480.0F)
+                }
+            } else {
+                for subject in subjects {
+                    subject.Engine.Calculate(subject.Root, width, 480.0F)
+                }
             }
             elapsed += Stopwatch.GetTimestamp() - start
             allocated += GC.GetAllocatedBytesForCurrentThread() - before
-            if pass == LayoutPass.First || batch == batches - 1 {
+            if first || batch == batches - 1 {
                 for subject in subjects {
                     NodeLifecycle.DisposeTree(subject.Root)
                 }
@@ -171,7 +209,9 @@ func Measure(shape string, nodes int32, batchSize int32, pass LayoutPass, batche
     }
     Array.Sort(micros)
     Array.Sort(allocations)
+    let lower = (runs - 1) / 2
+    let upper = runs / 2
     Console.WriteLine(
-        "$shape\t$nodes\t$pass\t${batchSize * batches}\t${(micros[4] + micros[5]) / 2.0:F3}\t${(allocations[4] + allocations[5]) / 2.0:F1}"
+        "$shape\t$nodes\t$pass\t${batchSize * batches}\t${(micros[lower] + micros[upper]) / 2.0:F3}\t${(allocations[lower] + allocations[upper]) / 2.0:F1}"
     )
 }

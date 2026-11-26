@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import Facebook.Yoga
 
 /// Mounts the items placed by a VirtualSource. It scrolls content coordinates.
 /// Overriding the list role or clearing Accessibility forwards item position to content.
@@ -224,11 +223,9 @@ public class VirtualViewport {
     let child = bound().Children[index]
     var size = LayoutSize(float64(child.Rect.W), float64(child.Rect.H))
     var measured = false
-    if let yoga = child.Yoga {
-      size = LayoutSize(
-        float64(YGNodeLayoutAPI.YGNodeLayoutGetRawWidth(yoga)),
-        float64(YGNodeLayoutAPI.YGNodeLayoutGetRawHeight(yoga)))
-      measured = !YGNodeAPI.YGNodeIsDirty(yoga)
+    if child.LogicalLayout.Valid {
+      size = LayoutSize(float64(child.LogicalLayout.Raw.W), float64(child.LogicalLayout.Raw.H))
+      measured = child.FlexMeasures.HasCommitted
     }
     return VirtualChild{ Key: child.Key ?? "", Size: size, Measured: measured }
   }

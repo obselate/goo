@@ -61,9 +61,7 @@ internal class RowRecyclingFixtures {
         let body = cell.Handles[0].AttachedNode(), let wrapper = body.Parent,
         let viewport = cell.Viewport.AttachedNode(), let state = Virtualization.State(viewport),
         let semantic = AccessibilityNodeStates.Get(body) else { return false }
-      let bodyYoga = body.Yoga
       let label = body.Children[0]
-      let labelYoga = label.Yoga
       let stale = NodeMount(body)
       let identity = semantic.Id
       first.Local = 7
@@ -80,8 +78,8 @@ internal class RowRecyclingFixtures {
       guard let current = cell.Current, let currentInner = current.Inner,
         let rebound = cell.Handles[2].AttachedNode(),
         let reboundSemantic = AccessibilityNodeStates.Get(rebound) else { return false }
-      if rebound != body || rebound.Parent != wrapper || rebound.Yoga != bodyYoga
-        || rebound.Children[0] != label || label.Yoga != labelYoga
+      if rebound != body || rebound.Parent != wrapper || !rebound.LogicalLayout.Valid
+        || rebound.Children[0] != label || !label.LogicalLayout.Valid
         || stale.Captured != nil || rebound.MountGeneration != 2uL
         || current == first || currentInner == inner || current.Local != 0 || currentInner.Local != 0
         || rebound.Children[0].Content != "2:0:0" || reboundSemantic.Id == identity {

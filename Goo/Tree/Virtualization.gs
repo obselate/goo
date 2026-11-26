@@ -99,7 +99,7 @@ internal sealed class VirtualNodeState {
   private var pixelScale float32 = 1.0F
   private const MaximumRecycledRows int32 = 32
   private const MaximumRecycledBytes int32 = 1048576
-  private const NodeStorageChargeBytes int32 = 2048
+  private const NodeStorageChargeBytes int32 = 1440
   private let recycledRows List[VirtualRowStorage] = List[VirtualRowStorage]()
   private let retiringRows List[VirtualRowStorage] = List[VirtualRowStorage]()
   private var recycledNodes int32
@@ -160,13 +160,6 @@ internal sealed class VirtualNodeState {
       if children.Capacity > (MaximumRecycledBytes - bytes) / 8 { return false }
       bytes += children.Capacity == 0 ? 0 : 24 + children.Capacity * 8
     }
-    if let yoga = n.Yoga {
-      let yogaChildren = yoga.GetChildren()
-      if yogaChildren is List[Facebook.Yoga.Node] {
-        if yogaChildren.Capacity > (MaximumRecycledBytes - bytes) / 8 { return false }
-        bytes += yogaChildren.Capacity == 0 ? 0 : 24 + yogaChildren.Capacity * 8
-      }
-    }
     if bytes > MaximumRecycledBytes { return false }
     for i in 0 ... n.Children.Count {
       if !chargeStorage(n.Children[i], ref nodes, ref bytes) { return false }
@@ -211,7 +204,7 @@ internal sealed class VirtualNodeState {
         retiringRows.RemoveAt(index)
         retiringNodes -= row.Nodes
         retiringBytes -= row.Bytes
-        if row.Root.Yoga?.GetOwner() != nil { continue }
+        if row.Root.Parent?.Children.Contains(row.Root) == true { continue }
         NodeLifecycle.ResetForReuse(row.Root)
         recycledRows.Add(row)
         recycledNodes += row.Nodes

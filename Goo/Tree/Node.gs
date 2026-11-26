@@ -95,11 +95,6 @@ internal class Node {
     return true
   }
 
-  internal prop NeedsYogaBinding bool{
-    get -> (lifecycleState & uint16(4096)) != uint16(0)
-    set -> lifecycleState = value ? lifecycleState | uint16(4096) : lifecycleState & ~uint16(4096)
-  }
-
   internal func ResetForReuse() {
     if !Retired { throw InvalidOperationException("Node storage must be retired before reset") }
     editingState = nil
@@ -118,7 +113,6 @@ internal class Node {
     HasDirectImageSourceState = false
     Password = false
     PortalAnchorClipped = false
-    NeedsYogaBinding = true
     HasCustomLayout = false
     HitContained = false
     Key = nil
@@ -151,6 +145,7 @@ internal class Node {
     PaintBindings = nil
     PaintBindingResolver = nil
     TextLayout = nil
+    PriorTextLayout = nil
     TextLayoutCache = nil
     Selectable = false
     StyleQueuedPass = 0
@@ -180,11 +175,6 @@ internal class Node {
     HitTestSelf = true
     VulkanOwner = nil
     VulkanOwnerToken = nil
-    if let yoga = Yoga {
-      yoga.SetContext(nil)
-      yoga.SetDirtiedFunc(nil)
-      yoga.MarkDirtyAndPropagate()
-    }
     ApplyAllDefaults(this)
     BumpScenePaintVersion()
   }
@@ -281,8 +271,12 @@ internal class Node {
     get -> parent
     set {
       if parent == value { return }
-      parent?.MarkSceneDirty()
+      if let old = parent {
+        old.MarkSceneDirty()
+        if !Retired && old.RetainedSizedState == nil { FlexLayoutEngine.Invalidate(old) }
+      }
       parent = value
+      FlexLayoutEngine.Invalidate(this)
       MarkSceneDirty()
     }
   }
@@ -300,8 +294,6 @@ internal class Node {
       BumpScenePaintVersion()
     }
   }
-  internal prop Yoga Facebook.Yoga.Node? { get; set; }
-  internal prop YogaStyleMask StyleMask{ get; set; }
   internal var LogicalLayout LayoutResult
   internal var FlexMeasures FlexCache
   internal var FlexScratch FlexItem
@@ -446,6 +438,7 @@ internal class Node {
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
   internal var Selectable bool
+  internal var PriorTextLayout TextLayout?
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
   internal prop EntryShape EntryShapeState?{
     get -> editingState?.EntryShape

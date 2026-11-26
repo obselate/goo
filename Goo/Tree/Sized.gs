@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 
@@ -81,10 +80,6 @@ internal sealed class SizedNodeState : IDisposable {
     Verifier = nil
   }
 
-  shared {
-    internal func Measure(node Facebook.Yoga.Node, width float32, widthMode MeasureMode,
-      height float32, heightMode MeasureMode) YGSize -> YGSize{}
-  }
 }
 
 internal partial class Reconciler {
@@ -148,10 +143,7 @@ internal partial class Layout {
   private var sizedListDirty bool = true
 
   private func collectSized(node Node) {
-    if node.IsPortal {
-      guard let yoga = node.Yoga else { return }
-      if YGNodeAPI.YGNodeIsDirty(yoga) { return }
-    }
+    if node.IsPortal && !node.FlexMeasures.HasCommitted { return }
     if node.RetainedSizedState != nil { sizedNodes.Add(node) }
     for child in node.Children { collectSized(child) }
   }
@@ -179,7 +171,7 @@ internal partial class Layout {
 
   internal func NeedsSizedRefresh(root Node) bool {
     if !HasSized(root) { return false }
-    let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
+    let scale = Density
     for node in sizedNodes {
       guard let state = node.RetainedSizedState else { continue }
       if node.Retired { continue }
@@ -188,7 +180,7 @@ internal partial class Layout {
         return true
       }
       for child in node.Children {
-        if let yoga = child.Yoga && !child.IsPortal && YGNodeAPI.YGNodeIsDirty(yoga) { return true }
+        if !child.IsPortal && !child.FlexMeasures.HasCommitted && child.Display != Display.None { return true }
       }
     }
     return false
@@ -211,7 +203,7 @@ internal partial class Layout {
 
   private func refreshSizedCore(root Node, rec Reconciler) {
     if !HasSized(root) { return }
-    let scale = YGConfigAPI.YGConfigGetPointScaleFactor(config)
+    let scale = Density
     var index = 0
     while index < sizedNodes.Count {
       let node = sizedNodes[index]
@@ -230,7 +222,6 @@ internal partial class Layout {
         rec.BuildSized(node, LayoutSize(float64(width), float64(height)))
         rec.FlushStyles()
         for child in node.Children {
-          if !child.IsPortal { syncNode(child, true) }
           collectSized(child)
         }
         lengthRoot = nil
@@ -249,27 +240,27 @@ internal partial class Layout {
   }
 
   private func arrangeSized(node Node, hidden bool = false) {
-    guard let yoga = node.Yoga else { return }
+    if !node.LogicalLayout.Valid { return }
     let width = BoxGeometry.ContentWidth(node, true)
     let height = BoxGeometry.ContentHeight(node, true)
-    let x = node.Rect.X + CustomLayouts.Inset(yoga, YGEdge.Left)
-    let y = node.Rect.Y + CustomLayouts.Inset(yoga, YGEdge.Top)
+    let x = node.Rect.X + BoxGeometry.Inset(node, PhysicalEdge.Left)
+    let y = node.Rect.Y + BoxGeometry.Inset(node, PhysicalEdge.Top)
     let state = node.RetainedSizedState!!
     let resized = state.ContentWidth != width || state.ContentHeight != height
     for i in 0 ... node.Children.Count {
       let child = node.Children[i]
       if child.IsPortal { continue }
-      guard let childYoga = child.Yoga else { continue }
-      if resized || YGNodeAPI.YGNodeIsDirty(childYoga) {
-        YGNodeAPI.YGNodeCalculateLayout(childYoga, width, height, yogaDirection(child.Direction))
-        resolveFinalIntrinsic(child, width, height)
+      if !hidden && (resized || !child.FlexMeasures.HasCommitted) {
+        let request = Engine.RootRequest(width, height, Density, child.Direction)
+        Engine.ArrangeSubtree(child, request)
+        resolveFinalIntrinsic(child, request)
       }
       readRect(child, x, y, hidden: hidden)
     }
     state.ContentWidth = width
     state.ContentHeight = height
     if node.OverflowX == Overflow.Scroll || node.OverflowY == Overflow.Scroll {
-      measureScrollExtent(node, yoga)
+      measureScrollExtent(node)
     }
   }
 }

@@ -430,7 +430,9 @@ internal class AccessibilityFixtures {
     primitiveWindow.AccessibilityAdapter = primitives
     primitiveWindow.UpdateTree()
     guard let primitiveRoot = primitives.Tree?.Root else { return false }
-    return primitiveRoot.Id.Value == 0 && hasAction(primitiveRoot.Children[0], AccessibilityAction.Activate)
+    let image = primitiveWindow.Tree!!.Children[1].Rect
+    return image.W == 100.0F && image.H == 21.0F && primitiveRoot.Id.Value == 0
+      && hasAction(primitiveRoot.Children[0], AccessibilityAction.Activate)
       && primitiveRoot.Children[1].Name == ""
   }
 
