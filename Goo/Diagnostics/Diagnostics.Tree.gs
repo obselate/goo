@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 import System.Globalization
@@ -215,10 +214,10 @@ internal class DiagnosticTreeState {
       X: float64(border.X), Y: float64(border.Y), Width: float64(border.W), Height: float64(border.H),
     }
     result.Bounds = result.BorderBox
-    let borderLeft = resolvedBorder(n, YGEdge.Left)
-    let borderTop = resolvedBorder(n, YGEdge.Top)
-    let borderRight = resolvedBorder(n, YGEdge.Right)
-    let borderBottom = resolvedBorder(n, YGEdge.Bottom)
+    let borderLeft = resolvedBorder(n, PhysicalEdge.Left)
+    let borderTop = resolvedBorder(n, PhysicalEdge.Top)
+    let borderRight = resolvedBorder(n, PhysicalEdge.Right)
+    let borderBottom = resolvedBorder(n, PhysicalEdge.Bottom)
     var paddingWidth = n.Rect.W - borderLeft - borderRight
     var paddingHeight = n.Rect.H - borderTop - borderBottom
     if paddingWidth < 0.0F { paddingWidth = 0.0F }
@@ -240,10 +239,10 @@ internal class DiagnosticTreeState {
       X: float64(content.X), Y: float64(content.Y),
       Width: float64(content.W), Height: float64(content.H),
     }
-    let marginLeft = resolvedMargin(n, YGEdge.Left)
-    let marginTop = resolvedMargin(n, YGEdge.Top)
-    let marginRight = resolvedMargin(n, YGEdge.Right)
-    let marginBottom = resolvedMargin(n, YGEdge.Bottom)
+    let marginLeft = resolvedMargin(n, PhysicalEdge.Left)
+    let marginTop = resolvedMargin(n, PhysicalEdge.Top)
+    let marginRight = resolvedMargin(n, PhysicalEdge.Right)
+    let marginBottom = resolvedMargin(n, PhysicalEdge.Bottom)
     let margin = TransformGeometry.BoundsToWindow(n,
       n.Rect.X - marginLeft, n.Rect.Y - marginTop,
       n.Rect.W + marginLeft + marginRight, n.Rect.H + marginTop + marginBottom)
@@ -526,15 +525,9 @@ internal class DiagnosticTreeState {
   +value.B.ToString(CultureInfo.InvariantCulture) + ","
   +value.A.ToString(CultureInfo.InvariantCulture)
 
-  private func resolvedBorder(n Node, edge YGEdge) float32 {
-    guard let yoga = n.Yoga else { return 0.0F }
-    return finiteEdge(YGNodeLayoutAPI.YGNodeLayoutGetBorder(yoga, edge))
-  }
+  private func resolvedBorder(n Node, edge PhysicalEdge) float32 -> n.LogicalLayout.Valid ? finiteEdge(n.LogicalLayout.Border.Get(edge)) : 0.0F
 
-  private func resolvedMargin(n Node, edge YGEdge) float32 {
-    guard let yoga = n.Yoga else { return 0.0F }
-    return finiteEdge(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, edge))
-  }
+  private func resolvedMargin(n Node, edge PhysicalEdge) float32 -> n.LogicalLayout.Valid ? finiteEdge(n.LogicalLayout.Margin.Get(edge)) : 0.0F
 
   private func finiteEdge(value float32) float32 -> if Single.IsNaN(value) || Single.IsInfinity(value) { 0.0F } else { value }
 

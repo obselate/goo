@@ -263,11 +263,12 @@ internal unsafe partial class VulkanWindowTarget {
       }
       textRedrawPending = textScene?.RedrawRequired == true
       imageRedrawPending = imageScene?.RedrawRequired == true
-      var deferInitialPresentation bool
-      if firstPresentationPending && imageScene?.PendingImages == true {
-        if initialImageWaitStarted == 0 { initialImageWaitStarted = Stopwatch.GetTimestamp() }
-        deferInitialPresentation = Stopwatch.GetElapsedTime(initialImageWaitStarted).TotalMilliseconds
-          < float64(InitialImageWaitMilliseconds)
+      let stillImage = (host as SdlHost?)?.UsesStillImage == true
+      let waitingForImage = (firstPresentationPending || stillImage) && imageScene?.PendingImages == true
+      if waitingForImage && initialImageWaitStarted == 0 {
+        initialImageWaitStarted = Stopwatch.GetTimestamp()
+      } else if stillImage && !waitingForImage {
+        initialImageWaitStarted = 0
       }
       let uploadStart = DiagnosticTimestamp()
       var uploadBytes uint64 = 0uL
@@ -326,7 +327,9 @@ internal unsafe partial class VulkanWindowTarget {
         EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Upload)
       }
       RecordDiagnosticUpload(uploadStart, uploadBytes)
-      if deferInitialPresentation {
+      if waitingForImage && (stillImage && uploadBytes != 0uL
+        || Stopwatch.GetElapsedTime(initialImageWaitStarted).TotalMilliseconds < float64(InitialImageWaitMilliseconds)) {
+        if stillImage && uploadBytes != 0uL { initialImageWaitStarted = Stopwatch.GetTimestamp() }
         initialImageUploadFrame = uploadBytes != 0uL
         frameRendered = initialImageUploadFrame
         frameRenderDeferred = true

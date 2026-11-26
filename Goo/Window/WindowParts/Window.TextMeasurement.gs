@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 
 /// Measures text without mounting nodes.
 public partial class Window {
@@ -48,6 +47,6 @@ public partial class Window {
       int32(weight.A), FontStyle(int32(fontStyle.A)) == FontStyle.Italic,
       Length{ Unit: LengthUnit(int32(spacing.B)), Value: spacing.A }.Px, int32(direction.A),
       entryText(language) ?? "")
-    return float64(PixelGrid.RoundValueToPixelGrid(width, RenderScale.X, true, false))
+    return float64(float32(FlexLayoutEngine.PixelRound(width, RenderScale.X, ceil: true)))
   }
 }

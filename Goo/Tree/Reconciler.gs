@@ -551,7 +551,7 @@ internal partial class Reconciler {
         n.Caret = 0
       }
       n.Content = t.Content
-      TextLayouts.Invalidate(n)
+      TextLayouts.Invalidate(n, retainContentCache: !rangeChange.Changed)
       MarkEffects(ReconcileEffects.Content)
       MarkEffects(ReconcileEffects.Layout)
       MarkEffects(ReconcileEffects.Paint)
@@ -1146,7 +1146,7 @@ internal partial class Reconciler {
     var hitGeometryChanged = false
     if !n.ShapePath.Equals(s.Path) {
       n.ShapePath = s.Path
-      syncYogaField(n, StyleField.AspectRatio)
+      FlexLayoutEngine.Invalidate(n)
       contentChanged = true
       layoutChanged = true
       paintChanged = true
@@ -1445,6 +1445,7 @@ internal partial class Reconciler {
       markStructure()
     }
     if childrenChanged {
+      if n.RetainedSizedState == nil { FlexLayoutEngine.Invalidate(n) }
       Stacking.InvalidateStructure(n)
     }
     if let error = disposeTrees(retire) {
@@ -1633,6 +1634,7 @@ internal partial class Reconciler {
       }
       committed = true
       if childrenChanged {
+        if n.RetainedSizedState == nil { FlexLayoutEngine.Invalidate(n) }
         Stacking.InvalidateStructure(n)
       }
 

@@ -2008,7 +2008,7 @@ class MotionChapterCell : Cell[MotionChapter] {
                     Color: GalleryTheme.InkMuted
                 },
                 Text{
-                    Content: "Layout Engine: Yoga Flexbox C# Binding (Auto-Reflow)",
+                    Content: "Layout Engine: Goo Internal Flex Layout (Auto-Reflow)",
                     FontSize: 10,
                     Color: GalleryTheme.InkMuted
                 },

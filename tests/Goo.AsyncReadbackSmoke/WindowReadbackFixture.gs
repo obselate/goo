@@ -413,6 +413,7 @@ internal partial class VulkanWindowTarget {
   }
   internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
   imageResources?.Stats ?? VulkanImageResourceStats{}
+  internal func SceneImageCountForTest() int32 -> sceneCompiler.Frame.CachedImageCount
   internal func PathResourceStatsForTest() VulkanPathResourcesStats ->
   pathResources?.Stats ?? VulkanPathResourcesStats{}
 
@@ -1069,6 +1070,8 @@ internal unsafe partial class SdlRuntime {
 }
 
 internal unsafe partial class SdlHost {
+  internal prop LayerPresentedForTest bool { get -> layerWindow?.Presented == true }
+
   internal func SetMetricsForTest(logicalWidth int32, logicalHeight int32,
     framebufferWidth int32, framebufferHeight int32) {
       LogicalWidth = logicalWidth

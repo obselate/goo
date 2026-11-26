@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 
 /// Selects the client axes measured from the root before the first map.
@@ -104,7 +103,7 @@ public partial class Window {
   internal func MeasureContentSize(maximum LayoutSize, widthAxis bool = true, heightAxis bool = true,
     percentageSize LayoutSize? = nil) LayoutSize {
     UpdateTree()
-    guard let tree = node, let yoga = tree.Yoga else { return Size }
+    guard let tree = node else { return Size }
     var dependsOnWidth = tree.Width.Unit == LengthUnit.Percent
     var dependsOnHeight = tree.Height.Unit == LengthUnit.Percent
     if let declarations = LengthDeclarations.Get(tree) {
@@ -118,54 +117,31 @@ public partial class Window {
     if !measureWidth && !measureHeight { return Size }
     let availableWidth = maximum.Width
     let availableHeight = maximum.Height
-    let marginWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
-      + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
-    let marginHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
-      + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
-    let boundedWidth = Math.Max(0.0, availableWidth - marginWidth)
-    let boundedHeight = Math.Max(0.0, availableHeight - marginHeight)
-    let maxContentWidth = if tree.MaxWidth.Unit == LengthUnit.Px { Math.Min(boundedWidth, float64(tree.MaxWidth.Value)) } else { boundedWidth }
-    let maxContentHeight = if tree.MaxHeight.Unit == LengthUnit.Px { Math.Min(boundedHeight, float64(tree.MaxHeight.Value)) } else { boundedHeight }
-    try {
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, float32(maxContentWidth))
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, float32(maxContentHeight))
-      if percentageSize != nil {
-        if tree.Width.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yoga, tree.Width.Value) }
-        if tree.Height.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yoga, tree.Height.Value) }
-      }
-      YGNodeAPI.YGNodeCalculateLayout(yoga,
-        if measureWidth && (percentageSize == nil || tree.Width.Unit != LengthUnit.Percent) { Single.NaN }
-          else { float32(percentageSize?.Width ?? float64(LayoutWidth)) },
-        if measureHeight && (percentageSize == nil || tree.Height.Unit != LengthUnit.Percent) { Single.NaN }
-          else { float32(percentageSize?.Height ?? float64(LayoutHeight)) }, yogaDirection(tree.Direction))
-      let measuredWidth = float64(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
-        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left)
-        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right))
-      let measuredHeight = float64(YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
-        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top)
-        + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom))
-      let contentWidth = if measureWidth { Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) } else { Size.Width }
-      let contentHeight = if measureHeight { Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) } else { Size.Height }
-      if percentageSize != nil {
-        layout.PopupMeasuredWidth = tree.Width.Unit == LengthUnit.Percent ? float32(contentWidth - marginWidth) : nil
-        layout.PopupMeasuredHeight = tree.Height.Unit == LengthUnit.Percent ? float32(contentHeight - marginHeight) : nil
-      }
-      return LayoutSize(contentWidth, contentHeight)
-    } finally {
-      markYogaStyle(tree, StyleField.MaxWidth)
-      markYogaStyle(tree, StyleField.MaxHeight)
-      applyMinMax(yoga, tree)
+    let basis = percentageSize ?? LayoutSize(float64(LayoutWidth), float64(LayoutHeight))
+    let engine = layout.Engine
+    var request = engine.RootRequest(float32(basis.Width), float32(basis.Height), layout.Density, tree.Direction)
+    let margin = engine.ResolveBox(tree, in request).Margin
+    request.Override = FlexOverride.Capped
+    request.Width = measureWidth ? FlexConstraint.Cap(float32(availableWidth) - margin.Sum(true))
+      : FlexConstraint.Exact(float32(basis.Width) - margin.Sum(true))
+    request.Height = measureHeight ? FlexConstraint.Cap(float32(availableHeight) - margin.Sum(false))
+      : FlexConstraint.Exact(float32(basis.Height) - margin.Sum(false))
+    let measured = engine.MeasureSubtree(tree, request)
+    let measuredWidth = FlexLayoutEngine.PixelRound(measured.Width, layout.Density) + margin.Sum(true)
+    let measuredHeight = FlexLayoutEngine.PixelRound(measured.Height, layout.Density) + margin.Sum(false)
+    let contentWidth = measureWidth ? Math.Max(minWidth, Math.Min(measuredWidth, availableWidth)) : Size.Width
+    let contentHeight = measureHeight ? Math.Max(minHeight, Math.Min(measuredHeight, availableHeight)) : Size.Height
+    if percentageSize != nil {
+      layout.PopupMeasuredWidth = tree.Width.Unit == LengthUnit.Percent ? float32(contentWidth - margin.Sum(true)) : nil
+      layout.PopupMeasuredHeight = tree.Height.Unit == LengthUnit.Percent ? float32(contentHeight - margin.Sum(false)) : nil
       layout.laidOut = false
     }
+    return LayoutSize(contentWidth, contentHeight)
   }
 
   internal func ClearPopupMeasurement() {
     layout.PopupMeasuredWidth = nil
     layout.PopupMeasuredHeight = nil
-    if let tree = node, let yoga = tree.Yoga {
-      if tree.Width.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yoga, tree.Width.Value) }
-      if tree.Height.Unit == LengthUnit.Percent { YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yoga, tree.Height.Value) }
-      layout.laidOut = false
-    }
+    layout.laidOut = false
   }
 }

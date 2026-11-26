@@ -572,7 +572,7 @@ public partial class Window {
             }
           }
         }
-        let frameNeeded = needsRenderFrame(resolver.VisualDirty)
+        let frameNeeded = !stillImageFallbackPreparing() && needsRenderFrame(resolver.VisualDirty)
         if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
           FlushDeferredVirtualization()
           if !IsOpen || pendingLayerGeometry != nil || (native as SdlHost?)?.LayerResizePending == true {
@@ -630,10 +630,11 @@ public partial class Window {
   // latch Pump into an unpaced, unrendered poll spin instead of a bounded
   // sleep. idleWaitMs() below is where their timing actually gets honored.
   private func hasDemand() bool -> motionPump.Active || resolver.Animating.Count > 0
-    || renderDirty && !memoryPressureWaiting || pendingRebuild != 0 || resolver.Scrollbars.HasPending
+    || !memoryPressureWaiting && (renderDirty || windowTarget?.NeedsRender == true) && !stillImageFallbackPreparing()
+    || pendingRebuild != 0 || resolver.Scrollbars.HasPending
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
-    || windowTarget?.NeedsRender == true && !memoryPressureWaiting || windowTarget?.QueueWorkPending == true
+    || windowTarget?.QueueWorkPending == true
     || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true || nativeHidePending
@@ -645,12 +646,16 @@ public partial class Window {
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
+  private func stillImageFallbackPreparing() bool ->
+    layerImageFallback?.Preparing(layerImage, node) == true
+
   internal func NotifyStillImageReady() {
     Post(() -> requestRender())
     SdlRuntime.Wake()
   }
 
   internal func SchedulerHasImmediateService() bool -> callbackClosing || host?.HasPendingEvents == true || hasPostedActions()
+    || layerImageFallback != nil && pendingImageCompletion != 0
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Application.HasPendingActivation

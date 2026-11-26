@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 
 internal partial class SceneFrame {
   private const DebugOverlayOwnerId uint64 = 18446744073709551614uL
@@ -98,14 +97,14 @@ internal partial class SceneFrame {
   }
 
   private func DebugBox(node Node, border bool, content bool) ConservativeBounds {
-    let leftBorder = DebugBorder(node, YGEdge.Left)
-    let topBorder = DebugBorder(node, YGEdge.Top)
-    let rightBorder = DebugBorder(node, YGEdge.Right)
-    let bottomBorder = DebugBorder(node, YGEdge.Bottom)
-    let leftPadding = DebugPadding(node, YGEdge.Left)
-    let topPadding = DebugPadding(node, YGEdge.Top)
-    let rightPadding = DebugPadding(node, YGEdge.Right)
-    let bottomPadding = DebugPadding(node, YGEdge.Bottom)
+    let leftBorder = DebugBorder(node, PhysicalEdge.Left)
+    let topBorder = DebugBorder(node, PhysicalEdge.Top)
+    let rightBorder = DebugBorder(node, PhysicalEdge.Right)
+    let bottomBorder = DebugBorder(node, PhysicalEdge.Bottom)
+    let leftPadding = DebugPadding(node, PhysicalEdge.Left)
+    let topPadding = DebugPadding(node, PhysicalEdge.Top)
+    let rightPadding = DebugPadding(node, PhysicalEdge.Right)
+    let bottomPadding = DebugPadding(node, PhysicalEdge.Bottom)
     var x = node.Rect.X
     var y = node.Rect.Y
     var width = node.Rect.W
@@ -134,10 +133,10 @@ internal partial class SceneFrame {
   }
 
   private func DebugMarginBox(node Node) ConservativeBounds {
-    let left = DebugMargin(node, YGEdge.Left)
-    let top = DebugMargin(node, YGEdge.Top)
-    let right = DebugMargin(node, YGEdge.Right)
-    let bottom = DebugMargin(node, YGEdge.Bottom)
+    let left = DebugMargin(node, PhysicalEdge.Left)
+    let top = DebugMargin(node, PhysicalEdge.Top)
+    let right = DebugMargin(node, PhysicalEdge.Right)
+    let bottom = DebugMargin(node, PhysicalEdge.Bottom)
     let mapped = TransformGeometry.BoundsToWindow(node,
       node.Rect.X - left, node.Rect.Y - top,
       node.Rect.W + left + right, node.Rect.H + top + bottom)
@@ -149,20 +148,11 @@ internal partial class SceneFrame {
     }
   }
 
-  private func DebugBorder(node Node, edge YGEdge) float32 {
-    guard let yoga = node.Yoga else { return 0.0F }
-    return DebugEdge(YGNodeLayoutAPI.YGNodeLayoutGetBorder(yoga, edge))
-  }
+  private func DebugBorder(node Node, edge PhysicalEdge) float32 -> node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Border.Get(edge)) : 0.0F
 
-  private func DebugPadding(node Node, edge YGEdge) float32 {
-    guard let yoga = node.Yoga else { return 0.0F }
-    return DebugEdge(YGNodeLayoutAPI.YGNodeLayoutGetPadding(yoga, edge))
-  }
+  private func DebugPadding(node Node, edge PhysicalEdge) float32 -> node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Padding.Get(edge)) : 0.0F
 
-  private func DebugMargin(node Node, edge YGEdge) float32 {
-    guard let yoga = node.Yoga else { return 0.0F }
-    return DebugEdge(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, edge))
-  }
+  private func DebugMargin(node Node, edge PhysicalEdge) float32 -> node.LogicalLayout.Valid ? DebugEdge(node.LogicalLayout.Margin.Get(edge)) : 0.0F
 
   private func DebugEdge(value float32) float32 -> if !finiteVulkanSceneValue(value) { 0.0F } else { value }
 }

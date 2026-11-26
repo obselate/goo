@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 
 /// Specifies the visual side of a text position at a directional boundary.
 public enum TextAffinity { Upstream; Downstream }
@@ -35,26 +34,6 @@ internal class EntryShapeState {
     && FontWeight == n.FontWeight && Italic == (n.FontStyle == FontStyle.Italic)
     && Spacing == TextLayouts.letterSpacing(n) && Direction == int32(n.Direction)
     && Password == n.Password
-}
-
-internal class EntryLayouts {
-  shared {
-    internal func Measure(yoga Facebook.Yoga.Node, width float32, widthMode MeasureMode,
-      height float32, heightMode MeasureMode) YGSize{
-        let n = nodeFromYoga(yoga)
-        var measuredWidth = 0.0F
-        var measuredHeight = TextLayouts.resolvedLineHeight(n)
-        if widthMode == MeasureMode.Exactly {
-          measuredWidth = width
-        }
-        if heightMode == MeasureMode.Exactly {
-          measuredHeight = height
-        } else if heightMode == MeasureMode.AtMost && measuredHeight > height {
-          measuredHeight = height
-        }
-        return YGSize{ Width: measuredWidth, Height: measuredHeight }
-      }
-  }
 }
 
 internal func protectedTextMask(value string) string -> String('•', UnicodeGraphemes.Starts(value).Length)

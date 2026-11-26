@@ -3,20 +3,11 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
-import Facebook.Yoga
-
-internal data struct CustomMeasure {
-  internal var Width float64
-  internal var Height float64
-  internal var Result LayoutSize
-  internal var Version int64
-}
 
 internal class CustomLayoutChild {
   internal var Node Node
   internal var Bounds ElementRect
   internal var Arranged bool
-  internal var Cache List[CustomMeasure]?
 }
 
 internal class CustomLayoutState {
@@ -45,7 +36,7 @@ internal class CustomLayoutState {
 
   internal func Invalidate() {
     version++
-    if let yoga = Node.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
+    FlexLayoutEngine.Invalidate(Node)
   }
 
   internal func SyncChildren() {
@@ -75,12 +66,10 @@ internal class CustomLayoutState {
       Children = next
       Invalidate()
     }
-    for child in Children {
-      if let yoga = child.Node.Yoga {
-        YGNodeAPI.YGNodeSetContext(yoga, child.Node)
-        YGNodeAPI.YGNodeSetDirtiedFunc(yoga, CustomLayouts.ChildDirty)
-      }
-    }
+  }
+
+  internal func ChildInvalidated() {
+    if !Active { version++ }
   }
 
   internal func ChildCount() int32 {
@@ -114,6 +103,7 @@ internal class CustomLayoutState {
   }
 
   internal func Measure(available LayoutSize) LayoutSize {
+    SyncChildren()
     Begin(false)
     try {
       availableSize = available
@@ -141,31 +131,19 @@ internal class CustomLayoutState {
     CustomLayouts.ValidateSize(available, true)
     calls++
     if calls > Math.Min(65536, Math.Max(32, Children.Length * 16)) { throw InvalidOperationException("${Algorithm.GetType().Name}.MeasureChild exceeded the measurement budget for child $index after $calls calls: bound measurement loops and reuse measured sizes.") }
-    if let cache = child.Cache {
-      for entry in cache {
-        if entry.Version == version && entry.Width == available.Width && entry.Height == available.Height { return entry.Result }
-      }
-    }
     let n = child.Node
-    guard let yoga = n.Yoga else { throw InvalidOperationException("Custom layout child has no retained layout") }
-    arrangedVersion = 0L
-    CustomLayouts.RestoreSize(n)
+    let engine = FlexLayoutEngine.Shared
     let width = CustomLayouts.Constraint(available.Width)
     let height = CustomLayouts.Constraint(available.Height)
-    YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, CustomLayouts.Maximum(n.MaxWidth, width, width, n, StyleField.MaxWidth))
-    YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, CustomLayouts.Maximum(n.MaxHeight, height, height, n, StyleField.MaxHeight))
-    YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(Node.Direction))
-    let desiredWidth = yoga.Layout.MeasuredDimension(Dimension.Width) + CustomLayouts.MarginX(yoga)
-    let desiredHeight = yoga.Layout.MeasuredDimension(Dimension.Height) + CustomLayouts.MarginY(yoga)
-    let result = LayoutSize(
-      Math.Max(0.0, Math.Min(float64(desiredWidth), available.Width)),
-      Math.Max(0.0, Math.Min(float64(desiredHeight), available.Height)))
-    CustomLayouts.ValidateSize(result, false)
-    child.Cache ??= List[CustomMeasure](4)
-    let cache = child.Cache!!
-    if cache.Count == 4 { cache.RemoveAt(0) }
-    cache.Add(CustomMeasure{Width: available.Width, Height: available.Height, Result: result, Version: version})
-    return result
+    var request = engine.RootRequest(width, height, CustomLayouts.Density, Node.Direction)
+    request.Override = FlexOverride.Capped
+    let margin = engine.ResolveBox(n, in request).Margin
+    request.Width = FlexConstraint.Cap(width - margin.Sum(true))
+    request.Height = FlexConstraint.Cap(height - margin.Sum(false))
+    let measured = engine.MeasureSubtree(n, request)
+    return LayoutSize(
+      Math.Max(0.0, Math.Min(float64(measured.Width + margin.Sum(true)), available.Width)),
+      Math.Max(0.0, Math.Min(float64(measured.Height + margin.Sum(false)), available.Height)))
   }
 
   internal func ArrangeChild(index int32, bounds ElementRect) {
@@ -181,14 +159,10 @@ internal class CustomLayoutState {
   }
 
   internal func Arrange() {
-    guard let yoga = Node.Yoga else { return }
-    let left = CustomLayouts.Inset(yoga, YGEdge.Left)
-    let top = CustomLayouts.Inset(yoga, YGEdge.Top)
-    let right = CustomLayouts.Inset(yoga, YGEdge.Right)
-    let bottom = CustomLayouts.Inset(yoga, YGEdge.Bottom)
-    let width = Math.Max(0.0F, YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga) - left - right)
-    let height = Math.Max(0.0F, YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) - top - bottom)
-    let density = yoga.Config.GetPointScaleFactor()
+    SyncChildren()
+    let width = BoxGeometry.ContentWidth(Node, true)
+    let height = BoxGeometry.ContentHeight(Node, true)
+    let density = Node.LogicalLayout.Density
     if arrangedVersion == version && arrangedWidth == float64(width)
       && arrangedHeight == float64(height) && arrangedDensity == density { return }
     Begin(true)
@@ -201,13 +175,10 @@ internal class CustomLayoutState {
       ContentHeight = 0.0F
       for child in Children {
         if !child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.Arrange omitted a child with key '${child.Node.Key ?? "<unkeyed>"}': call ArrangeChild once for every child.") }
-        CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction)
-        if let childYoga = child.Node.Yoga {
-          let x = float32(child.Bounds.X) + YGNodeLayoutAPI.YGNodeLayoutGetLeft(childYoga)
-          let y = float32(child.Bounds.Y) + YGNodeLayoutAPI.YGNodeLayoutGetTop(childYoga)
-          ContentWidth = Math.Max(ContentWidth, x + YGNodeLayoutAPI.YGNodeLayoutGetWidth(childYoga))
-          ContentHeight = Math.Max(ContentHeight, y + YGNodeLayoutAPI.YGNodeLayoutGetHeight(childYoga))
-        }
+        CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction, density)
+        let rect = child.Node.LogicalLayout.Snapped
+        ContentWidth = Math.Max(ContentWidth, float32(child.Bounds.X) + rect.X + rect.W)
+        ContentHeight = Math.Max(ContentHeight, float32(child.Bounds.Y) + rect.Y + rect.H)
       }
       if !Single.IsFinite(ContentWidth) || !Single.IsFinite(ContentHeight) { throw InvalidOperationException("Custom layout content extent overflowed") }
       arrangedWidth = float64(width)
@@ -228,6 +199,8 @@ internal class CustomLayouts {
     internal var ViewportWidth float32
     @ThreadStatic
     internal var ViewportHeight float32
+    @ThreadStatic
+    internal var Density float32
 
     internal func Remove(node Node) {
       Configure(node, nil)
@@ -267,39 +240,17 @@ internal class CustomLayouts {
           nodes ??= ConditionalWeakTable[Node, CustomLayoutState]()
           nodes?.Add(node, CustomLayoutState(node, selected))
           node.HasCustomLayout = true
+          FlexLayoutEngine.Invalidate(node)
         }
         return true
       }
       guard let state = current else { return false }
       if state.Active { throw InvalidOperationException("${state.Algorithm.GetType().Name} changed its custom layout during a callback: defer the change until Measure or Arrange returns.") }
-      if let yoga = node.Yoga {
-        YGNodeAPI.YGNodeMarkDirty(yoga)
-        YGNodeAPI.YGNodeSetMeasureFunc(yoga, nil)
-      }
-      for child in state.Children {
-        if let yoga = child.Node.Yoga { YGNodeAPI.YGNodeSetDirtiedFunc(yoga, nil) }
-        RestoreSize(child.Node)
-      }
+      FlexLayoutEngine.Invalidate(node)
       nodes?.Remove(node)
       node.HasCustomLayout = false
       return true
     }
-
-    internal func ChildDirty(yoga Facebook.Yoga.Node) {
-      guard let child = YGNodeAPI.YGNodeGetContext(yoga) as Node, let parent = child.Parent, let state = State(parent) else { return }
-      if !state.Active { state.Invalidate() }
-    }
-
-    internal func Measure(yoga Facebook.Yoga.Node, width float32, widthMode MeasureMode,
-      height float32, heightMode MeasureMode) YGSize{
-        let node = nodeFromYoga(yoga)
-        guard let state = State(node) else { throw InvalidOperationException("Custom layout policy is missing") }
-        let available = LayoutSize(
-          if widthMode == MeasureMode.Undefined { Double.PositiveInfinity } else { float64(Math.Max(0.0F, width)) },
-          if heightMode == MeasureMode.Undefined { Double.PositiveInfinity } else { float64(Math.Max(0.0F, height)) })
-        let result = state.Measure(available)
-        return YGSize{Width: float32(result.Width), Height: float32(result.Height)}
-      }
 
     internal func ValidateSize(value LayoutSize, unbounded bool) {
       if !ValidDimension(value.Width, unbounded) || !ValidDimension(value.Height, unbounded) {
@@ -309,54 +260,16 @@ internal class CustomLayouts {
 
     private func ValidDimension(value float64, unbounded bool) bool -> value >= 0.0 && (value <= float64(Single.MaxValue) || (unbounded && Double.IsPositiveInfinity(value)))
     internal func Constraint(value float64) float32 -> if Double.IsPositiveInfinity(value) { Single.NaN } else { float32(value) }
-    internal func Inset(yoga Facebook.Yoga.Node, edge YGEdge) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetPadding(yoga, edge) + YGNodeLayoutAPI.YGNodeLayoutGetBorder(yoga, edge)
-    internal func MarginX(yoga Facebook.Yoga.Node) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Left) + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Right)
-    internal func MarginY(yoga Facebook.Yoga.Node) float32 -> YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Top) + YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, YGEdge.Bottom)
-    internal func Maximum(length NodeLength, available float32, reference float32, node Node, field StyleField) float32 {
-      let authored = if length.Unit == LengthUnit.Px { length.Value }
-        else if length.Unit == LengthUnit.Percent { length.Value * reference / 100.0F }
-        else if length.Unit == LengthUnit.Relative { LengthDeclarations.StoredPixels(node, field, reference) }
-        else { Single.NaN }
-      if Single.IsNaN(available) { return authored }
-      return if Single.IsNaN(authored) { available } else { Math.Min(authored, available) }
-    }
-
-    internal func RestoreSize(node Node) {
-      guard let yoga = node.Yoga else { return }
-      // Native overrides are private to a custom-layout root; reset all six dimensions from authored state.
-      YGNodeStyleAPI.YGNodeStyleSetWidthAuto(yoga)
-      YGNodeStyleAPI.YGNodeStyleSetHeightAuto(yoga)
-      YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, Single.NaN)
-      applySize(yoga, node)
-      applyMinMax(yoga, node)
-      LengthDeclarations.RestoreSizes(node)
-    }
-
-    internal func ArrangeRoot(node Node, bounds ElementRect, direction Direction) {
-      guard let yoga = node.Yoga else { return }
-      if node.Display == Display.None {
-        YGNodeAPI.YGNodeCalculateLayout(yoga, 0.0F, 0.0F, yogaDirection(direction))
-        return
-      }
-      // Resolve margins under the final available width before assigning the border box.
-      RestoreSize(node)
+    internal func ArrangeRoot(node Node, bounds ElementRect, direction Direction, density float32) {
+      let engine = FlexLayoutEngine.Shared
       let width = float32(bounds.Width)
       let height = float32(bounds.Height)
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, width)
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, height)
-      YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(direction))
-      let borderWidth = Math.Max(0.0F, width - MarginX(yoga))
-      let borderHeight = Math.Max(0.0F, height - MarginY(yoga))
-      YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, Single.NaN)
-      YGNodeStyleAPI.YGNodeStyleSetWidth(yoga, borderWidth)
-      YGNodeStyleAPI.YGNodeStyleSetHeight(yoga, borderHeight)
-      YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(direction))
+      var request = engine.RootRequest(width, height, density, direction)
+      let margin = engine.ResolveBox(node, in request).Margin
+      request.Override = FlexOverride.AssignedBox
+      request.Width = FlexConstraint.Exact(width - margin.Sum(true))
+      request.Height = FlexConstraint.Exact(height - margin.Sum(false))
+      engine.ArrangeSubtree(node, request)
     }
   }
 }

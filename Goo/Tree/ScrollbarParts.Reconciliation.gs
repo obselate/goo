@@ -73,7 +73,7 @@ internal partial class ScrollbarParts {
                     state.Parts.Add(root)
                 }
                 partLayout.MarkStructureDirty()
-                owner.Yoga?.MarkDirtyAndPropagate()
+                FlexLayoutEngine.Invalidate(owner)
                 reconciler.MarkEffects(
                     ReconcileEffects.Structure | ReconcileEffects.Layout
                     | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility
