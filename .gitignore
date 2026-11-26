@@ -158,6 +158,8 @@
 !/tools/Goo.ReleaseCheck/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
+!/tools/Goo.LayoutBenchmark/
+!/tools/Goo.LayoutBenchmark/**
 !/tools/Goo.Investigation/
 !/tools/Goo.Investigation/**
 !/tools/Goo.HostChecks/
@@ -185,12 +187,6 @@
 
 !/vendor/
 /vendor/*
-!/vendor/Yoga.Net/
-/vendor/Yoga.Net/*
-!/vendor/Yoga.Net/LICENSE
-!/vendor/Yoga.Net/UPSTREAM.md
-!/vendor/Yoga.Net/src/
-!/vendor/Yoga.Net/src/**
 
 !/README.md
 !/CONTRIBUTING.md

@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 import System.IO
@@ -120,37 +119,24 @@ internal class LayoutFixtures {
       received = size
       return Container{Width: 2000, Height: 2000}
     }))}
-    let passes = Dictionary[Facebook.Yoga.Node, int32]()
-    let subscriber Event.Subscriber = (node Facebook.Yoga.Node?, kind EventType, data Event.Data) -> {
-      if kind == EventType.LayoutPassStart && node != nil {
-        passes[node] = passes.GetValueOrDefault(node) + 1
-      }
-    }
-    Event.Subscribe(subscriber)
     try {
       window.UpdateTree()
       let root = window.Tree!!
-      let yoga = root.Yoga!!
-      let initial = passes.GetValueOrDefault(yoga)
+      let initial = window.NormalPassesForFixture()
       if builds != 1 || received != LayoutSize(200, 100) || root.Rect.W != 200 || root.Rect.H != 100
-        || initial != 1 || passes.Count != 2 { return false }
+        || initial != 1 || !root.Children[0].LogicalLayout.Valid { return false }
       let child = root.Children[0]
-      passes.Clear()
+      let generation = child.LogicalLayout.Generation
       window.UpdateTree()
-      if builds != 1 || passes.Count != 0 { return false }
+      if builds != 1 || window.NormalPassesForFixture() != initial || child.LogicalLayout.Generation != generation { return false }
       window.Size = LayoutSize(240, 120)
       window.UpdateTree()
-      let resized = passes.GetValueOrDefault(yoga)
+      let resized = window.NormalPassesForFixture()
       if builds != 2 || received != LayoutSize(240, 120) || root.Children[0] != child
-        || resized != 1 { return false }
-      passes.Clear()
+        || resized != initial + 1 { return false }
       window.UpdateTree()
-      Console.WriteLine("Sized layout passes: initial full=$initial, resize full=$resized, stable full=${passes.GetValueOrDefault(yoga)}, stable total=${passes.Count}")
-      return builds == 2 && passes.Count == 0
-    } finally {
-      Event.Unsubscribe(subscriber)
-      window.Close()
-    }
+      return builds == 2 && window.NormalPassesForFixture() == resized
+    } finally { window.Close() }
   }
 
   func SizedNestedAndMountedGeometryContract() bool {
@@ -207,13 +193,13 @@ internal class LayoutFixtures {
     var root = reconciler.Mount(Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis})
     let layout = Layout()
     layout.Calculate(root, 20.0F, 40.0F)
-    if YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Value != 0.0F { return false }
+    if root.Rect.W != 20.0F { return false }
     root = reconciler.Diff(root, Text{Content: "Unbreakable", TextTrimming: TextTrimming.Ellipsis, MinWidth: 50})
     layout.Calculate(root, 20.0F, 40.0F)
     if root.Rect.W != 50.0F { return false }
     root = reconciler.Diff(root, Text{Content: "Unbreakable"})
     layout.Calculate(root, 20.0F, 40.0F)
-    return YGNodeStyleAPI.YGNodeStyleGetMinWidth(root.Yoga!!).Unit == Unit.Undefined
+    return root.MinWidth.Unit == LengthUnit.Unset && root.Rect.W == 20.0F
   }
 
   func CustomLayoutRetainsMixedMaximumMeasurements() bool {
@@ -295,7 +281,7 @@ internal class LayoutFixtures {
     let child = parent.Children[0]
     if parent.Rect.W != 180.0F || parent.Rect.H != 60.0F || child.Rect.W != 110.0F
       || child.Rect.H != 40.0F || child.FontSize.Px != 30.0F
-      || YGNodeLayoutAPI.YGNodeLayoutGetPadding(child.Yoga, YGEdge.Left) != 15.0F {
+      || child.LogicalLayout.Padding.Left != 15.0F {
       throw InvalidOperationException("first mixed layout: ${parent.Rect.W}, ${parent.Rect.H}, ${child.Rect.W}, ${child.Rect.H}, ${child.FontSize.Px}")
     }
     layout.Calculate(root, 600.0F, 400.0F)
@@ -376,7 +362,7 @@ internal class LayoutFixtures {
     if child.Rect.Y != 166.0F { return false }
     layout.SetPixelDensity(2.25F)
     layout.Calculate(root, 100.0F, 200.0F)
-    let expected = PixelGrid.RoundValueToPixelGrid(166.0, 2.25, false, false)
+    let expected = 374.0F / 2.25F
     if child.Rect.Y != expected {
       throw InvalidOperationException("density=2.25, child=${child.Rect.Y}, expected=${expected}")
     }
@@ -520,7 +506,7 @@ internal class LayoutFixtures {
     return page.ContentH < 1010.0F
   }
 
-  func KeyedReorderRetainsYogaLayouts() bool {
+  func KeyedReorderRetainsLogicalLayouts() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     var root = reconciler.Mount(Container() {.Width: 90,.Height: 20,.FlexDirection: FlexDirection.Row,
         Container{ Key: "a", Width: 10, Height: 10 },
@@ -532,12 +518,6 @@ internal class LayoutFixtures {
     let a = root.Children[0]
     let b = root.Children[1]
     let c = root.Children[2]
-    guard let aYoga = a.Yoga else { return false }
-    guard let bYoga = b.Yoga else { return false }
-    guard let cYoga = c.Yoga else { return false }
-    let aLayout = aYoga.GetLayout()
-    let bLayout = bYoga.GetLayout()
-    let cLayout = cYoga.GetLayout()
 
     root = reconciler.Diff(root, Container() {.Width: 90,.Height: 20,.FlexDirection: FlexDirection.Row,
         Container{ Key: "c", Width: 30, Height: 10 },
@@ -552,11 +532,6 @@ internal class LayoutFixtures {
       || !Object.ReferenceEquals(root.Children[2], b) {
         throw InvalidOperationException("keyed node identity changed")
       }
-    if !Object.ReferenceEquals(aYoga.GetLayout(), aLayout)
-      || !Object.ReferenceEquals(bYoga.GetLayout(), bLayout)
-      || !Object.ReferenceEquals(cYoga.GetLayout(), cLayout) {
-        throw InvalidOperationException("Yoga layout storage changed")
-      }
     if c.Rect.X != 0.0F || a.Rect.X != 30.0F || b.Rect.X != 40.0F {
       throw InvalidOperationException(c.Rect.X.ToString() + "," + a.Rect.X.ToString()
         +"," + b.Rect.X.ToString())
@@ -569,23 +544,16 @@ internal class LayoutFixtures {
     })
     layout.MarkStructureDirty()
     layout.Calculate(root, 90.0F, 20.0F)
-    guard let rootYoga = root.Yoga else { return false }
-    guard let dYoga = root.Children[1].Yoga else { return false }
-    if bYoga.GetOwner() != nil || Object.ReferenceEquals(bYoga.GetLayout(), bLayout) {
-      throw InvalidOperationException("removed Yoga child retained state")
-    }
-    if !Object.ReferenceEquals(aYoga.GetLayout(), aLayout)
-      || !Object.ReferenceEquals(cYoga.GetLayout(), cLayout) {
-        throw InvalidOperationException("retained Yoga child lost state")
-      }
-    if dYoga.GetOwner() != rootYoga
+    if !b.Retired || root.Children.Contains(b) || !a.LogicalLayout.Valid || !c.LogicalLayout.Valid
+      || root.Children[0] != a || root.Children[2] != c
+      || root.Children[1].Parent != root || !root.Children[1].LogicalLayout.Valid
       || a.Rect.X != 0.0F || root.Children[1].Rect.X != 10.0F || c.Rect.X != 50.0F {
-        throw InvalidOperationException("mixed Yoga child sync failed")
-      }
+      throw InvalidOperationException("reordered logical layouts did not match retained children")
+    }
     return true
   }
 
-  func RetainedYogaReset(family int32) bool -> switch family {
+  func RetainedLayoutReset(family int32) bool -> switch family {
     case 0: resetSizeAndPadding()
     case 1: resetRootSize()
     case 2: resetEdgesAndGaps()
@@ -787,8 +755,7 @@ internal class LayoutFixtures {
       window.UpdateTree()
       let editor = window.Tree!!.Children[0]
       let sibling = window.Tree!!.Children[1]
-      let siblingYoga = sibling.Yoga!!
-      let settledY = YGNodeLayoutAPI.YGNodeLayoutGetTop(siblingYoga)
+      let settledY = sibling.LogicalLayout.Snapped.Y
       let roundingBias = settledY - BoxGeometry.LayoutHeight(editor)
       if editor.Rect.W != 300.0F || editor.Rect.H != oldHeight
         || sibling.Rect.Y != oldHeight + roundingBias || factories != 1 {
@@ -886,7 +853,8 @@ internal class LayoutFixtures {
         window.UpdateTree(0.001)
         if target.Rect.W != BoxGeometry.LayoutWidth(target) { return false }
       }
-      if let yoga = target.Yoga { YGNodeStyleAPI.YGNodeStyleSetMargin(yoga, YGEdge.Left, 11.0F) }
+      target.MarginLeft = 11.0F
+      FlexLayoutEngine.Invalidate(target)
       window.UpdateTree()
       return cell.Simulations.Count == 0 && target.Rect.X > 0.0F
         && target.Rect.W == BoxGeometry.LayoutWidth(target) && !window.PaintMotionPump.Active
@@ -1073,14 +1041,13 @@ internal class LayoutFixtures {
           layout.Calculate(root, 240.0F, 50.0F)
           let a = root.Children[0]
           let b = root.Children[1]
-          let yoga = root.Yoga!!
-          let generation = yoga.Layout.GenerationCount
+          let generation = root.LogicalLayout.Generation
           for frame in 0 ... 21 {
             let elapsed = float32(frame) * 0.05F
             let width = animated ? MathF.Min(100.0F, 50.0F + elapsed * 100.0F) : 100.0F
             let residual = !animated && transitioned ? -50.0F * MathF.Max(0.0F, 1.0F - elapsed) : 0.0F
             if MathF.Abs(a.Rect.W - width) > 0.001F || MathF.Abs(b.Rect.X - a.Rect.X - a.Rect.W - 10.0F - residual) > 0.001F
-              || yoga.Layout.GenerationCount != generation {
+              || root.LogicalLayout.Generation != generation {
               throw InvalidOperationException("Animated A=$animated, transitioned B=$transitioned frame $frame: A ${a.Rect}, B ${b.Rect}")
             }
             pump.Sweep(0.05)
@@ -1119,19 +1086,26 @@ internal class LayoutFixtures {
             let root = reconciler.Mount(scene(150.0, 100.0, transition))
             let reference = reconciler.Mount(scene(150.0, 100.0, nil))
             try {
+              if auto {
+                root.Children[0].MarginLeft = NodeLength{Unit: LengthUnit.Auto}
+                reference.Children[0].MarginLeft = NodeLength{Unit: LengthUnit.Auto}
+              }
               layout.Calculate(root, 500.0F, 300.0F)
               control.Calculate(reference, 500.0F, 300.0F)
-              if auto {
-                YGNodeStyleAPI.YGNodeStyleSetMarginAuto(root.Children[0].Yoga, YGEdge.Left)
-                YGNodeStyleAPI.YGNodeStyleSetMarginAuto(reference.Children[0].Yoga, YGEdge.Left)
-                layout.Calculate(root, 500.0F, 300.0F)
-              }
               reconciler.Diff(root, scene(270.0, 180.0, transition))
+              if auto {
+                root.Children[0].MarginLeft = NodeLength{Unit: LengthUnit.Auto}
+                FlexLayoutEngine.Invalidate(root.Children[0])
+              }
               layout.Calculate(root, 500.0F, 300.0F)
               for sample in 0 ... 5 {
                 let expectedW = float32(150 + sample * 30)
                 let expectedH = float32(100 + sample * 20)
                 reconciler.Diff(reference, scene(float64(expectedW), float64(expectedH), nil))
+                if auto {
+                  reference.Children[0].MarginLeft = NodeLength{Unit: LengthUnit.Auto}
+                  FlexLayoutEngine.Invalidate(reference.Children[0])
+                }
                 control.Calculate(reference, 500.0F, 300.0F)
                 if root.Rect.W != expectedW || root.Rect.H != expectedH { return false }
                 for index in 0 ... reference.Children.Count {
@@ -1633,7 +1607,7 @@ internal class LayoutFixtures {
     layout.RefreshRects(root)
     if scroll.ScrollY != 150.0F { return false }
     scroll.Display = Display.None
-    syncYogaField(scroll, StyleField.Display)
+    FlexLayoutEngine.Invalidate(scroll)
     layout.MarkStructureDirty()
     layout.Calculate(root, 100.0F, 100.0F)
     return scroll.ScrollY == 0.0F && scroll.ScrollTargetY == 0.0F
@@ -2090,10 +2064,9 @@ internal class LayoutFixtures {
 
     reconciler.Diff(node, second)
     layout.Calculate(node, 200.0F, 100.0F)
-    guard let yoga = child.Yoga else { return false }
     return child.Rect.W == 200.0F && child.Rect.H == 10.0F && leaf.Rect.X == 0.0F
-      && YGNodeStyleAPI.YGNodeStyleGetWidth(yoga).Unit == Unit.Auto
-      && YGNodeStyleAPI.YGNodeStyleGetHeight(yoga).Unit == Unit.Auto
+      && child.Width.Unit == LengthUnit.Unset
+      && child.Height.Unit == LengthUnit.Unset
   }
 
   private func resetRootSize() bool {
@@ -2160,11 +2133,10 @@ internal class LayoutFixtures {
 
     reconciler.Diff(node, second)
     layout.Calculate(node, 300.0F, 100.0F)
-    guard let basisYoga = node.Children[2].Yoga else { return false }
     return node.Children[0].Rect.W == 20.0F
       && node.Children[1].Rect.W == 100.0F
       && node.Children[2].Rect.W == 20.0F
-      && YGNodeStyleAPI.YGNodeStyleGetFlexBasis(basisYoga).Unit == Unit.Auto
+      && node.Children[2].FlexBasis.Unit == LengthUnit.Unset
   }
 
   private func resetPositionAndAspectRatio() bool {
@@ -2411,4 +2383,8 @@ internal class RelativeLateMountFixtureCell : Cell {
     }
     return result
   }
+}
+
+public partial class Window {
+  internal func NormalPassesForFixture() int32 -> layout.NormalPasses
 }

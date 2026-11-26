@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
@@ -34,11 +33,13 @@ internal partial class Layout {
   internal var HasWindowLayoutTransitions bool
   private var standalone bool
   private var standaloneTransitions bool
-  internal var config Facebook.Yoga.Config?
+  internal let Engine FlexLayoutEngine = FlexLayoutEngine.Shared
+  internal var Density float32 = 1.0F
   internal var lastWidth float32
   internal var lastHeight float32
   internal var lastRoot Node?
   internal var laidOut bool
+  internal var NormalPasses int32
   internal var PopupMeasuredWidth float32?
   internal var PopupMeasuredHeight float32?
   internal var structureDirty bool
@@ -53,9 +54,7 @@ internal partial class Layout {
   private var portalStructureDirty bool
   private let placedPortals HashSet[Node]
 
-  // No web defaults: native Yoga's Column direction matches Goo's default.
   internal init() {
-    config = YGConfigAPI.YGConfigNew()
     scrollNodes = List[Node]()
     placedPortals = HashSet[Node]()
     scrollListDirty = true
@@ -63,14 +62,12 @@ internal partial class Layout {
   }
 
   internal func SetPixelDensity(value float32) {
-    if YGConfigAPI.YGConfigGetPointScaleFactor(config) == value { return }
-    YGConfigAPI.YGConfigSetPointScaleFactor(config, value)
+    if Density == value { return }
+    Density = value
     laidOut = false
     portalLaidOut = false
   }
 
-  // Walk only when structure changed; targeted style pushes keep Yoga current,
-  // and Yoga's setters propagate dirt to the root for the clean early-out.
   internal func Calculate(root Node, width float32, height float32) {
     standalone = true
     CalculateCore(root, nil, width, height)
@@ -84,34 +81,25 @@ internal partial class Layout {
     if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback reentered window layout: use LayoutContext.MeasureChild and ArrangeChild instead of requesting window layout from Measure or Arrange.") }
     CustomLayouts.ViewportWidth = width
     CustomLayouts.ViewportHeight = height
-    if structureDirty || root != lastRoot || root.Yoga == nil {
-      syncNode(root, true)
+    CustomLayouts.Density = Density
+    if structureDirty {
+      FlexLayoutEngine.Invalidate(root)
       structureDirty = false
     }
-    if let overlays = overlayRoot {
-      overlays.Rect = Rect{W: width, H: height}
-      if portalStructureDirty || overlays != portalRoot {
-        for portal in overlays.Children { syncNode(portal, true) }
-        portalStructureDirty = false
-        portalRoot = overlays
-      }
-    }
-    guard let yg = root.Yoga else {
-      return
-    }
+    if let overlays = overlayRoot { overlays.Rect = Rect{W: width, H: height} }
     resolveLengths(root, width, height)
-    if root.Width.Unit == LengthUnit.Percent && PopupMeasuredWidth is {} measuredWidth {
-      YGNodeStyleAPI.YGNodeStyleSetWidth(yg, measuredWidth)
-    }
-    if root.Height.Unit == LengthUnit.Percent && PopupMeasuredHeight is {} measuredHeight {
-      YGNodeStyleAPI.YGNodeStyleSetHeight(yg, measuredHeight)
-    }
-    if !root.IsPortal && (!laidOut || root != lastRoot
-      || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
-      let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
-      ? Single.NaN : height
-      YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
-      resolveFinalIntrinsic(root, width, height)
+    if !root.IsPortal && NormalNeedsLayout(root, width, height) {
+      NormalPasses++
+      var request = Engine.RootRequest(width, height, Density, root.Direction)
+      if root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset { request.Height = FlexConstraint{} }
+      if root.Width.Unit == LengthUnit.Percent && PopupMeasuredWidth is {} measuredWidth {
+        request.Width = FlexConstraint.Exact(measuredWidth)
+      }
+      if root.Height.Unit == LengthUnit.Percent && PopupMeasuredHeight is {} measuredHeight {
+        request.Height = FlexConstraint.Exact(measuredHeight)
+      }
+      Engine.ArrangeSubtree(root, request)
+      resolveFinalIntrinsic(root, request)
       if overlayRoot == nil {
         standaloneTransitions = false
         TransitionPhase = LayoutTransitionPhase.StandaloneSizes
@@ -137,23 +125,13 @@ internal partial class Layout {
   }
 
   private func CalculatePortals(sourceRoot Node, overlayRoot Node, width float32, height float32) {
-    let resized = !portalLaidOut || width != portalLastWidth || height != portalLastHeight
     for portal in overlayRoot.Children {
-      guard let yoga = portal.Yoga else { continue }
-      if portal.PortalAnchor == nil {
-        restorePortalConstraints(yoga, portal)
-      } else {
-        let bounds = portal.PortalBounds?.CollisionBounds
-        applyPortalConstraints(yoga, portal,
-          float32(bounds?.Width ?? float64(width)),
-          float32(bounds?.Height ?? float64(height)))
-      }
-      if resized || YGNodeAPI.YGNodeIsDirty(yoga) {
-        YGNodeAPI.YGNodeCalculateLayout(yoga, width, height,
-          yogaDirection(portal.Direction))
-        resolveFinalIntrinsic(portal, width, height)
-      }
+      if portal.PortalAnchor != nil { continue }
+      let request = Engine.RootRequest(width, height, Density, portal.Direction)
+      Engine.ArrangeSubtree(portal, request)
+      resolveFinalIntrinsic(portal, request)
     }
+    portalStructureDirty = false
     placePortals(sourceRoot, overlayRoot, width, height)
     portalRoot = overlayRoot
     portalLastWidth = width
@@ -210,8 +188,7 @@ internal partial class Layout {
         return true
       }
     for portal in overlayRoot.Children {
-      guard let portalYoga = portal.Yoga else { return true }
-      if YGNodeAPI.YGNodeIsDirty(portalYoga) { return true }
+      if !portal.FlexMeasures.HasCommitted && !portal.PortalPlacementHidden && portal.Display != Display.None { return true }
       if portalPlacementChanged(root, portal) { return true }
     }
     return false
@@ -222,106 +199,7 @@ internal partial class Layout {
       || width != lastWidth || height != lastHeight {
         return true
       }
-    guard let yoga = root.Yoga else { return true }
-    return !root.IsPortal && YGNodeAPI.YGNodeIsDirty(yoga)
-  }
-
-  // Structure-only walk: attaches Yoga (with a one-time full style sync) for
-  // new nodes, refreshes image measures, and repairs changed child lists.
-  internal func syncNode(n Node, isRoot bool) {
-    var fresh = n.NeedsYogaBinding
-    if n.Yoga == nil {
-      n.Yoga = YGNodeAPI.YGNodeNewWithConfig(config)
-      fresh = true
-    }
-    guard let yg = n.Yoga else {
-      return
-    }
-    if fresh {
-      if n.Kind == NodeKind.Text {
-        YGNodeAPI.YGNodeSetContext(yg, n)
-        YGNodeAPI.YGNodeSetMeasureFunc(yg, TextLayouts.Measure)
-      } else if n.Kind == NodeKind.Entry {
-        YGNodeAPI.YGNodeSetContext(yg, n)
-        YGNodeAPI.YGNodeSetMeasureFunc(yg, EntryLayouts.Measure)
-      } else if n.Kind == NodeKind.Editor {
-        YGNodeAPI.YGNodeSetContext(yg, n)
-        YGNodeAPI.YGNodeSetMeasureFunc(yg, TextEditorLayouts.Measure)
-      } else if n.Kind == NodeKind.Image {
-        YGNodeAPI.YGNodeSetContext(yg, n)
-        YGNodeAPI.YGNodeSetMeasureFunc(yg, ImageLayouts.Measure)
-      }
-      applyAll(yg, n, isRoot)
-      n.NeedsYogaBinding = false
-    } else if n.Kind == NodeKind.Shape {
-      // Re-derive view-box aspect: ShapePath swaps land outside style writes.
-      applyFlexLayout(yg, n, isRoot)
-    }
-    if n.RetainedSizedState != nil {
-      YGNodeAPI.YGNodeSetMeasureFunc(yg, SizedNodeState.Measure)
-      for child in n.Children {
-        if !child.IsPortal { syncNode(child, true) }
-      }
-      return
-    }
-    if let custom = CustomLayouts.State(n) {
-      if YGNodeAPI.YGNodeGetChildCount(yg) != nuint(0) { YGNodeAPI.YGNodeSetChildrenRetaining(yg, []Facebook.Yoga.Node{}) }
-      YGNodeAPI.YGNodeSetContext(yg, n)
-      YGNodeAPI.YGNodeSetMeasureFunc(yg, CustomLayouts.Measure)
-      YGNodeAPI.YGNodeSetNodeType(yg, YGNodeType.Default)
-      for child in n.Children {
-        if !child.IsPortal { syncNode(child, true) }
-      }
-      custom.SyncChildren()
-      return
-    }
-    if n.Kind == NodeKind.Image {
-      for child in n.Children {
-        if !child.IsPortal { syncNode(child, true) }
-      }
-      return
-    }
-    // Measured editors cannot own Yoga children; slot roots are calculated in readRect.
-    if n.Kind == NodeKind.Editor {
-      for i in 0 ... n.Children.Count {
-        let child = n.Children[i]
-        if child.IsPortal { continue }
-        syncNode(child, true)
-        if let childYoga = child.Yoga {
-          YGNodeAPI.YGNodeSetContext(childYoga, child)
-          YGNodeAPI.YGNodeSetDirtiedFunc(childYoga, TextEditorLayouts.SlotChildDirty)
-          if YGNodeAPI.YGNodeIsDirty(childYoga) {
-            TextEditorLayouts.SlotChildDirty(childYoga)
-          }
-        }
-      }
-      return
-    }
-    for i in 0 ... n.Children.Count {
-      if !n.Children[i].IsPortal { syncNode(n.Children[i], false) }
-    }
-    // Rebuilding the Yoga child list dirties the whole subtree, so only when
-    // Diff actually changed the children.
-    if childrenAlreadyMatch(yg, n) {
-      return
-    }
-    syncChildren(yg, n)
-  }
-
-  private func syncChildren(yg Facebook.Yoga.Node, n Node) {
-    let count = Portals.SourceChildCount(n)
-    let children = [count]Facebook.Yoga.Node
-    var index int32
-    for child in n.Children {
-      if !child.IsPortal {
-        guard let childYg = child.Yoga else {
-          throw InvalidOperationException("child Yoga node is unavailable")
-        }
-        children[index] = childYg
-        index++
-      }
-    }
-    YGNodeAPI.YGNodeSetChildrenRetaining(yg, children)
+    return !root.IsPortal && !root.FlexMeasures.HasCommitted && (root.Display != Display.None || root.LogicalLayout.Valid)
   }
 
   internal func RefreshRects(root Node) {
@@ -362,49 +240,6 @@ internal partial class Layout {
     if portalLaidOut && overlayRoot == portalRoot {
       placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
     }
-  }
-
-  private func applyPortalConstraints(yoga Facebook.Yoga.Node, portal Node,
-    availableWidth float32, availableHeight float32) {
-      YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
-        portalMinimum(portal.MinWidth, availableWidth, portal, StyleField.MinWidth))
-      YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
-        portalMinimum(portal.MinHeight, availableHeight, portal, StyleField.MinHeight))
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
-        portalMaximum(portal.MaxWidth, availableWidth, portal, StyleField.MaxWidth))
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
-        portalMaximum(portal.MaxHeight, availableHeight, portal, StyleField.MaxHeight))
-    }
-
-  private func restorePortalConstraints(yoga Facebook.Yoga.Node, portal Node) {
-    markYogaStyle(portal, StyleField.MinWidth)
-    markYogaStyle(portal, StyleField.MinHeight)
-    markYogaStyle(portal, StyleField.MaxWidth)
-    markYogaStyle(portal, StyleField.MaxHeight)
-    applyMinMax(yoga, portal)
-    LengthDeclarations.RestoreSizes(portal)
-  }
-
-  private func portalMinimum(value NodeLength, available float32, node Node, field StyleField) float32 {
-    if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
-    if value.Unit == LengthUnit.Percent {
-      return clampPortalSize(available * value.Value / 100.0F, available)
-    }
-    if value.Unit == LengthUnit.Relative {
-      return clampPortalSize(LengthDeclarations.StoredPixels(node, field, available), available)
-    }
-    return Single.NaN
-  }
-
-  private func portalMaximum(value NodeLength, available float32, node Node, field StyleField) float32 {
-    if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
-    if value.Unit == LengthUnit.Percent {
-      return clampPortalSize(available * value.Value / 100.0F, available)
-    }
-    if value.Unit == LengthUnit.Relative {
-      return clampPortalSize(LengthDeclarations.StoredPixels(node, field, available), available)
-    }
-    return available
   }
 
   private func clampPortalSize(value float32, available float32) float32 {
@@ -458,32 +293,22 @@ internal partial class Layout {
             progressed = true
             continue
           }
-          guard let yoga = portal.Yoga else { continue }
           let collision = portal.PortalBounds?.CollisionBounds
-            ?? ElementRect{ Width: float64(width), Height: float64(height) }
-          let availableWidth = float32(collision.Width)
-          let availableHeight = float32(collision.Height)
-          applyPortalConstraints(yoga, portal, availableWidth, availableHeight)
-          if YGNodeAPI.YGNodeIsDirty(yoga) {
-            YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(portal.Direction))
-          }
-          let placement = resolvePortalPlacement(portal, bounds, collision)
-          let vertical = int32(placement) < int32(PortalPlacement.RightStart)
+            ?? ElementRect{Width: float64(width), Height: float64(height)}
+          var request = Engine.RootRequest(width, height, Density, portal.Direction)
+          request.Override = FlexOverride.Capped
+          request.Width = FlexConstraint.Cap(float32(collision.Width))
+          request.Height = FlexConstraint.Cap(float32(collision.Height))
+          let desired = Engine.MeasureSubtree(portal, request)
+          let placement = resolvePortalPlacement(portal, bounds, collision, desired)
           let space = portalSideSpace(placement, bounds, collision)
-          if vertical {
-            YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
-              MathF.Min(portalMinimum(portal.MinHeight, availableHeight, portal, StyleField.MinHeight), space))
-            YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
-              MathF.Min(portalMaximum(portal.MaxHeight, availableHeight, portal, StyleField.MaxHeight), space))
+          if int32(placement) < int32(PortalPlacement.RightStart) {
+            request.Height = FlexConstraint.Cap(space)
           } else {
-            YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
-              MathF.Min(portalMinimum(portal.MinWidth, availableWidth, portal, StyleField.MinWidth), space))
-            YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
-              MathF.Min(portalMaximum(portal.MaxWidth, availableWidth, portal, StyleField.MaxWidth), space))
+            request.Width = FlexConstraint.Cap(space)
           }
-          if YGNodeAPI.YGNodeIsDirty(yoga) {
-            YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(portal.Direction))
-          }
+          Engine.ArrangeSubtree(portal, request)
+          resolveFinalIntrinsic(portal, request)
           let origin = portalOrigin(portal, placement, bounds, width, height)
           portal.PortalAnchorBounds = Rect{
             X: bounds.X, Y: bounds.Y, W: bounds.W, H: bounds.H,
@@ -577,11 +402,9 @@ internal partial class Layout {
   }
 
   private func readPortalRect(portal Node, x float32, y float32) {
-    guard let yoga = portal.Yoga else { return }
-    let density = YGConfigAPI.YGConfigGetPointScaleFactor(config)
     readRect(portal, 0.0F, 0.0F,
-      snapPlacement(0.0F, x, density) - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga),
-      snapPlacement(0.0F, y, density) - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga))
+      snapPlacement(0.0F, x, Density) - portal.LogicalLayout.Snapped.X,
+      snapPlacement(0.0F, y, Density) - portal.LogicalLayout.Snapped.Y)
   }
 
   private func portalSideSpace(placement PortalPlacement, anchor TransformBounds,
@@ -598,13 +421,12 @@ internal partial class Layout {
   }
 
   private func resolvePortalPlacement(portal Node, anchor TransformBounds,
-    bounds ElementRect) PortalPlacement {
+    bounds ElementRect, desired FlexSize) PortalPlacement {
     let preferred = portal.PortalPlacement
     let ordinal = int32(preferred)
     let opposite = PortalPlacement(ordinal + ((ordinal / 3) % 2 == 0 ? 3 : -3))
     let size = ordinal < int32(PortalPlacement.RightStart)
-      ? YGNodeLayoutAPI.YGNodeLayoutGetHeight(portal.Yoga)
-      : YGNodeLayoutAPI.YGNodeLayoutGetWidth(portal.Yoga)
+      ? desired.Height : desired.Width
     let available = portalSideSpace(preferred, anchor, bounds)
     return size > available && portalSideSpace(opposite, anchor, bounds) > available
       ? opposite : preferred
@@ -612,9 +434,8 @@ internal partial class Layout {
 
   private func portalOrigin(portal Node, placement PortalPlacement,
     anchor TransformBounds, width float32, height float32) Rect {
-      guard let yoga = portal.Yoga else { return Rect{} }
-      let popupWidth = YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
-      let popupHeight = YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
+      let popupWidth = portal.LogicalLayout.Snapped.W
+      let popupHeight = portal.LogicalLayout.Snapped.H
       let bounds = portal.PortalBounds?.CollisionBounds
         ?? ElementRect{ Width: float64(width), Height: float64(height) }
       let left = float32(bounds.X)
@@ -666,18 +487,16 @@ internal partial class Layout {
   internal func readRect(n Node, originX float32, originY float32,
     placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false,
     projectedX float32 = 0.0F, projectedY float32 = 0.0F, idealX float32 = 0.0F, idealY float32 = 0.0F) {
-      guard let yg = n.Yoga else {
-        return
-      }
-      let localX = YGNodeLayoutAPI.YGNodeLayoutGetLeft(yg) + placementX
-      let localY = YGNodeLayoutAPI.YGNodeLayoutGetTop(yg) + placementY
+      if !n.LogicalLayout.Valid && !hidden && n.Display != Display.None { return }
+      let localX = n.LogicalLayout.Snapped.X + placementX
+      let localY = n.LogicalLayout.Snapped.Y + placementY
       if TransitionPhase == LayoutTransitionPhase.StandaloneSizes && n.RetainedLayoutTransition != nil {
         standaloneTransitions = true
       }
       let absX = originX + localX + projectedX
       let absY = originY + localY + projectedY
       let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY,
-        YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg), YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
+        n.LogicalLayout.Snapped.W, n.LogicalLayout.Snapped.H,
         TransitionPhase, projectedX, projectedY, idealX, idealY)
       n.Rect = visual
       let hiddenSubtree = hidden || n.Display == Display.None
@@ -688,7 +507,7 @@ internal partial class Layout {
       if editor {
         ScrollState.SyncEditor(n)
       } else if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
-        measureScrollExtent(n, yg)
+        measureScrollExtent(n)
       }
       n.PlacedScrollX = n.ScrollX
       n.PlacedScrollY = n.ScrollY
@@ -704,22 +523,21 @@ internal partial class Layout {
         for i in 0 ... n.Children.Count {
           let child = n.Children[i]
           if child.IsPortal { continue }
-          if let yoga = child.Yoga {
-            YGNodeAPI.YGNodeCalculateLayout(yoga, YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
-              YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg), yogaDirection(n.Direction))
-            readRect(child, visual.X, visual.Y, hidden: hiddenSubtree)
+          if !hiddenSubtree {
+            Engine.ArrangeSubtree(child, Engine.RootRequest(n.LogicalLayout.Snapped.W,
+              n.LogicalLayout.Snapped.H, Density, n.LogicalLayout.Direction))
           }
+          readRect(child, visual.X, visual.Y, hidden: hiddenSubtree)
         }
         n.HitContained = false
         return
       }
       if let state = custom {
-        let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left)
-        let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top)
-        let density = YGConfigAPI.YGConfigGetPointScaleFactor(config)
+        let x = visual.X + BoxGeometry.Inset(n, PhysicalEdge.Left)
+        let y = visual.Y + BoxGeometry.Inset(n, PhysicalEdge.Top)
         for child in state.Children {
-          readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), density),
-            snapPlacement(y, float32(child.Bounds.Y), density), hiddenSubtree)
+          readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), Density),
+            snapPlacement(y, float32(child.Bounds.Y), Density), hiddenSubtree)
         }
       } else if n.RetainedSizedState != nil {
         arrangeSized(n, hiddenSubtree)
@@ -763,11 +581,11 @@ internal partial class Layout {
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       if child.IsPortal { continue }
-      guard let yoga = child.Yoga else { continue }
-      if calculate || YGNodeAPI.YGNodeIsDirty(yoga) {
+      if (calculate || !child.FlexMeasures.HasCommitted) && !hidden {
         let availableWidth = child.EditorSlotBlock ? contentWidth : Single.NaN
-        YGNodeAPI.YGNodeCalculateLayout(yoga, availableWidth, Single.NaN,
-          yogaDirection(n.Direction))
+        var request = Engine.RootRequest(availableWidth, Single.NaN, Density, n.LogicalLayout.Direction)
+        request.Baseline = true
+        Engine.ArrangeSubtree(child, request)
       }
       guard let origin = TextEditorLayouts.SlotOrigin(n, child.EditorSlotKey) else {
         if child.Visibility != Visibility.Hidden {
@@ -780,19 +598,19 @@ internal partial class Layout {
       child.Visibility = Visibility.Visible
       let x = n.Rect.X + origin.X
       let y = n.Rect.Y + origin.Y
-      if calculate || !wasVisible || child.Rect.X != x + YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga)
-        || child.Rect.Y != y + YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
-        || child.Rect.W != YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
-        || child.Rect.H != YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) {
+      if calculate || !wasVisible || child.Rect.X != x + child.LogicalLayout.Snapped.X
+        || child.Rect.Y != y + child.LogicalLayout.Snapped.Y
+        || child.Rect.W != child.LogicalLayout.Snapped.W
+        || child.Rect.H != child.LogicalLayout.Snapped.H {
           readRect(child, x, y, hidden: hidden)
           child.MarkSceneDirty()
         }
     }
   }
 
-  // Content extent from Yoga's relative child geometry; every pass re-clamps
+  // Content extent from committed relative child geometry; every pass re-clamps
   // so content shrink can never leave an out-of-range offset behind.
-  private func measureScrollExtent(n Node, yoga Facebook.Yoga.Node) {
+  private func measureScrollExtent(n Node) {
     var cw = 0.0F
     var ch = 0.0F
     if let custom = CustomLayouts.State(n) {
@@ -802,527 +620,19 @@ internal partial class Layout {
       cw = extent.Width
       ch = extent.Height
     } else {
-      let insetX = n.RetainedSizedState != nil ? 0.0F : CustomLayouts.Inset(yoga, YGEdge.Left)
-      let insetY = n.RetainedSizedState != nil ? 0.0F : CustomLayouts.Inset(yoga, YGEdge.Top)
+      let insetX = n.RetainedSizedState != nil ? 0.0F : BoxGeometry.Inset(n, PhysicalEdge.Left)
+      let insetY = n.RetainedSizedState != nil ? 0.0F : BoxGeometry.Inset(n, PhysicalEdge.Top)
       for i in 0 ... n.Children.Count {
-        if n.Children[i].IsPortal { continue }
-        guard let cy = n.Children[i].Yoga else {
-          continue
-        }
-        let right = YGNodeLayoutAPI.YGNodeLayoutGetLeft(cy) + YGNodeLayoutAPI.YGNodeLayoutGetWidth(cy) - insetX
-        let bottom = YGNodeLayoutAPI.YGNodeLayoutGetTop(cy) + YGNodeLayoutAPI.YGNodeLayoutGetHeight(cy) - insetY
+        let child = n.Children[i]
+        if child.IsPortal || !child.LogicalLayout.Valid { continue }
+        let right = child.LogicalLayout.Snapped.X + child.LogicalLayout.Snapped.W - insetX
+        let bottom = child.LogicalLayout.Snapped.Y + child.LogicalLayout.Snapped.H - insetY
         if right > cw { cw = right }
         if bottom > ch { ch = bottom }
       }
     }
     ScrollState.SetExtent(n, cw, ch)
   }
-}
-
-internal func nodeFromYoga(yoga Facebook.Yoga.Node) Node {
-  guard let node = YGNodeAPI.YGNodeGetContext(yoga) as Node else {
-    throw InvalidOperationException("Yoga node has no Goo context")
-  }
-  return node
-}
-
-internal func applyAll(yg Facebook.Yoga.Node, n Node, isRoot bool) {
-  applyDirection(yg, n)
-  applySize(yg, n)
-  applyEdges(yg, n)
-  applyFlex(yg, n)
-  applyMinMax(yg, n)
-  applyFlexLayout(yg, n, isRoot)
-  applyPosition(yg, n)
-  applyDisplay(yg, n)
-}
-
-internal func yogaDirection(direction Direction) YGDirection -> switch direction {
-  case Direction.Auto: YGDirection.LTR
-  case Direction.LeftToRight: YGDirection.LTR
-  case Direction.RightToLeft: YGDirection.RTL
-  case _: throw NotSupportedException("Layout.yogaDirection: unhandled Direction " + direction.ToString())
-}
-
-internal func applyDirection(yg Facebook.Yoga.Node, n Node) {
-  let direction = yogaDirection(n.Direction)
-  if YGNodeStyleAPI.YGNodeStyleGetDirection(yg) != direction {
-    YGNodeStyleAPI.YGNodeStyleSetDirection(yg, direction)
-  }
-}
-
-// Push-on-change: one resolved style write lands in Yoga through the same
-// appliers the mount-time sync uses. Nil Yoga means the mount sync covers it.
-internal func syncYogaField(n Node, f StyleField) {
-  if n.NeedsYogaBinding { return }
-  guard let yg = n.Yoga else {
-    return
-  }
-  switch f {
-    case StyleField.Direction { applyDirection(yg, n) }
-    case StyleField.Width { applySize(yg, n) }
-    case StyleField.Height { applySize(yg, n) }
-    case StyleField.MinWidth { applyMinMax(yg, n) }
-    case StyleField.MinHeight { applyMinMax(yg, n) }
-    case StyleField.MaxWidth { applyMinMax(yg, n) }
-    case StyleField.MaxHeight { applyMinMax(yg, n) }
-    case StyleField.TextTrimming { applyMinMax(yg, n) }
-    case StyleField.AspectRatio { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.Padding { applyEdges(yg, n) }
-    case StyleField.PaddingLeft { applyEdges(yg, n) }
-    case StyleField.PaddingTop { applyEdges(yg, n) }
-    case StyleField.PaddingRight { applyEdges(yg, n) }
-    case StyleField.PaddingBottom { applyEdges(yg, n) }
-    case StyleField.Margin { applyEdges(yg, n) }
-    case StyleField.MarginLeft { applyEdges(yg, n) }
-    case StyleField.MarginTop { applyEdges(yg, n) }
-    case StyleField.MarginRight { applyEdges(yg, n) }
-    case StyleField.MarginBottom { applyEdges(yg, n) }
-    case StyleField.Gap { applyEdges(yg, n) }
-    case StyleField.RowGap { applyEdges(yg, n) }
-    case StyleField.ColumnGap { applyEdges(yg, n) }
-    case StyleField.BorderLeftWidth {
-      if n.Kind != NodeKind.Shape { applyBorderEdge(yg, YGEdge.Left, n.BorderLeftWidth) }
-    }
-    case StyleField.BorderTopWidth {
-      if n.Kind != NodeKind.Shape { applyBorderEdge(yg, YGEdge.Top, n.BorderTopWidth) }
-    }
-    case StyleField.BorderRightWidth {
-      if n.Kind != NodeKind.Shape { applyBorderEdge(yg, YGEdge.Right, n.BorderRightWidth) }
-    }
-    case StyleField.BorderBottomWidth {
-      if n.Kind != NodeKind.Shape { applyBorderEdge(yg, YGEdge.Bottom, n.BorderBottomWidth) }
-    }
-    case StyleField.ShapeStrokeWidth { applyBorderEdges(yg, n) }
-    case StyleField.FlexDirection { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.FlexWrap { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.JustifyContent { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.AlignItems { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.AlignSelf { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.AlignContent { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.FlexBasis { applyFlexLayout(yg, n, n.Parent == nil) }
-    case StyleField.FlexGrow { applyFlex(yg, n) }
-    case StyleField.FlexShrink { applyFlex(yg, n) }
-    case StyleField.Position { applyPosition(yg, n) }
-    case StyleField.Left { applyPosition(yg, n) }
-    case StyleField.Top { applyPosition(yg, n) }
-    case StyleField.Right { applyPosition(yg, n) }
-    case StyleField.Bottom { applyPosition(yg, n) }
-    case StyleField.Display { applyDisplay(yg, n) }
-    case StyleField.OverflowX { applyDisplay(yg, n) }
-    case StyleField.OverflowY { applyDisplay(yg, n) }
-    default { }
-  }
-  if YGNodeAPI.YGNodeIsDirty(yg) && YGNodeAPI.YGNodeGetOwner(yg) == nil && ScrollbarParts.IsPart(n) {
-    n.Parent?.Yoga?.MarkDirtyAndPropagate()
-  }
-}
-
-internal func markYogaStyle(n Node, field StyleField) {
-  n.YogaStyleMask = styleMaskWith(n.YogaStyleMask, field)
-}
-
-internal func clearYogaStyle(n Node, field StyleField) bool {
-  if !styleMaskHas(n.YogaStyleMask, field) {
-    return false
-  }
-  n.YogaStyleMask = styleMaskWithout(n.YogaStyleMask, field)
-  return true
-}
-
-internal func applySize(yg Facebook.Yoga.Node, n Node) {
-  switch n.Width.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetWidth(yg, n.Width.Value)
-      markYogaStyle(n, StyleField.Width)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetWidthPercent(yg, n.Width.Value)
-      markYogaStyle(n, StyleField.Width)
-    }
-    case LengthUnit.Auto {
-      YGNodeStyleAPI.YGNodeStyleSetWidthAuto(yg)
-      markYogaStyle(n, StyleField.Width)
-    }
-    default {
-      if clearYogaStyle(n, StyleField.Width) {
-        YGNodeStyleAPI.YGNodeStyleSetWidthAuto(yg)
-      }
-    }
-  }
-  switch n.Height.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetHeight(yg, n.Height.Value)
-      markYogaStyle(n, StyleField.Height)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetHeightPercent(yg, n.Height.Value)
-      markYogaStyle(n, StyleField.Height)
-    }
-    case LengthUnit.Auto {
-      YGNodeStyleAPI.YGNodeStyleSetHeightAuto(yg)
-      markYogaStyle(n, StyleField.Height)
-    }
-    default {
-      if clearYogaStyle(n, StyleField.Height) {
-        YGNodeStyleAPI.YGNodeStyleSetHeightAuto(yg)
-      }
-    }
-  }
-}
-
-internal func applyEdges(yg Facebook.Yoga.Node, n Node) {
-  applyPaddingEdge(yg, n, YGEdge.All, n.Padding, StyleField.Padding)
-  applyPaddingEdge(yg, n, YGEdge.Left, n.PaddingLeft, StyleField.PaddingLeft)
-  applyPaddingEdge(yg, n, YGEdge.Top, n.PaddingTop, StyleField.PaddingTop)
-  applyPaddingEdge(yg, n, YGEdge.Right, n.PaddingRight, StyleField.PaddingRight)
-  applyPaddingEdge(yg, n, YGEdge.Bottom, n.PaddingBottom, StyleField.PaddingBottom)
-
-  applyBorderEdges(yg, n)
-
-  applyMarginEdge(yg, n, YGEdge.All, n.Margin, StyleField.Margin)
-  applyMarginEdge(yg, n, YGEdge.Left, n.MarginLeft, StyleField.MarginLeft)
-  applyMarginEdge(yg, n, YGEdge.Top, n.MarginTop, StyleField.MarginTop)
-  applyMarginEdge(yg, n, YGEdge.Right, n.MarginRight, StyleField.MarginRight)
-  applyMarginEdge(yg, n, YGEdge.Bottom, n.MarginBottom, StyleField.MarginBottom)
-
-  applyGapEdge(yg, n, YGGutter.All, n.Gap, StyleField.Gap)
-  applyGapEdge(yg, n, YGGutter.Row, n.RowGap, StyleField.RowGap)
-  applyGapEdge(yg, n, YGGutter.Column, n.ColumnGap, StyleField.ColumnGap)
-}
-
-internal func applyPaddingEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
-    switch v.Unit {
-      case LengthUnit.Px {
-        YGNodeStyleAPI.YGNodeStyleSetPadding(yg, edge, v.Value)
-        markYogaStyle(n, field)
-      }
-      case LengthUnit.Percent {
-        YGNodeStyleAPI.YGNodeStyleSetPaddingPercent(yg, edge, v.Value)
-        markYogaStyle(n, field)
-      }
-      default {
-        if clearYogaStyle(n, field) {
-          YGNodeStyleAPI.YGNodeStyleSetPadding(yg, edge, YogaValue.YGValueUndefined.Value)
-        }
-      }
-    }
-  }
-
-internal func applyBorderEdge(yg Facebook.Yoga.Node, edge YGEdge, width NodeLength) {
-  let value = width.Unit == LengthUnit.Px ? width.Value : 0.0F
-  if YGNodeStyleAPI.YGNodeStyleGetBorder(yg, edge) != value {
-    YGNodeStyleAPI.YGNodeStyleSetBorder(yg, edge, value)
-  }
-}
-
-internal func applyBorderEdges(yg Facebook.Yoga.Node, n Node) {
-  if n.Kind == NodeKind.Shape {
-    applyBorderEdge(yg, YGEdge.Left, n.BorderLeftWidth)
-    applyBorderEdge(yg, YGEdge.Top, n.BorderLeftWidth)
-    applyBorderEdge(yg, YGEdge.Right, n.BorderLeftWidth)
-    applyBorderEdge(yg, YGEdge.Bottom, n.BorderLeftWidth)
-    return
-  }
-  applyBorderEdge(yg, YGEdge.Left, n.BorderLeftWidth)
-  applyBorderEdge(yg, YGEdge.Top, n.BorderTopWidth)
-  applyBorderEdge(yg, YGEdge.Right, n.BorderRightWidth)
-  applyBorderEdge(yg, YGEdge.Bottom, n.BorderBottomWidth)
-}
-
-internal func applyMarginEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
-    switch v.Unit {
-      case LengthUnit.Px {
-        YGNodeStyleAPI.YGNodeStyleSetMargin(yg, edge, v.Value)
-        markYogaStyle(n, field)
-      }
-      case LengthUnit.Percent {
-        YGNodeStyleAPI.YGNodeStyleSetMarginPercent(yg, edge, v.Value)
-        markYogaStyle(n, field)
-      }
-      default {
-        if clearYogaStyle(n, field) {
-          YGNodeStyleAPI.YGNodeStyleSetMargin(yg, edge, YogaValue.YGValueUndefined.Value)
-        }
-      }
-    }
-  }
-
-internal func applyGapEdge(
-  yg Facebook.Yoga.Node, n Node, gutter YGGutter, v Length, field StyleField) {
-    switch v.Unit {
-      case LengthUnit.Px {
-        YGNodeStyleAPI.YGNodeStyleSetGap(yg, gutter, v.Value)
-        markYogaStyle(n, field)
-      }
-      case LengthUnit.Percent {
-        YGNodeStyleAPI.YGNodeStyleSetGapPercent(yg, gutter, v.Value)
-        markYogaStyle(n, field)
-      }
-      default {
-        if clearYogaStyle(n, field) {
-          YGNodeStyleAPI.YGNodeStyleSetGap(yg, gutter, YogaValue.YGValueUndefined.Value)
-        }
-      }
-    }
-  }
-
-internal func applyFlex(yg Facebook.Yoga.Node, n Node) {
-  YGNodeStyleAPI.YGNodeStyleSetFlexGrow(yg, float32(n.FlexGrow))
-  YGNodeStyleAPI.YGNodeStyleSetFlexShrink(yg, float32(n.FlexShrink))
-}
-
-internal func applyMinMax(yg Facebook.Yoga.Node, n Node) {
-  switch n.MinWidth.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, n.MinWidth.Value)
-      markYogaStyle(n, StyleField.MinWidth)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetMinWidthPercent(yg, n.MinWidth.Value)
-      markYogaStyle(n, StyleField.MinWidth)
-    }
-    default {
-      if n.Kind == NodeKind.Text && n.TextTrimming == TextTrimming.Ellipsis {
-        YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, 0.0F)
-        markYogaStyle(n, StyleField.MinWidth)
-      } else if clearYogaStyle(n, StyleField.MinWidth) {
-        YGNodeStyleAPI.YGNodeStyleSetMinWidth(yg, YogaValue.YGValueUndefined.Value)
-      }
-    }
-  }
-  switch n.MinHeight.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetMinHeight(yg, n.MinHeight.Value)
-      markYogaStyle(n, StyleField.MinHeight)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetMinHeightPercent(yg, n.MinHeight.Value)
-      markYogaStyle(n, StyleField.MinHeight)
-    }
-    default {
-      if clearYogaStyle(n, StyleField.MinHeight) {
-        YGNodeStyleAPI.YGNodeStyleSetMinHeight(yg, YogaValue.YGValueUndefined.Value)
-      }
-    }
-  }
-  switch n.MaxWidth.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yg, n.MaxWidth.Value)
-      markYogaStyle(n, StyleField.MaxWidth)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetMaxWidthPercent(yg, n.MaxWidth.Value)
-      markYogaStyle(n, StyleField.MaxWidth)
-    }
-    default {
-      if clearYogaStyle(n, StyleField.MaxWidth) {
-        YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yg, YogaValue.YGValueUndefined.Value)
-      }
-    }
-  }
-  switch n.MaxHeight.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yg, n.MaxHeight.Value)
-      markYogaStyle(n, StyleField.MaxHeight)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetMaxHeightPercent(yg, n.MaxHeight.Value)
-      markYogaStyle(n, StyleField.MaxHeight)
-    }
-    default {
-      if clearYogaStyle(n, StyleField.MaxHeight) {
-        YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yg, YogaValue.YGValueUndefined.Value)
-      }
-    }
-  }
-}
-
-// Explicit enum mapping prevents ordinal drift. Compare before Yoga enum writes.
-internal func applyFlexLayout(yg Facebook.Yoga.Node, n Node, isRoot bool) {
-  let flexDirection = switch n.FlexDirection {
-    case FlexDirection.Column: YGFlexDirection.Column
-    case FlexDirection.ColumnReverse: YGFlexDirection.ColumnReverse
-    case FlexDirection.Row: YGFlexDirection.Row
-    case FlexDirection.RowReverse: YGFlexDirection.RowReverse
-    case _: throw NotSupportedException("Layout.applyFlexLayout: unhandled FlexDirection " + n.FlexDirection.ToString())
-  }
-  if YGNodeStyleAPI.YGNodeStyleGetFlexDirection(yg) != flexDirection {
-    YGNodeStyleAPI.YGNodeStyleSetFlexDirection(yg, flexDirection)
-  }
-  let flexWrap = switch n.FlexWrap {
-    case FlexWrap.NoWrap: YGWrap.NoWrap
-    case FlexWrap.Wrap: YGWrap.Wrap
-    case FlexWrap.WrapReverse: YGWrap.WrapReverse
-    case _: throw NotSupportedException("Layout.applyFlexLayout: unhandled FlexWrap " + n.FlexWrap.ToString())
-  }
-  if YGNodeStyleAPI.YGNodeStyleGetFlexWrap(yg) != flexWrap {
-    YGNodeStyleAPI.YGNodeStyleSetFlexWrap(yg, flexWrap)
-  }
-  let justifyContent = switch n.JustifyContent {
-    case JustifyContent.FlexStart: YGJustify.FlexStart
-    case JustifyContent.Center: YGJustify.Center
-    case JustifyContent.FlexEnd: YGJustify.FlexEnd
-    case JustifyContent.SpaceBetween: YGJustify.SpaceBetween
-    case JustifyContent.SpaceAround: YGJustify.SpaceAround
-    case JustifyContent.SpaceEvenly: YGJustify.SpaceEvenly
-    case _: throw NotSupportedException("Layout.applyFlexLayout: unhandled JustifyContent " + n.JustifyContent.ToString())
-  }
-  if YGNodeStyleAPI.YGNodeStyleGetJustifyContent(yg) != justifyContent {
-    YGNodeStyleAPI.YGNodeStyleSetJustifyContent(yg, justifyContent)
-  }
-  let alignItems = mapAlignItems(n.AlignItems)
-  if YGNodeStyleAPI.YGNodeStyleGetAlignItems(yg) != alignItems {
-    YGNodeStyleAPI.YGNodeStyleSetAlignItems(yg, alignItems)
-  }
-  let alignSelf = mapAlignSelf(n.AlignSelf)
-  if YGNodeStyleAPI.YGNodeStyleGetAlignSelf(yg) != alignSelf {
-    YGNodeStyleAPI.YGNodeStyleSetAlignSelf(yg, alignSelf)
-  }
-  let alignContent = mapAlignContent(n.AlignContent)
-  if YGNodeStyleAPI.YGNodeStyleGetAlignContent(yg) != alignContent {
-    YGNodeStyleAPI.YGNodeStyleSetAlignContent(yg, alignContent)
-  }
-  switch n.FlexBasis.Unit {
-    case LengthUnit.Px {
-      YGNodeStyleAPI.YGNodeStyleSetFlexBasis(yg, n.FlexBasis.Value)
-      markYogaStyle(n, StyleField.FlexBasis)
-    }
-    case LengthUnit.Percent {
-      YGNodeStyleAPI.YGNodeStyleSetFlexBasisPercent(yg, n.FlexBasis.Value)
-      markYogaStyle(n, StyleField.FlexBasis)
-    }
-    case LengthUnit.Auto {
-      YGNodeStyleAPI.YGNodeStyleSetFlexBasisAuto(yg)
-      markYogaStyle(n, StyleField.FlexBasis)
-    }
-    default {
-      if clearYogaStyle(n, StyleField.FlexBasis) {
-        YGNodeStyleAPI.YGNodeStyleSetFlexBasisAuto(yg)
-      }
-    }
-  }
-  // Unsized non-root Shapes inherit their view-box aspect.
-  let aspect = if n.AspectRatio <= 0.0 && !isRoot && n.Kind == NodeKind.Shape
-    && !(isSized(n.Width) && isSized(n.Height)) {
-      n.ShapePath.ViewBoxWidth / n.ShapePath.ViewBoxHeight
-    } else {
-      n.AspectRatio
-    }
-  let yogaAspect = float32(aspect)
-  if aspect > 0.0 && yogaAspect > 0.0F && !Single.IsInfinity(yogaAspect) {
-    YGNodeStyleAPI.YGNodeStyleSetAspectRatio(yg, yogaAspect)
-    markYogaStyle(n, StyleField.AspectRatio)
-  } else if clearYogaStyle(n, StyleField.AspectRatio) {
-    YGNodeStyleAPI.YGNodeStyleSetAspectRatio(yg, YogaValue.YGValueUndefined.Value)
-  }
-}
-
-internal func isSized(v NodeLength) bool -> v.Unit == LengthUnit.Px || v.Unit == LengthUnit.Percent
-
-internal func mapAlignItems(a AlignItems) YGAlign -> switch a {
-  case AlignItems.Stretch: YGAlign.Stretch
-  case AlignItems.FlexStart: YGAlign.FlexStart
-  case AlignItems.Center: YGAlign.Center
-  case AlignItems.FlexEnd: YGAlign.FlexEnd
-  case AlignItems.Baseline: YGAlign.Baseline
-  case _: throw NotSupportedException("Layout.mapAlignItems: unhandled AlignItems " + a.ToString())
-}
-
-internal func mapAlignSelf(a AlignSelf) YGAlign -> switch a {
-  case AlignSelf.Auto: YGAlign.Auto
-  case AlignSelf.Stretch: YGAlign.Stretch
-  case AlignSelf.FlexStart: YGAlign.FlexStart
-  case AlignSelf.Center: YGAlign.Center
-  case AlignSelf.FlexEnd: YGAlign.FlexEnd
-  case AlignSelf.Baseline: YGAlign.Baseline
-  case _: throw NotSupportedException("Layout.mapAlignSelf: unhandled AlignSelf " + a.ToString())
-}
-
-internal func mapAlignContent(a AlignContent) YGAlign -> switch a {
-  case AlignContent.FlexStart: YGAlign.FlexStart
-  case AlignContent.Center: YGAlign.Center
-  case AlignContent.FlexEnd: YGAlign.FlexEnd
-  case AlignContent.Stretch: YGAlign.Stretch
-  case AlignContent.SpaceBetween: YGAlign.SpaceBetween
-  case AlignContent.SpaceAround: YGAlign.SpaceAround
-  case _: throw NotSupportedException("Layout.mapAlignContent: unhandled AlignContent " + a.ToString())
-}
-
-internal func applyPosition(yg Facebook.Yoga.Node, n Node) {
-  let positionType = n.Position == PositionType.Absolute ? YGPositionType.Absolute : n.Position == PositionType.Static ? YGPositionType.Static : YGPositionType.Relative
-  if YGNodeStyleAPI.YGNodeStyleGetPositionType(yg) != positionType {
-    YGNodeStyleAPI.YGNodeStyleSetPositionType(yg, positionType)
-  }
-  applyPositionEdge(yg, n, YGEdge.Left, n.Left, StyleField.Left)
-  applyPositionEdge(yg, n, YGEdge.Top, n.Top, StyleField.Top)
-  applyPositionEdge(yg, n, YGEdge.Right, n.Right, StyleField.Right)
-  applyPositionEdge(yg, n, YGEdge.Bottom, n.Bottom, StyleField.Bottom)
-}
-
-internal func applyPositionEdge(
-  yg Facebook.Yoga.Node, n Node, edge YGEdge, v NodeLength, field StyleField) {
-    switch v.Unit {
-      case LengthUnit.Px {
-        YGNodeStyleAPI.YGNodeStyleSetPosition(yg, edge, v.Value)
-        markYogaStyle(n, field)
-      }
-      case LengthUnit.Percent {
-        YGNodeStyleAPI.YGNodeStyleSetPositionPercent(yg, edge, v.Value)
-        markYogaStyle(n, field)
-      }
-      default {
-        if clearYogaStyle(n, field) {
-          YGNodeStyleAPI.YGNodeStyleSetPosition(yg, edge, YogaValue.YGValueUndefined.Value)
-        }
-      }
-    }
-  }
-
-internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
-  let display = switch n.Display {
-    case Display.Flex: YGDisplay.Flex
-    case Display.None: YGDisplay.None
-    case _: throw NotSupportedException("Layout.applyDisplay: unhandled Display " + n.Display.ToString())
-  }
-  if YGNodeStyleAPI.YGNodeStyleGetDisplay(yg) != display {
-    YGNodeStyleAPI.YGNodeStyleSetDisplay(yg, display)
-  }
-  let overflow = if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
-    YGOverflow.Scroll
-  } else if n.OverflowX == Overflow.Hidden || n.OverflowY == Overflow.Hidden {
-    YGOverflow.Hidden
-  } else {
-    YGOverflow.Visible
-  }
-  if YGNodeStyleAPI.YGNodeStyleGetOverflow(yg) != overflow {
-    YGNodeStyleAPI.YGNodeStyleSetOverflow(yg, overflow)
-  }
-}
-
-// Reference equality per slot: Diff reuses Node instances, and syncNode reuses
-// their Yoga nodes, so an unchanged child list is the same handles in order.
-internal func childrenAlreadyMatch(yg Facebook.Yoga.Node, n Node) bool {
-  let count = Portals.SourceChildCount(n)
-  if uint32(YGNodeAPI.YGNodeGetChildCount(yg)) != uint32(count) {
-    return false
-  }
-  var index int32
-  for childIndex in 0 ... n.Children.Count {
-    let child = n.Children[childIndex]
-    if !child.IsPortal {
-      guard let childYg = child.Yoga else {
-        return false
-      }
-      if YGNodeAPI.YGNodeGetChild(yg, nuint(index)) != childYg {
-        return false
-      }
-      index++
-    }
-  }
-  return true
 }
 
 internal func clampOffset(v float32, max float32) float32 {

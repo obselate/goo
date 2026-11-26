@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 
@@ -95,24 +94,12 @@ internal partial class TextEditorLayouts {
       }
     }
 
-    internal func SlotChildDirty(yoga Facebook.Yoga.Node) {
-      guard let child = YGNodeAPI.YGNodeGetContext(yoga) as Node,
-      let parent = child.Parent,
-      let state = parent.EditorState else {
-        return
-      }
-      state.ClearParagraphs()
-      Invalidate(parent)
-    }
-
     internal func Invalidate(n Node) {
       if let state = n.EditorState {
         state.Dirty = true
         state.Layout = nil
       }
-      if !(n.Width.Unit == LengthUnit.Px && n.Height.Unit == LengthUnit.Px) {
-        if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
-      }
+      FlexLayoutEngine.Invalidate(n)
     }
 
     internal func disposeParagraph(value TextEditorParagraphLayout) {
@@ -126,15 +113,6 @@ internal partial class TextEditorLayouts {
         for run in line.Runs { run.Shape?.Dispose() }
       }
     }
-
-    internal func Measure(yoga Facebook.Yoga.Node, width float32, widthMode MeasureMode,
-      height float32, heightMode MeasureMode) YGSize{
-        let n = nodeFromYoga(yoga)
-        let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
-        let heightConstraint = if heightMode == MeasureMode.Exactly { height } else { -1.0F }
-        let layout = For(n, constraint, heightConstraint, true)
-        return TextLayouts.clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
-      }
 
     internal func CaretRect(n Node, position TextPosition, scrolled bool = true) Rect {
       let width = BoxGeometry.ContentWidth(n)

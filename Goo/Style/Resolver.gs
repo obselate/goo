@@ -1087,7 +1087,9 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     }
   }
   n.BumpScenePaintVersion()
-  syncYogaField(n, e.Field)
+  if (StyleFields.Effects(e.Field) & ReconcileEffects.Layout) != ReconcileEffects.None {
+    FlexLayoutEngine.Invalidate(n)
+  }
   return true
 }
 

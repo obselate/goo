@@ -137,7 +137,7 @@ painted pixel alpha. Opacity zero therefore retains normal Goo hit-test behavior
 Portal. `Disabled` and focus-scope policies follow the logical tree, while source
 opacity, overflow clipping, and transforms do not constrain presented geometry.
 
-Portal children do not participate in their source container's Yoga or custom
+Portal children do not participate in their source container's flex or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
 semantics. Goo does not infer an anchor from the declaration parent.

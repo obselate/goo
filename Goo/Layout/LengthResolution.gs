@@ -3,7 +3,6 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
-import Facebook.Yoga
 
 internal struct NodeLength {
   internal var Unit LengthUnit
@@ -29,8 +28,6 @@ internal class ResolvedLength {
   internal var Value Length
   internal var Pixels float32 = Single.NaN
   internal var Percent float32 = Single.NaN
-  internal var EdgeValue StyleLength?
-  internal var IntrinsicCache IntrinsicLengthCache?
 }
 
 internal class LengthNode {
@@ -39,37 +36,6 @@ internal class LengthNode {
   internal var IntrinsicLevel int32
   internal var Layout Layout?
   internal let Values List[ResolvedLength] = List[ResolvedLength]()
-}
-
-internal data struct IntrinsicMeasure {
-  internal var Width float32
-  internal var Height float32
-  internal var Minimum float32
-  internal var Maximum float32
-  internal var Valid bool
-}
-
-internal class IntrinsicLengthCache {
-  internal var First IntrinsicMeasure
-  internal var Second IntrinsicMeasure
-
-  internal func Clear() {
-    First.Valid = false
-    Second.Valid = false
-  }
-
-  internal func Measure(yoga Facebook.Yoga.Node, axis Dimension, width float32, height float32, kind LengthUnit) IntrinsicMeasure {
-    if First.Valid && First.Width == width && First.Height == height { return First }
-    if Second.Valid && Second.Width == width && Second.Height == height { return Second }
-    let minimum = kind == LengthUnit.MaxContent ? 0.0F
-      : Facebook.Yoga.LayoutAlgorithm.MeasureIntrinsicSize(yoga, axis, true, width, height)
-    let maximum = kind == LengthUnit.MinContent ? minimum
-      : Facebook.Yoga.LayoutAlgorithm.MeasureIntrinsicSize(yoga, axis, false, width, height)
-    let result = IntrinsicMeasure{Width: width, Height: height, Minimum: minimum, Maximum: maximum, Valid: true}
-    Second = First
-    First = result
-    return result
-  }
 }
 
 internal class LengthRevision {
@@ -100,6 +66,7 @@ internal class LengthDeclarations {
     private func Invalidate(node Node) {
       let revision = revisions.GetOrCreateValue(Root(node))
       revision.Value++
+      FlexLayoutEngine.Invalidate(node)
     }
 
     internal func Remove(node Node) {
@@ -107,25 +74,6 @@ internal class LengthDeclarations {
       state.Layout?.RemoveLengths(state)
       values?.Remove(node)
       Invalidate(node)
-    }
-
-    internal func StoredPixels(node Node, field StyleField, basis float32) float32 {
-      if let state = Get(node) {
-        for entry in state.Values {
-          if entry.Field == field { return entry.Pixels + entry.Value.PercentPart * basis / 100.0F }
-        }
-      }
-      return Single.NaN
-    }
-
-    internal func RestoreSizes(node Node) {
-      if let state = Get(node) {
-        for entry in state.Values {
-          if entry.Field <= StyleField.MaxHeight && entry.Value.PercentPart != 0.0F {
-            applyMixedLength(node, entry.Field, entry.Pixels, entry.Percent, entry.EdgeValue!!)
-          }
-        }
-      }
     }
 
     internal func Set(node Node, entry StyleEntry, resolver Resolver) bool {
@@ -142,7 +90,6 @@ internal class LengthDeclarations {
         if list[i].Field != entry.Field { continue }
         if let declaration = source {
           if sameLength(list[i].Value, declaration.Value) { return false }
-          list[i].IntrinsicCache?.Clear()
           list[i].Value = declaration.Value
           list[i].Pixels = Single.NaN
         } else { list.RemoveAt(i) }
@@ -198,9 +145,10 @@ internal partial class Layout {
     for child in node.Children { collectLengths(child, nextLevel) }
   }
 
-  private func resolveLengths(root Node, width float32, height float32) {
+  internal func resolveLengths(root Node, width float32, height float32) {
     let revision = LengthDeclarations.Revision(root)
-    if lengthRevision != revision || lengthRoot != root {
+    let declarationsChanged = lengthRevision != revision || lengthRoot != root
+    if declarationsChanged {
       lengthNodes?.Clear()
       maximumIntrinsicLevel = -1
       if LengthDeclarations.Active { collectLengths(root) }
@@ -220,26 +168,25 @@ internal partial class Layout {
         }
       }
     }
-    for state in nodes {
-      for entry in state.Values {
-        if !entry.Value.IsIntrinsic && entry.Percent != 0.0F {
-          applyMixedLength(state.Node, entry.Field, entry.Pixels, entry.Percent, entry.EdgeValue!!)
-        }
-      }
+    if maximumIntrinsicLevel < 0 {
+      intrinsicPending = false
+      return
     }
-    intrinsicPending = maximumIntrinsicLevel >= 0 && (!laidOut || root != lastRoot || width != lastWidth
-      || height != lastHeight || root.Yoga?.IsDirty() == true)
-    if maximumIntrinsicLevel >= 0 && !intrinsicPending {
+    intrinsicPending = declarationsChanged || !laidOut || root != lastRoot || width != lastWidth
+      || height != lastHeight || !root.FlexMeasures.HasCommitted
+    if !intrinsicPending {
       for state in nodes {
-        if state.Node.Yoga?.IsDirty() == true { intrinsicPending = true }
+        if state.Node.Display == Display.None || state.Node.FlexMeasures.HasCommitted { continue }
+        for entry in state.Values {
+          if entry.Value.IsIntrinsic {
+            intrinsicPending = true
+            break
+          }
+        }
+        if intrinsicPending { break }
       }
     }
     if !intrinsicPending { return }
-    for state in nodes {
-      if state.Node.Yoga?.IsDirty() == true {
-        for entry in state.Values { entry.IntrinsicCache?.Clear() }
-      }
-    }
     for var i = nodes.Count - 1; i >= 0; i-- {
       let state = nodes[i]
       for entry in state.Values {
@@ -248,20 +195,18 @@ internal partial class Layout {
     }
   }
 
-  private func resolveFinalIntrinsic(root Node, width float32, height float32) {
+  private func resolveFinalIntrinsic(root Node, request FlexRequest) {
     if !intrinsicPending { return }
-    guard let nodes = lengthNodes, let yoga = root.Yoga else { return }
+    guard let nodes = lengthNodes else { return }
     for level in 0 ... maximumIntrinsicLevel + 1 {
       for state in nodes {
         if state.IntrinsicLevel != level { continue }
         if !belongsToLayout(state.Node, root) { continue }
         for entry in state.Values {
-          if entry.Value.IsIntrinsic { resolveIntrinsic(state, entry, width, height, false) }
+          if entry.Value.IsIntrinsic { resolveIntrinsic(state, entry, request.OwnerWidth, request.OwnerHeight, false) }
         }
       }
-      if YGNodeAPI.YGNodeIsDirty(yoga) {
-        YGNodeAPI.YGNodeCalculateLayout(yoga, width, height, yogaDirection(root.Direction))
-      }
+      if !root.FlexMeasures.HasCommitted { Engine.ArrangeSubtree(root, request) }
     }
   }
 
@@ -282,33 +227,49 @@ internal partial class Layout {
     if pixels == entry.Pixels && percent == entry.Percent { return }
     entry.Pixels = pixels
     entry.Percent = percent
-    entry.EdgeValue = percent != 0.0F ? StyleLength.Mixed(pixels, percent) : nil
 
     let packed = StyleEntry{Field: entry.Field, A: pixels,
       B: float32(int32(percent == 0.0F ? LengthUnit.Px : LengthUnit.Relative))}
+    if percent != 0.0F {
+      let resolved = Length{Unit: LengthUnit.Relative, Value: pixels, PercentPart: percent}
+      switch entry.Field {
+        case StyleField.TransformTranslateX { Transforming.SetTranslateX(node, resolved)
+          return
+        }
+        case StyleField.TransformTranslateY { Transforming.SetTranslateY(node, resolved)
+          return
+        }
+        case StyleField.TransformOriginX { Transforming.SetOriginX(node, resolved)
+          return
+        }
+        case StyleField.TransformOriginY { Transforming.SetOriginY(node, resolved)
+          return
+        }
+        case _ { FlexLayoutEngine.Invalidate(node) }
+      }
+    }
     if writeDirectWithInvalidation(node, packed, nil, state.Resolver.Owner) && entry.Field == StyleField.FontSize {
       state.Resolver.propagateInherited(node, StyleField.FontSize)
     }
   }
   private func resolveIntrinsic(state LengthNode, entry ResolvedLength, width float32, height float32, provisional bool) {
     let node = state.Node
-    guard let yoga = node.Yoga else { return }
-    let ownerWidth = !provisional && node.Parent?.Yoga != nil
-      ? MathF.Max(0.0F, node.Parent!!.Yoga!!.Layout.Dimension(Dimension.Width) - CustomLayouts.Inset(node.Parent!!.Yoga!!, YGEdge.Left)
-        - CustomLayouts.Inset(node.Parent!!.Yoga!!, YGEdge.Right)) : width
-    let ownerHeight = !provisional && node.Parent?.Yoga != nil
-      ? MathF.Max(0.0F, node.Parent!!.Yoga!!.Layout.Dimension(Dimension.Height) - CustomLayouts.Inset(node.Parent!!.Yoga!!, YGEdge.Top)
-        - CustomLayouts.Inset(node.Parent!!.Yoga!!, YGEdge.Bottom)) : height
+    var ownerWidth = width
+    var ownerHeight = height
+    if !provisional {
+      if let parent = node.Parent && parent.LogicalLayout.Valid {
+        ownerWidth = MathF.Max(0.0F, parent.LogicalLayout.Raw.W - parent.LogicalLayout.Padding.Sum(true) - parent.LogicalLayout.Border.Sum(true))
+        ownerHeight = MathF.Max(0.0F, parent.LogicalLayout.Raw.H - parent.LogicalLayout.Padding.Sum(false) - parent.LogicalLayout.Border.Sum(false))
+      }
+    }
     let horizontal = entry.Field == StyleField.Width || entry.Field == StyleField.MinWidth
       || entry.Field == StyleField.MaxWidth || entry.Field == StyleField.FlexBasis
       && (node.Parent?.FlexDirection == FlexDirection.Row || node.Parent?.FlexDirection == FlexDirection.RowReverse)
-    let axis = horizontal ? Dimension.Width : Dimension.Height
-    entry.IntrinsicCache ??= IntrinsicLengthCache()
-    let measure = entry.IntrinsicCache!!.Measure(yoga, axis, ownerWidth, ownerHeight, entry.Value.Unit)
-    let minimum = measure.Minimum
+    let request = FlexRequest{OwnerWidth: ownerWidth, OwnerHeight: ownerHeight, Direction: node.Direction, Density: Density}
+    let minimum = entry.Value.Unit == LengthUnit.MaxContent ? 0.0F : Engine.MeasureIntrinsic(node, horizontal, true, request)
     var result = minimum
     if entry.Value.Unit != LengthUnit.MinContent {
-      let maximum = measure.Maximum
+      let maximum = Engine.MeasureIntrinsic(node, horizontal, false, request)
       result = maximum
       if entry.Value.Unit == LengthUnit.FitContent {
         let pixels = LengthDeclarations.Pixels(entry.Value, node, width, height, false)
@@ -321,81 +282,4 @@ internal partial class Layout {
     writeDirectWithInvalidation(node,
       StyleEntry{Field: entry.Field, A: result, B: float32(int32(LengthUnit.Px))}, nil, state.Resolver.Owner)
   }
-}
-
-internal func applyMixedLength(node Node, field StyleField, pixels float32, percent float32, edge StyleLength) {
-  let transform = Length{Unit: LengthUnit.Relative, Value: pixels, PercentPart: percent}
-  switch field {
-    case StyleField.TransformTranslateX {
-      Transforming.SetTranslateX(node, transform)
-      return
-    }
-    case StyleField.TransformTranslateY {
-      Transforming.SetTranslateY(node, transform)
-      return
-    }
-    case StyleField.TransformOriginX {
-      Transforming.SetOriginX(node, transform)
-      return
-    }
-    case StyleField.TransformOriginY {
-      Transforming.SetOriginY(node, transform)
-      return
-    }
-    case _ { }
-  }
-  guard let yoga = node.Yoga else { return }
-  let size = StyleSizeLength.Mixed(pixels, percent)
-  let same = switch field {
-    case StyleField.Width: yoga.Style.Dimension(Dimension.Width) == size
-    case StyleField.Height: yoga.Style.Dimension(Dimension.Height) == size
-    case StyleField.MinWidth: yoga.Style.MinDimension(Dimension.Width) == size
-    case StyleField.MinHeight: yoga.Style.MinDimension(Dimension.Height) == size
-    case StyleField.MaxWidth: yoga.Style.MaxDimension(Dimension.Width) == size
-    case StyleField.MaxHeight: yoga.Style.MaxDimension(Dimension.Height) == size
-    case StyleField.FlexBasis: yoga.Style.FlexBasis == size
-    case StyleField.PaddingLeft: yoga.Style.Padding(Edge.Left) == edge
-    case StyleField.PaddingTop: yoga.Style.Padding(Edge.Top) == edge
-    case StyleField.PaddingRight: yoga.Style.Padding(Edge.Right) == edge
-    case StyleField.PaddingBottom: yoga.Style.Padding(Edge.Bottom) == edge
-    case StyleField.MarginLeft: yoga.Style.Margin(Edge.Left) == edge
-    case StyleField.MarginTop: yoga.Style.Margin(Edge.Top) == edge
-    case StyleField.MarginRight: yoga.Style.Margin(Edge.Right) == edge
-    case StyleField.MarginBottom: yoga.Style.Margin(Edge.Bottom) == edge
-    case StyleField.Gap: yoga.Style.Gap(Gutter.All) == edge
-    case StyleField.RowGap: yoga.Style.Gap(Gutter.Row) == edge
-    case StyleField.ColumnGap: yoga.Style.Gap(Gutter.Column) == edge
-    case StyleField.Left: yoga.Style.Position(Edge.Left) == edge
-    case StyleField.Top: yoga.Style.Position(Edge.Top) == edge
-    case StyleField.Right: yoga.Style.Position(Edge.Right) == edge
-    case StyleField.Bottom: yoga.Style.Position(Edge.Bottom) == edge
-    case _: false
-  }
-  if same { return }
-  switch field {
-    case StyleField.Width { yoga.Style.SetDimension(Dimension.Width, size) }
-    case StyleField.Height { yoga.Style.SetDimension(Dimension.Height, size) }
-    case StyleField.MinWidth { yoga.Style.SetMinDimension(Dimension.Width, size) }
-    case StyleField.MinHeight { yoga.Style.SetMinDimension(Dimension.Height, size) }
-    case StyleField.MaxWidth { yoga.Style.SetMaxDimension(Dimension.Width, size) }
-    case StyleField.MaxHeight { yoga.Style.SetMaxDimension(Dimension.Height, size) }
-    case StyleField.FlexBasis { yoga.Style.FlexBasis = size }
-    case StyleField.PaddingLeft { yoga.Style.SetPadding(Edge.Left, edge) }
-    case StyleField.PaddingTop { yoga.Style.SetPadding(Edge.Top, edge) }
-    case StyleField.PaddingRight { yoga.Style.SetPadding(Edge.Right, edge) }
-    case StyleField.PaddingBottom { yoga.Style.SetPadding(Edge.Bottom, edge) }
-    case StyleField.MarginLeft { yoga.Style.SetMargin(Edge.Left, edge) }
-    case StyleField.MarginTop { yoga.Style.SetMargin(Edge.Top, edge) }
-    case StyleField.MarginRight { yoga.Style.SetMargin(Edge.Right, edge) }
-    case StyleField.MarginBottom { yoga.Style.SetMargin(Edge.Bottom, edge) }
-    case StyleField.Gap { yoga.Style.SetGap(Gutter.All, edge) }
-    case StyleField.RowGap { yoga.Style.SetGap(Gutter.Row, edge) }
-    case StyleField.ColumnGap { yoga.Style.SetGap(Gutter.Column, edge) }
-    case StyleField.Left { yoga.Style.SetPosition(Edge.Left, edge) }
-    case StyleField.Top { yoga.Style.SetPosition(Edge.Top, edge) }
-    case StyleField.Right { yoga.Style.SetPosition(Edge.Right, edge) }
-    case StyleField.Bottom { yoga.Style.SetPosition(Edge.Bottom, edge) }
-    case _ { throw InvalidOperationException("Unsupported mixed length field: " + field.ToString()) }
-  }
-  yoga.MarkDirtyAndPropagate()
 }
