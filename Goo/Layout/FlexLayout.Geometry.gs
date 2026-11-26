@@ -477,9 +477,9 @@ internal partial class FlexLayoutEngine {
             inherited
         }
         var hasAbsDesc = false
-        if let virtualState = node.RetainedVirtualState {
+        if node.SolverMode == LayoutSolverMode.Virtual {
             hasAbsDesc = FinalizeVirtualChildren(
-                node, virtualState, absoluteX, absoluteY, left, top, density, frame, in block, state, nodeOriginUnchanged
+                node, node.RetainedVirtualState!!, absoluteX, absoluteY, left, top, density, frame, in block, state, nodeOriginUnchanged
             )
         } else {
             for index in 0 ... node.Children.Count {
@@ -503,7 +503,7 @@ internal partial class FlexLayoutEngine {
             }
         }
         if density != 0.0F && !node.HasCustomLayout && node.Kind != NodeKind.Editor
-        && node.RetainedVirtualState == nil
+        && node.SolverMode != LayoutSolverMode.Virtual
         && node.OverflowX != Overflow.Scroll && node.OverflowY != Overflow.Scroll {
             let axes = node.LogicalLayout.ContentAxes
             let horizontal = (axes & 1) != 0 && node.OverflowX == Overflow.Hidden
@@ -686,8 +686,8 @@ internal partial class FlexLayoutEngine {
             }
             return
         }
-        if let custom = CustomLayouts.State(node) {
-            custom.Arrange(state, frame)
+        if node.SolverMode == LayoutSolverMode.Custom {
+            node.RetainedCustomLayout!!.Arrange(state, frame)
             return
         }
         if node.Kind == NodeKind.Editor {

@@ -38,8 +38,7 @@ internal class Node {
   internal var ScrollActivityState ScrollNodeActivity?
   internal var ScrollbarPartState ScrollbarPartState?
   internal var RetainedLayoutTransition LayoutTransitionState?
-  internal var RetainedVirtualState VirtualNodeState?
-  internal var RetainedSizedState SizedNodeState?
+  internal var RetainedLayoutState object?
 
   internal prop HitContained bool{
     get -> hitContained
@@ -115,6 +114,7 @@ internal class Node {
     Password = false
     PortalAnchorClipped = false
     HasCustomLayout = false
+    RetainedLayoutState = nil
     HitContained = false
     Key = nil
     Parent = nil
@@ -271,7 +271,59 @@ internal class Node {
     get -> (lifecycleState & uint16(4096)) != uint16(0)
     set -> lifecycleState = value ? lifecycleState | uint16(4096) : lifecycleState & ~uint16(4096)
   }
-  internal prop HasCustomLayout bool{ get; set; }
+  internal prop HasLayoutTraits bool {
+    get -> (layoutFlags & (1u << 22)) != 0u
+    set -> layoutFlags = value ? layoutFlags | (1u << 22) : layoutFlags & ~(1u << 22)
+  }
+  internal prop SolverMode LayoutSolverMode {
+    get -> LayoutSolverMode(int32((layoutFlags >> 23) & 15u))
+    set -> layoutFlags = (layoutFlags & ~(15u << 23)) | ((uint32(int32(value)) & 15u) << 23)
+  }
+  internal prop HasCustomLayout bool {
+    get -> SolverMode == LayoutSolverMode.Custom
+    set {
+      if !value && SolverMode == LayoutSolverMode.Custom {
+        RetainedLayoutState = nil
+        SolverMode = LayoutSolverMode.Flex
+      }
+    }
+  }
+  internal prop RetainedVirtualState VirtualNodeState? {
+    get -> SolverMode == LayoutSolverMode.Virtual ? RetainedLayoutState as VirtualNodeState : nil
+    set {
+      if let state = value {
+        RetainedLayoutState = state
+        SolverMode = LayoutSolverMode.Virtual
+      } else if SolverMode == LayoutSolverMode.Virtual {
+        RetainedLayoutState = nil
+        SolverMode = LayoutSolverMode.Flex
+      }
+    }
+  }
+  internal prop RetainedSizedState SizedNodeState? {
+    get -> SolverMode == LayoutSolverMode.Sized ? RetainedLayoutState as SizedNodeState : nil
+    set {
+      if let state = value {
+        RetainedLayoutState = state
+        SolverMode = LayoutSolverMode.Sized
+      } else if SolverMode == LayoutSolverMode.Sized {
+        RetainedLayoutState = nil
+        SolverMode = LayoutSolverMode.Flex
+      }
+    }
+  }
+  internal prop RetainedCustomLayout CustomLayoutState? {
+    get -> SolverMode == LayoutSolverMode.Custom ? RetainedLayoutState as CustomLayoutState : nil
+    set {
+      if let state = value {
+        RetainedLayoutState = state
+        SolverMode = LayoutSolverMode.Custom
+      } else if SolverMode == LayoutSolverMode.Custom {
+        RetainedLayoutState = nil
+        SolverMode = LayoutSolverMode.Flex
+      }
+    }
+  }
   internal prop Key string? { get; set; }
   internal prop Parent Node? {
     get -> parent

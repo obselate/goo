@@ -908,6 +908,15 @@ internal partial class Reconciler {
         MarkEffects(ReconcileEffects.Accessibility)
       }
     }
+    if b.HasLayoutTraits || n.HasLayoutTraits {
+      if LayoutTraits.Sync(n, b) {
+        if let parent = n.Parent {
+          if let custom = parent.RetainedCustomLayout { custom.ChildInvalidated() }
+          if parent.RetainedSizedState == nil { FlexLayoutEngine.Invalidate(parent) }
+        }
+        MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
+      }
+    }
   }
 
   private func replace(n Node, b Blob) Node {

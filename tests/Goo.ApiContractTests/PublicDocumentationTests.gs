@@ -293,8 +293,21 @@ class PublicDocumentationTests {
             "M:Goo.Window.SetColors(Goo.Color,Goo.Color)",
             "M:Goo.LayoutAlgorithm.Measure(Goo.LayoutContext,Goo.LayoutSize)",
             "M:Goo.LayoutAlgorithm.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
+            "M:Goo.LayoutConstraint.AtMost(System.Double)",
+            "M:Goo.LayoutConstraint.Exactly(System.Double)",
+            "M:Goo.LayoutContext.ChildDisplay(System.Int32)",
+            "M:Goo.LayoutContext.TryGetChildTrait``1(System.Int32,Goo.LayoutKey{``0},``0@)",
+            "M:Goo.LayoutContext.ChildTrait``1(System.Int32,Goo.LayoutKey{``0})",
             "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutSize)",
+            "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutConstraint,Goo.LayoutConstraint)",
+            "M:Goo.LayoutContext.MeasureChildBaseline(System.Int32,Goo.LayoutConstraint,Goo.LayoutConstraint)",
             "M:Goo.LayoutContext.ArrangeChild(System.Int32,Goo.ElementRect)",
+            "M:Goo.LayoutKey`1.#ctor",
+            "M:Goo.LayoutKey`1.#ctor(`0)",
+            "M:Goo.Blob.SetLayoutTrait``1(Goo.LayoutKey{``0},``0)",
+            "M:Goo.Blob.WithLayoutTrait``1(Goo.LayoutKey{``0},``0)",
+            "M:Goo.Blob.TryGetLayoutTrait``1(Goo.LayoutKey{``0},``0@)",
+            "M:Goo.Blob.ClearLayoutTrait``1(Goo.LayoutKey{``0})",
             "M:Goo.Virtual.#ctor",
             "M:Goo.VirtualSource.State(Goo.VirtualState)",
             "M:Goo.VirtualState.Realize(Goo.VirtualViewport,Goo.VirtualOutput)",
@@ -729,6 +742,10 @@ class PublicDocumentationTests {
         private let ExpectedEnumFieldIds[]string = []string{
             "F:Goo.LayoutAxis.Horizontal",
             "F:Goo.LayoutAxis.Vertical",
+            "F:Goo.LayoutMeasureMode.Unbounded",
+            "F:Goo.LayoutMeasureMode.AtMost",
+            "F:Goo.LayoutMeasureMode.Exactly",
+            "F:Goo.LayoutMeasureMode.MinContent",
             "F:Goo.AccessibilityRole.Separator",
             "F:Goo.AccessibilityRole.TabPanel",
             "F:Goo.AccessibilityRole.Toolbar",
@@ -2159,8 +2176,43 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 false
             ),
+            ["M:Goo.LayoutConstraint.AtMost(System.Double)"] = DocumentationShape(
+                []string{"size"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.LayoutConstraint.Exactly(System.Double)"] = DocumentationShape(
+                []string{"size"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.LayoutContext.ChildDisplay(System.Int32)"] = DocumentationShape(
+                []string{"index"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.LayoutContext.TryGetChildTrait``1(System.Int32,Goo.LayoutKey{``0},``0@)"] = DocumentationShape(
+                []string{"index", "key", "value"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.LayoutContext.ChildTrait``1(System.Int32,Goo.LayoutKey{``0})"] = DocumentationShape(
+                []string{"index", "key"},
+                []string{"T"},
+                true
+            ),
             ["M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutSize)"] = DocumentationShape(
                 []string{"index", "available"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutConstraint,Goo.LayoutConstraint)"] = DocumentationShape(
+                []string{"index", "width", "height"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.LayoutContext.MeasureChildBaseline(System.Int32,Goo.LayoutConstraint,Goo.LayoutConstraint)"] = DocumentationShape(
+                []string{"index", "width", "height"},
                 System.Array.Empty[string](),
                 true
             ),
@@ -2168,6 +2220,36 @@ class PublicDocumentationTests {
                 []string{"index", "bounds"},
                 System.Array.Empty[string](),
                 false
+            ),
+            ["T:Goo.LayoutKey`1"] = DocumentationShape(
+                System.Array.Empty[string](),
+                []string{"T"},
+                false
+            ),
+            ["M:Goo.LayoutKey`1.#ctor(`0)"] = DocumentationShape(
+                []string{"defaultValue"},
+                System.Array.Empty[string](),
+                false
+            ),
+            ["M:Goo.Blob.SetLayoutTrait``1(Goo.LayoutKey{``0},``0)"] = DocumentationShape(
+                []string{"key", "value"},
+                []string{"T"},
+                false
+            ),
+            ["M:Goo.Blob.WithLayoutTrait``1(Goo.LayoutKey{``0},``0)"] = DocumentationShape(
+                []string{"key", "value"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.Blob.TryGetLayoutTrait``1(Goo.LayoutKey{``0},``0@)"] = DocumentationShape(
+                []string{"key", "value"},
+                []string{"T"},
+                true
+            ),
+            ["M:Goo.Blob.ClearLayoutTrait``1(Goo.LayoutKey{``0})"] = DocumentationShape(
+                []string{"key"},
+                []string{"T"},
+                true
             ),
             ["M:Goo.WindowClipboard.ReadFiles"] = DocumentationShape(
                 System.Array.Empty[string](),

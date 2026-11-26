@@ -1984,6 +1984,114 @@ internal class LayoutFixtures {
     return covered == n.Content.Length
   }
 
+  func LayoutTraitsReconcileAndInvalidateContract() bool {
+    let spanKey = LayoutKey[int32](1)
+    let tagKey = LayoutKey[string]()
+    let reconciler = Reconciler{Res: Resolver{}}
+    let childBlob = Container{Width: 20, Height: 20}.WithLayoutTrait(spanKey, 2)
+    childBlob.SetLayoutTrait(tagKey, "a")
+    if !childBlob.TryGetLayoutTrait(spanKey, out var bSpan) || bSpan != 2 { return false }
+    if !childBlob.ClearLayoutTrait(tagKey) || childBlob.ClearLayoutTrait(tagKey) { return false }
+    childBlob.SetLayoutTrait(tagKey, "a")
+
+    let root = reconciler.Mount(Container{Width: 100, Height: 40, childBlob})
+    try {
+      var frozenRejected = false
+      try { childBlob.SetLayoutTrait(spanKey, 9) } catch (_ InvalidOperationException) { frozenRejected = true }
+      if !frozenRejected { return false }
+
+      let layout = Layout()
+      layout.Calculate(root, 100.0F, 40.0F)
+      let childNode = root.Children[0]
+      if !childNode.HasLayoutTraits || !LayoutTraits.TryGetNode(childNode, spanKey, out var nSpan) || nSpan != 2 {
+        return false
+      }
+
+      reconciler.Diff(root, Container{Width: 100, Height: 40,
+        Container{Width: 20, Height: 20}.WithLayoutTrait(spanKey, 2).WithLayoutTrait(tagKey, "a")})
+      if !root.FlexMeasures.HasCommitted { return false }
+
+      reconciler.Diff(root, Container{Width: 100, Height: 40,
+        Container{Width: 20, Height: 20}.WithLayoutTrait(spanKey, 3).WithLayoutTrait(tagKey, "a")})
+      if root.FlexMeasures.HasCommitted { return false }
+      if !LayoutTraits.TryGetNode(childNode, spanKey, out var updatedSpan) || updatedSpan != 3 { return false }
+      layout.Calculate(root, 100.0F, 40.0F)
+
+      reconciler.Diff(root, Container{Width: 100, Height: 40, Container{Width: 20, Height: 20}})
+      if root.FlexMeasures.HasCommitted { return false }
+      if childNode.HasLayoutTraits || LayoutTraits.TryGetNode(childNode, spanKey, out var fallbackSpan) || fallbackSpan != 1 {
+        return false
+      }
+
+      childNode.Retired = true
+      NodeLifecycle.ResetForReuse(childNode)
+      return !childNode.HasLayoutTraits
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func UpgradedLayoutContextConstraintsAndBaselineContract() bool {
+    let colKey = LayoutKey[int32](0)
+    let policy = UpgradedContextFixtureAlgorithm(colKey)
+    let reconciler = Reconciler{Res: Resolver{}}
+    let root = reconciler.Mount(Container{
+      Width: 300, Height: 200, AlignItems: AlignItems.FlexStart,
+      Container{
+        Direction: Direction.RightToLeft, Layout: policy,
+        Text{Content: "Alpha Beta"}.WithLayoutTrait(colKey, 2),
+        Container{Display: Display.None, Width: 10, Height: 10},
+        Container{Width: 30, Height: 20},
+      }
+    })
+    try {
+      let layout = Layout()
+      layout.SetPixelDensity(1.5F)
+      layout.Calculate(root, 300.0F, 200.0F)
+      if !policy.Valid || !policy.Checked { return false }
+
+      var invalidThrown = 0
+      try { let _ = LayoutConstraint.AtMost(-1.0) } catch (_ ArgumentOutOfRangeException) { invalidThrown++ }
+      try { let _ = LayoutConstraint.Exactly(Double.PositiveInfinity) } catch (_ ArgumentOutOfRangeException) { invalidThrown++ }
+      try { let _ = policy.Context!!.ChildDisplay(0) } catch (_ InvalidOperationException) { invalidThrown++ }
+      try { let _ = policy.Context!!.ChildTrait(0, colKey) } catch (_ InvalidOperationException) { invalidThrown++ }
+      try { let _ = policy.Context!!.MeasureChild(0, LayoutConstraint.Unbounded, LayoutConstraint.Unbounded) } catch (_ InvalidOperationException) { invalidThrown++ }
+      return invalidThrown == 5
+    } finally { NodeLifecycle.DisposeTree(root) }
+  }
+
+  func MultiSolverNodeStateContract() bool {
+    let policy = UpgradedContextFixtureAlgorithm(LayoutKey[int32](0))
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Container{Width: 120, Height: 80, Text{Content: "hi"}})
+    let virt = reconciler.Mount(Virtual{Source: DirectVirtualLayoutSource(), Width: 100, Height: 40})
+    let sized = reconciler.Mount(Blob.Sized((size LayoutSize) -> Container{Width: size.Width, Height: size.Height}))
+    try {
+      if node.SolverMode != LayoutSolverMode.Flex
+        || virt.SolverMode != LayoutSolverMode.Virtual
+        || sized.SolverMode != LayoutSolverMode.Sized { return false }
+
+      reconciler.Diff(node, Container{Width: 120, Height: 80, Layout: policy,
+        Text{Content: "hi"}, Container{Width: 10, Height: 10}, Container{Width: 10, Height: 10}})
+      if node.SolverMode != LayoutSolverMode.Custom || node.RetainedCustomLayout == nil || !node.HasCustomLayout {
+        return false
+      }
+
+      let layout = Layout()
+      layout.Calculate(node, 120.0F, 80.0F)
+      layout.Calculate(node, 120.0F, 80.0F)
+      let before = GC.GetAllocatedBytesForCurrentThread()
+      layout.Calculate(node, 120.0F, 80.0F)
+      let steadyBytes = GC.GetAllocatedBytesForCurrentThread() - before
+      if steadyBytes != 0L { return false }
+
+      reconciler.Diff(node, Container{Width: 120, Height: 80, Text{Content: "hi"}})
+      return node.SolverMode == LayoutSolverMode.Flex && node.RetainedCustomLayout == nil && !node.HasCustomLayout
+    } finally {
+      NodeLifecycle.DisposeTree(node)
+      NodeLifecycle.DisposeTree(virt)
+      NodeLifecycle.DisposeTree(sized)
+    }
+  }
+
   func MeasuredTextMatchesLaidOutText() bool {
     let failures = List[string]()
     for style in []Style{
@@ -2493,4 +2601,45 @@ internal class RelativeLateMountFixtureCell : Cell {
 
 public partial class Window {
   internal func NormalPassesForFixture() int32 -> layout.NormalPasses
+}
+
+internal class UpgradedContextFixtureAlgorithm(colKey LayoutKey[int32]) : LayoutAlgorithm {
+  internal var Context LayoutContext?
+  internal var Checked bool
+  internal var Valid bool = true
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
+    Context = context
+    Checked = true
+    Valid = Valid && context.Direction == Direction.RightToLeft
+      && context.PixelDensity == 1.5
+      && context.ChildCount == 3
+      && context.ChildDisplay(0) == Display.Flex
+      && context.ChildDisplay(1) == Display.None
+      && context.ChildTrait(0, colKey) == 2
+      && !context.TryGetChildTrait(1, colKey, out var missing) && missing == 0
+
+    let unbounded = context.MeasureChild(0, LayoutConstraint.Unbounded, LayoutConstraint.Unbounded)
+    let minContent = context.MeasureChild(0, LayoutConstraint.MinContent, LayoutConstraint.Unbounded)
+    let exact = context.MeasureChild(0, LayoutConstraint.Exactly(80.0), LayoutConstraint.Unbounded)
+    let atMost = context.MeasureChild(0, LayoutConstraint.AtMost(120.0), LayoutConstraint.Unbounded)
+    let hidden = context.MeasureChild(1, LayoutConstraint.Unbounded, LayoutConstraint.Unbounded)
+    let textBaseline = context.MeasureChildBaseline(0, LayoutConstraint.AtMost(120.0), LayoutConstraint.Unbounded)
+    let boxBaseline = context.MeasureChildBaseline(2, LayoutConstraint.Unbounded, LayoutConstraint.Unbounded)
+    Valid = Valid && unbounded.Width > 0.0
+      && minContent.Width <= unbounded.Width
+      && exact.Width == 80.0
+      && atMost.Width <= 120.0
+      && hidden.Width == 0.0 && hidden.Height == 0.0
+      && textBaseline != nil && textBaseline > 0.0
+      && boxBaseline == nil
+    return LayoutSize(Math.Min(120.0, available.Width), 60.0)
+  }
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    Context = context
+    context.ArrangeChild(0, ElementRect{X: 0, Y: 0, Width: 80, Height: 24})
+    context.ArrangeChild(1, ElementRect{X: 0, Y: 0, Width: 0, Height: 0})
+    context.ArrangeChild(2, ElementRect{X: 0, Y: 24, Width: 30, Height: 20})
+  }
 }

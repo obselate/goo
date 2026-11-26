@@ -22,6 +22,13 @@ package Goo
 
 import System
 
+internal enum LayoutSolverMode {
+    Flex;
+    Virtual;
+    Sized;
+    Custom
+}
+
 internal enum FlexMeasureMode {
     Unbounded;
     Exactly;

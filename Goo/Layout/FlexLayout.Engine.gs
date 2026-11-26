@@ -60,8 +60,8 @@ internal partial class FlexLayoutEngine {
         ||
             node.Kind == NodeKind.Editor ||
             node.Kind == NodeKind.Image ||
-            node.HasCustomLayout ||
-            node.RetainedSizedState != nil
+            node.SolverMode == LayoutSolverMode.Custom ||
+            node.SolverMode == LayoutSolverMode.Sized
     }
 
     internal let EngineId uint32 = uint32(Interlocked.Increment(ref nextEngineId))
@@ -260,7 +260,7 @@ internal partial class FlexLayoutEngine {
         return independent
     }
 
-    private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64, state FlexThreadState, contentMain int32 = 0) FlexSize {
+    internal func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64, state FlexThreadState, contentMain int32 = 0) FlexSize {
         if node.Display == Display.None {
             if arrange {
                 Hide(node, frame)
@@ -303,11 +303,11 @@ internal partial class FlexLayoutEngine {
             if arrange && node.FlexMeasures.HasProbes && state.Probes.TryMeasure(node, EngineId, in key, out var measured) {
                 measured
             } else {
-                MeasureLeaf(node, in request, box, width, height)
+                MeasureLeaf(node, in request, box, width, height, frame, state)
             }
         } else if !arrange && !request.Baseline && Known(width) && Known(height) {
             FlexSize{Width: width, Height: height, Baseline: height}
-        } else if node.Children.Count == 0 || node.RetainedVirtualState != nil {
+        } else if node.Children.Count == 0 || node.SolverMode == LayoutSolverMode.Virtual {
             let w = Known(width) ? width : box.Clamp(0.0F, true)
             let h = Known(height) ? height : box.Clamp(0.0F, false)
             FlexSize{Width: w, Height: h, Baseline: h}
@@ -337,7 +337,7 @@ internal partial class FlexLayoutEngine {
         return result
     }
 
-    private func MeasureLeaf(node Node, in request FlexRequest, box FlexBox, width float32, height float32) FlexSize {
+    private func MeasureLeaf(node Node, in request FlexRequest, box FlexBox, width float32, height float32, frame uint64, state FlexThreadState) FlexSize {
         let horizontal = box.Decorations(true)
         let vertical = box.Decorations(false)
         let w = ContentConstraint(request.Width, width, box.MaxWidth, horizontal)
@@ -347,7 +347,7 @@ internal partial class FlexLayoutEngine {
             let measured = if let callback = MeasureContent {
                 callback(node, w, h)
             } else {
-                DefaultMeasure(node, w, h)
+                DefaultMeasure(node, w, h, frame, state)
             }
             size.Width = Known(width) ? width : Used(
                 MathF.Max(0.0F, Zero(measured.Width)) + horizontal,
@@ -387,15 +387,16 @@ internal partial class FlexLayoutEngine {
     private func CustomConstraint(constraint FlexConstraint) float64 ->
     constraint.Mode == FlexMeasureMode.Unbounded ? Double.PositiveInfinity : float64(constraint.Size)
 
-    private func DefaultMeasure(node Node, width FlexConstraint, height FlexConstraint) FlexSize {
-        if let custom = CustomLayouts.State(node) {
+    private func DefaultMeasure(node Node, width FlexConstraint, height FlexConstraint, frame uint64, state FlexThreadState) FlexSize {
+        if node.SolverMode == LayoutSolverMode.Custom {
+            let custom = node.RetainedCustomLayout!!
             let blockLimit = height.Mode == FlexMeasureMode.MinContent ? Double.PositiveInfinity : CustomConstraint(
                 height
             )
-            let measured = custom.Measure(LayoutSize(CustomConstraint(width), blockLimit))
+            let measured = custom.Measure(LayoutSize(CustomConstraint(width), blockLimit), state, frame)
             return FlexSize{Width: float32(measured.Width), Height: float32(measured.Height)}
         }
-        if node.RetainedSizedState != nil {
+        if node.SolverMode == LayoutSolverMode.Sized {
             return FlexSize{}
         }
         switch node.Kind {

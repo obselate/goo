@@ -292,6 +292,15 @@ Gets the fixed version of this source.
 
 Defines the common surface for Goo-owned declarative elements.
 
+### `ClearLayoutTrait``1(LayoutKey{T})`
+
+Removes an attached child layout trait from this mutable element.
+
+- `T`: The trait value type.
+- `key`: The trait key.
+
+Returns: True when the trait was present and removed.
+
 ### `Each``1(System.Collections.Generic.IReadOnlyList{T},System.Func{T,string},System.Func{T,Blob})`
 
 Builds one child per item. Children without a key get the item's key. Explicit keys stay unchanged.
@@ -303,6 +312,14 @@ Builds one child per item. Children without a key get the item's key. Explicit k
 
 Returns: Children to spread into a container. Duplicate sibling keys are rejected during reconciliation.
 
+### `SetLayoutTrait``1(LayoutKey{T},T)`
+
+Attaches or replaces a typed child layout trait on this mutable element.
+
+- `T`: The trait value type.
+- `key`: The trait key.
+- `value`: The trait value.
+
 ### `Sized(System.Func{LayoutSize,Blob})`
 
 Builds content from the element's allotted size in layout units. See Sized.
@@ -310,6 +327,26 @@ Builds content from the element's allotted size in layout units. See Sized.
 - `build`: Builds content without changing State.
 
 Returns: A retained element with no intrinsic size.
+
+### `TryGetLayoutTrait``1(LayoutKey{T},T@)`
+
+Tries to read an attached child layout trait from this element.
+
+- `T`: The trait value type.
+- `key`: The trait key.
+- `value`: Receives the attached value, or the key default when absent.
+
+Returns: True when the trait is attached to this element.
+
+### `WithLayoutTrait``1(LayoutKey{T},T)`
+
+Attaches or replaces a typed child layout trait on this mutable element and returns this element for fluent composition.
+
+- `T`: The trait value type.
+- `key`: The trait key.
+- `value`: The trait value.
+
+Returns: This element.
 
 ### `Accessibility`
 

@@ -85,6 +85,9 @@ ctor|Goo.KeyBinding|public|(Key:Goo.Key,Modifiers:Goo.KeyModifiers,OnPress:Syste
 ctor|Goo.KeyModifiers|public|()
 ctor|Goo.LayerWindowImage|public|(path:System.String,fit:Goo.ImageFit=Cover)
 ctor|Goo.LayerWindowOptions|public|()
+ctor|Goo.LayoutConstraint|public|()
+ctor|Goo.LayoutKey`1|public|()
+ctor|Goo.LayoutKey`1|public|(defaultValue:!0?)
 ctor|Goo.LayoutSize|public|(Width:System.Double,Height:System.Double)
 ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
 ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
@@ -245,6 +248,7 @@ enum-underlying|Goo.Key|System.Int32
 enum-underlying|Goo.LayerWindowAnchor|System.Int32
 enum-underlying|Goo.LayerWindowKeyboardInteractivity|System.Int32
 enum-underlying|Goo.LayoutAxis|System.Int32
+enum-underlying|Goo.LayoutMeasureMode|System.Int32
 enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
 enum-underlying|Goo.MacOSBackdropState|System.Int32
 enum-underlying|Goo.MessageBoxIcon|System.Int32
@@ -721,6 +725,10 @@ enum|Goo.LayerWindowKeyboardInteractivity|None|0
 enum|Goo.LayerWindowKeyboardInteractivity|OnDemand|2
 enum|Goo.LayoutAxis|Horizontal|0
 enum|Goo.LayoutAxis|Vertical|1
+enum|Goo.LayoutMeasureMode|AtMost|1
+enum|Goo.LayoutMeasureMode|Exactly|2
+enum|Goo.LayoutMeasureMode|MinContent|3
+enum|Goo.LayoutMeasureMode|Unbounded|0
 enum|Goo.MacOSBackdropMaterial|ContentBackground|18
 enum|Goo.MacOSBackdropMaterial|FullScreenUI|15
 enum|Goo.MacOSBackdropMaterial|HeaderView|10
@@ -1226,8 +1234,12 @@ method|Goo.Assets|Open|static|public|generic:|(assembly:System.Reflection.Assemb
 method|Goo.Assets|ReadAllBytes|static|public|generic:|(assembly:System.Reflection.Assembly,name:System.String)->System.Byte[]
 method|Goo.AsyncImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
 method|Goo.AsyncImageSource|Dispose|instance|public|generic:|()->System.Void
+method|Goo.Blob|ClearLayoutTrait|instance|public|generic:T[attrs:0,constraints:]|(key:Goo.LayoutKey`1<!!0?>)->System.Boolean
 method|Goo.Blob|Each|static|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0?>,itemKey:System.Func`2<!!0?,System.String>,itemBuilder:System.Func`2<!!0?,Goo.Blob>)->Goo.Blob[]
+method|Goo.Blob|SetLayoutTrait|instance|public|generic:T[attrs:0,constraints:]|(key:Goo.LayoutKey`1<!!0?>,value:!!0?)->System.Void
 method|Goo.Blob|Sized|static|public|generic:|(build:System.Func`2<Goo.LayoutSize,Goo.Blob>)->Goo.Blob
+method|Goo.Blob|TryGetLayoutTrait|instance|public|generic:T[attrs:0,constraints:]|(key:Goo.LayoutKey`1<!!0?>,out value:!!0?&)->System.Boolean
+method|Goo.Blob|WithLayoutTrait|instance|public|generic:T[attrs:0,constraints:]|(key:Goo.LayoutKey`1<!!0?>,value:!!0?)->Goo.Blob
 method|Goo.BoxShadow|Deconstruct|instance|public|generic:|(out offsetX:Goo.Length&,out offsetY:Goo.Length&,out blur:Goo.Length&,out spread:Goo.Length&,out color:Goo.Color&,out inset:System.Boolean&)->System.Void
 method|Goo.BoxShadow|Equals|instance|public|generic:|(other:Goo.BoxShadow)->System.Boolean
 method|Goo.BoxShadow|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -1507,9 +1519,23 @@ method|Goo.KeyModifiers|op_Equality|static|public|generic:|(left:Goo.KeyModifier
 method|Goo.KeyModifiers|op_Inequality|static|public|generic:|(left:Goo.KeyModifiers,right:Goo.KeyModifiers)->System.Boolean
 method|Goo.LayoutAlgorithm|Arrange|abstract|public|generic:|(context:Goo.LayoutContext,finalSize:Goo.LayoutSize)->System.Void
 method|Goo.LayoutAlgorithm|Measure|abstract|public|generic:|(context:Goo.LayoutContext,available:Goo.LayoutSize)->Goo.LayoutSize
+method|Goo.LayoutConstraint|AtMost|static|public|generic:|(size:System.Double)->Goo.LayoutConstraint
+method|Goo.LayoutConstraint|Deconstruct|instance|public|generic:|(out mode:Goo.LayoutMeasureMode&,out size:System.Double&)->System.Void
+method|Goo.LayoutConstraint|Equals|instance|public|generic:|(other:Goo.LayoutConstraint)->System.Boolean
+method|Goo.LayoutConstraint|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
+method|Goo.LayoutConstraint|Exactly|static|public|generic:|(size:System.Double)->Goo.LayoutConstraint
+method|Goo.LayoutConstraint|GetHashCode|virtual|public|generic:|()->System.Int32
+method|Goo.LayoutConstraint|ToString|virtual|public|generic:|()->System.String
+method|Goo.LayoutConstraint|op_Equality|static|public|generic:|(left:Goo.LayoutConstraint,right:Goo.LayoutConstraint)->System.Boolean
+method|Goo.LayoutConstraint|op_Inequality|static|public|generic:|(left:Goo.LayoutConstraint,right:Goo.LayoutConstraint)->System.Boolean
 method|Goo.LayoutContext|ArrangeChild|instance|public|generic:|(index:System.Int32,bounds:Goo.ElementRect)->System.Void
+method|Goo.LayoutContext|ChildDisplay|instance|public|generic:|(index:System.Int32)->Goo.Display
+method|Goo.LayoutContext|ChildTrait|instance|public|generic:T[attrs:0,constraints:]|(index:System.Int32,key:Goo.LayoutKey`1<!!0?>)->!!0?
+method|Goo.LayoutContext|MeasureChildBaseline|instance|public|generic:|(index:System.Int32,width:Goo.LayoutConstraint,height:Goo.LayoutConstraint)->System.Nullable`1<System.Double>
 method|Goo.LayoutContext|MeasureChild|instance|public|generic:|(index:System.Int32,available:Goo.LayoutSize)->Goo.LayoutSize
+method|Goo.LayoutContext|MeasureChild|instance|public|generic:|(index:System.Int32,width:Goo.LayoutConstraint,height:Goo.LayoutConstraint)->Goo.LayoutSize
 method|Goo.LayoutContext|ResolveLength|instance|public|generic:|(value:Goo.Length,axis:Goo.LayoutAxis)->System.Nullable`1<System.Double>
+method|Goo.LayoutContext|TryGetChildTrait|instance|public|generic:T[attrs:0,constraints:]|(index:System.Int32,key:Goo.LayoutKey`1<!!0?>,out value:!!0?&)->System.Boolean
 method|Goo.LayoutSize|Deconstruct|instance|public|generic:|(out Width:System.Double&,out Height:System.Double&)->System.Void
 method|Goo.LayoutSize|Equals|instance|public|generic:|(other:Goo.LayoutSize)->System.Boolean
 method|Goo.LayoutSize|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
@@ -2511,7 +2537,14 @@ property|Goo.LayerWindowOptions|Namespace|System.String|instance|get:public,init
 property|Goo.LayerWindowOptions|Output|System.Nullable`1<Goo.WindowDisplayId>|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|StillImage|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.LayerWindowOptions|Width|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayoutConstraint|MinContent|Goo.LayoutConstraint|static|get:public|index:()
+property|Goo.LayoutConstraint|Mode|Goo.LayoutMeasureMode|instance|get:public,init:public|index:()
+property|Goo.LayoutConstraint|Size|System.Double|instance|get:public,init:public|index:()
+property|Goo.LayoutConstraint|Unbounded|Goo.LayoutConstraint|static|get:public|index:()
 property|Goo.LayoutContext|ChildCount|System.Int32|instance|get:public|index:()
+property|Goo.LayoutContext|Direction|Goo.Direction|instance|get:public|index:()
+property|Goo.LayoutContext|PixelDensity|System.Double|instance|get:public|index:()
+property|Goo.LayoutKey`1|Default|!0?|instance|get:public|index:()
 property|Goo.LayoutSize|Height|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutSize|Width|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutTransition|DurationMs|System.Double|instance|get:public,init:public|index:()
@@ -3327,7 +3360,10 @@ type|Goo.LayerWindowKeyboardInteractivity|enum|public|base:System.Enum|interface
 type|Goo.LayerWindowOptions|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:
 type|Goo.LayoutAxis|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayoutConstraint|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutConstraint>|generic:
 type|Goo.LayoutContext|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.LayoutKey`1|class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
+type|Goo.LayoutMeasureMode|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutSize>|generic:
 type|Goo.LayoutTransition|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutTransition>|generic:
 type|Goo.Length|struct|public|base:System.ValueType|interfaces:|generic:
