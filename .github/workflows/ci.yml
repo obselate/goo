@@ -1560,7 +1560,6 @@ jobs:
         run: |
           dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- \
             --package "artifacts/packages/Goo.$GOO_VERSION.nupkg" \
-            --symbols "artifacts/packages/Goo.$GOO_VERSION.snupkg" \
             --bundle artifacts/linux-x64
           mkdir -p artifacts/reports
           size=$(find artifacts/linux-x64 -type f -printf '%s\n' | awk '{s+=$1} END {print s+0}')
@@ -1594,7 +1593,6 @@ jobs:
           name: goo-${{ env.GOO_VERSION }}-symbols
           if-no-files-found: error
           path: |
-            artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
             artifacts/consumer-performance/stage/*/symbols/
 
@@ -1606,7 +1604,6 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SoftwareRenderer.${{ env.GOO_VERSION }}.nupkg
@@ -2446,10 +2443,6 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-          dotnet nuget push "artifacts/packages/Goo.$GOO_VERSION.snupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -2500,7 +2493,7 @@ jobs:
               --title "Goo $GOO_VERSION" \
               --notes-file "$notes_file"
           fi
-          gh release upload "$GITHUB_REF_NAME" artifacts/packages/*.nupkg artifacts/packages/*.snupkg --clobber
+          gh release upload "$GITHUB_REF_NAME" artifacts/packages/*.nupkg --clobber
 
   android:
     needs: [changes, preflight]

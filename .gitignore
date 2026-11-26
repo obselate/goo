@@ -187,12 +187,6 @@
 
 !/vendor/
 /vendor/*
-!/vendor/Yoga.Net/
-/vendor/Yoga.Net/*
-!/vendor/Yoga.Net/LICENSE
-!/vendor/Yoga.Net/UPSTREAM.md
-!/vendor/Yoga.Net/src/
-!/vendor/Yoga.Net/src/**
 
 !/README.md
 !/CONTRIBUTING.md

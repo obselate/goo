@@ -16,9 +16,8 @@
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IsPackable>true</IsPackable>
+    <IncludeSymbols>false</IncludeSymbols>
     <DebugType>embedded</DebugType>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <GooTestFixturesProps Condition="'$(GooTestFixturesProps)' == ''">$(MSBuildThisFileDirectory)../tests/Shared/Goo.TestFixtures.props</GooTestFixturesProps>
   </PropertyGroup>
   <ItemGroup>
@@ -39,8 +38,6 @@
                       LogicalName="Goo.Effects.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Rendering/Text/Data/*.bin"
                       LogicalName="Goo.Text.Data.%(Filename)%(Extension)" />
-    <ProjectReference Include="$(MSBuildProjectDirectory)/../vendor/Yoga.Net/src/Yoga.Net/Yoga.Net.csproj"
-                      PrivateAssets="all" />
     <PackageReference Include="Hexa.NET.SDL3" ExcludeAssets="native" />
     <PackageReference Include="Unicode.Bidi" />
     <PackageReference Include="Tmds.DBus.Protocol" />

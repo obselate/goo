@@ -327,11 +327,6 @@
   <Target Name="IncludeGooImplementationAssemblies"
           DependsOnTargets="BuildOnlySettings;ResolveReferences">
     <ItemGroup>
-      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)"
-          Condition="'%(ReferenceCopyLocalPaths.Filename)' == 'Yoga.Net'">
-        <TargetPath>%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</TargetPath>
-        <FinalOutputPath>%(ReferenceCopyLocalPaths.FullPath)</FinalOutputPath>
-      </BuildOutputInPackage>
       <BuildOutputInPackage Include="$(TargetDir)Goo.xml" Condition="Exists('$(TargetDir)Goo.xml')">
         <TargetPath>Goo.xml</TargetPath>
         <FinalOutputPath>$(TargetDir)Goo.xml</FinalOutputPath>

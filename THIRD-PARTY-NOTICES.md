@@ -122,20 +122,31 @@ Goo's Vulkan GLSL compatibility adapters under
 under `Goo/Shaders/Vulkan/` are derivative inclusions of
 those sources and retain the same attribution and license terms.
 
-## Yoga.Net 3.2.3, based on Meta Yoga v3.2.1
+## Facepunch Sandbox.Layout
 
-Goo ships one vendored C# Yoga implementation. `3.2.3` is the Yoga.Net port
-version. `v3.2.1` is the Meta Yoga source and behavior baseline for that port.
+Goo's internal flex layout engine adapts code from
+[Sandbox.Layout at `1e551e0`](https://github.com/Facepunch/sbox-public/tree/1e551e0dcbdc7d120e620d943adba71af037138e/engine/Sandbox.Layout)
+under the [MIT license](https://github.com/Facepunch/sbox-public/blob/1e551e0dcbdc7d120e620d943adba71af037138e/LICENSE.md).
 
-- Yoga.Net port: Copyright (c) 2026 Chen Ren Song.
-- Vendored Yoga.Net license: Copyright (c) Meta Platforms, Inc. and its affiliates.
-- Meta Yoga v3.2.1 license: Copyright (c) Facebook, Inc. and its affiliates.
-- License: MIT.
-- [Vendored Yoga.Net license](https://github.com/chenrensong/Yoga.Net/blob/baf14fcd6cbf21d8930a297e32ef3b76674c37bd/LICENSE)
-- [Meta Yoga v3.2.1 license](https://github.com/facebook/yoga/blob/v3.2.1/LICENSE)
-- Vendored revision: `baf14fcd6cbf21d8930a297e32ef3b76674c37bd`.
-- Goo carries local performance patches. Those changes are Goo modifications,
-  not an upstream Yoga.Net release.
+Copyright (c) 2025 Facepunch Studios Ltd
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## HarfBuzz Old MIT license
 

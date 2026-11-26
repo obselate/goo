@@ -12,7 +12,6 @@ internal shared partial class ReleaseCheck {
     private let PackageFiles[]string = []string{
         "_rels/.rels",
         "Goo.nuspec",
-        "lib/net10.0/Yoga.Net.dll",
         "lib/net10.0/Goo.xml",
         "lib/net10.0/Goo.dll",
         "ref/net10.0/Goo.dll",
