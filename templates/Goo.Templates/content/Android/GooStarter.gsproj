@@ -14,7 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Shared/**/*.gs" />
-    <PackageReference Include="Goo.Android" Version="0.32.10" />
+    <PackageReference Include="Goo.Android" Version="0.32.11" />
     <ProjectReference Include="Shared/GooStarter.Shared.gsproj" />
   </ItemGroup>
 </Project>
