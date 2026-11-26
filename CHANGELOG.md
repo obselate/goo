@@ -1,6 +1,19 @@
 # Changelog
 
 
+## 0.32.10 - 2026-11-26
+
+### Changed
+
+- Build Goo and generated projects with G# SDK 0.5.803. The .NET SDK remains 10.0.403.
+- Replace the vendored layout engine with Goo’s internal flex engine, correct flex geometry to match CSS, and let trailing whitespace hang when wrapping text.
+- Stop shipping the separate Goo symbol package; Goo.dll retains its embedded portable PDB.
+
+### Fixed
+
+- Keep content-sized overflow clips large enough for pixel-snapped in-flow descendants, including text inside visible-overflow wrappers. Visible overflow, definite sizes and scroll viewports keep their existing rounding.
+- Keep Wayland still-image layer windows unmapped until their first image is ready, avoiding a flash of the canvas color on startup.
+
 ## 0.32.9 - 2026-11-25
 
 ### Added
