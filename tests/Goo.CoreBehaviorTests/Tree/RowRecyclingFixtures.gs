@@ -18,8 +18,11 @@ internal class RowRecyclingFixtures {
         if content.Key != nil || !source.RejectedMutation || node.Children[0].Key != "row" { return false }
         source.Offset = 10
         reconciler.Diff(node, Virtual{Source: source})
+        Layout().Calculate(node, 100.0F, 40.0F)
         if node.Children[0].Children[0] != mounted || content.Key != nil || mounted.Content != "row"
-          || node.Children[0].Left.Value != 10.0F { return false }
+          || node.Children[0].Position != PositionType.Relative
+          || Virtualization.State(node)?.PlacementAt(0).X != 10.0F
+          || node.Children[0].Rect.X != 10.0F { return false }
       } finally { NodeLifecycle.DisposeTree(node) }
     }
     return true
@@ -42,12 +45,49 @@ internal class RowRecyclingFixtures {
       source.Offset = 10.0
       reconciler.Diff(node, Virtual{Source: source})
       resolver.CommitLayoutTargets()
-      return wrapper.Left.Value == 10.0F
+      Layout().Calculate(node, 100.0F, 40.0F)
+      return Virtualization.State(node)?.PlacementAt(0).X == 10.0F
+        && wrapper.Position == PositionType.Relative && wrapper.Rect.X == 10.0F
     } finally {
       LayoutOrigin.Current = previous
       NodeLifecycle.DisposeTree(node)
       window.Close()
     }
+  }
+
+  func DirectVirtualLayoutPlacementAndCachingContract() bool {
+    let reconciler = Reconciler{Res: Resolver{}}
+    let source = DirectVirtualLayoutSource()
+    let virtualBlob = Virtual{Source: source, Width: 200, Height: 100, Padding: 10, BorderWidth: 2}
+    let root = reconciler.Mount(virtualBlob)
+    let layout = Layout()
+    try {
+      layout.Calculate(root, 200.0F, 100.0F)
+      let row0 = root.Children[0]
+      let row1 = root.Children[1]
+      if row0.Position != PositionType.Relative || row1.Position != PositionType.Relative
+        || root.LogicalLayout.HasAbsoluteDescendant
+        || row0.Rect.X != 12.0F || row0.Rect.Y != 12.0F
+        || row0.Rect.W != 150.0F || row0.Rect.H != 20.0F
+        || row1.Rect.X != 12.0F || row1.Rect.Y != 36.0F
+        || row1.Rect.W != 150.0F || row1.Rect.H != 17.0F { return false }
+
+      let initialGen0 = row0.LogicalLayout.Generation
+      source.OffsetX = 4.0
+      source.OffsetY = 6.0
+      reconciler.Diff(root, Virtual{Source: source, Width: 200, Height: 100, Padding: 10, BorderWidth: 2})
+      if !row0.FlexMeasures.HasCommitted || !row1.FlexMeasures.HasCommitted { return false }
+      layout.Calculate(root, 200.0F, 100.0F)
+      if row0.LogicalLayout.Generation != initialGen0
+        || row0.Rect.X != 16.0F || row0.Rect.Y != 18.0F
+        || row1.Rect.X != 16.0F || row1.Rect.Y != 42.0F { return false }
+
+      source.Row0Width = 120.0
+      reconciler.Diff(root, Virtual{Source: source, Width: 200, Height: 100, Padding: 10, BorderWidth: 2})
+      if row0.FlexMeasures.HasCommitted || !row1.FlexMeasures.HasCommitted { return false }
+      layout.Calculate(root, 200.0F, 100.0F)
+      return row0.Rect.W == 120.0F && row0.Rect.X == 16.0F && row0.Rect.Y == 18.0F
+    } finally { NodeLifecycle.DisposeTree(root) }
   }
 
   func ReusesStorageAndResetsKeyScopedStateContract() bool {
@@ -420,6 +460,32 @@ internal class FrozenVirtualSource(content Text) : VirtualState, VirtualSource {
       try { content.Content = "changed" } catch (_ InvalidOperationException) { RejectedMutation = true }
     }
     output.ContentSize = LayoutSize(100, 20)
+  }
+
+  public override func Commit() { committed = true }
+}
+
+internal class DirectVirtualLayoutSource : VirtualState, VirtualSource {
+  internal var OffsetX float64
+  internal var OffsetY float64
+  internal var Row0Width float64 = 150.0
+  private var committed bool
+
+  public func State(current VirtualState?) VirtualState -> this
+
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    output.Add(VirtualItem{
+      Key: "r0", Index: 0, X: OffsetX, Y: OffsetY, Width: Row0Width, Height: 20.0,
+      Content: committed ? nil : Container{Height: 20.0},
+    })
+    output.Add(VirtualItem{
+      Key: "r1", Index: 1, X: OffsetX, Y: 24.0 + OffsetY, Width: 150.0,
+      Content: committed ? nil : Container{Height: 17.0},
+    })
+    output.ContentSize = LayoutSize(200.0, 60.0)
+    output.ItemCount = 2
   }
 
   public override func Commit() { committed = true }

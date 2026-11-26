@@ -217,6 +217,7 @@ class FixtureContractTests {
             yield Contract[TreeFixtures]("BuildReturnFreezesBeforeNestedCellContract")
             yield Contract[RowRecyclingFixtures]("VirtualKeysKeepAuthoredBlobsUnchangedContract")
             yield Contract[RowRecyclingFixtures]("VirtualPlacementSurvivesDeferredStyleCommitContract")
+            yield Contract[RowRecyclingFixtures]("DirectVirtualLayoutPlacementAndCachingContract")
             yield Contract[TreeFixtures]("InputOptionsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("ScrollbarDeclarationsFreezeAtHandOffContract")
             yield Contract[TreeFixtures]("VectorStrokeFreezeAtHandOffContract")

@@ -59,10 +59,15 @@ internal sealed class VirtualNodeState {
   private var mounted Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private var next Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private let children List[Blob] = List[Blob]()
+  private var placements List[VirtualPlacement] = List[VirtualPlacement]()
+  private var pendingPlacements List[VirtualPlacement] = List[VirtualPlacement]()
+  private var pendingGeometryChanged bool
+  private var pendingSizeChanged bool
+  private var pendingAccessibilityChanged bool
+  internal var LastGeometryChanged bool
+  internal var LastAccessibilityChanged bool
   private let viewport VirtualViewport = VirtualViewport()
   private let output VirtualOutput = VirtualOutput()
-  private var originX float32
-  private var originY float32
   private var listItems bool
   private var extent VirtualExtent
   private var count int32
@@ -113,6 +118,8 @@ internal sealed class VirtualNodeState {
   internal prop RecycledNodeCount int32 { get -> recycledNodes }
   internal prop RecycledStorageBytes int32 { get -> recycledBytes }
   internal prop HasStateChanges bool { get -> stateReads?.StateChanged ?? false }
+  internal prop PlacementCount int32 { get -> placements.Count }
+  internal func PlacementAt(index int32) VirtualPlacement -> placements[index]
 
   private func clearRecycledRows() {
     recycledRows.Clear()
@@ -521,8 +528,10 @@ internal sealed class VirtualNodeState {
 
   private func realize(n Node, state VirtualState, items bool) IList[Blob] {
     pending = state
-    originX = BoxGeometry.ContentLeft(n) - n.Rect.X
-    originY = BoxGeometry.ContentTop(n) - n.Rect.Y
+    pendingPlacements.Clear()
+    pendingGeometryChanged = false
+    pendingSizeChanged = false
+    pendingAccessibilityChanged = false
     listItems = items
     let previous = viewport.Bind(n)
     contextReader?.Begin()
@@ -597,8 +606,8 @@ internal sealed class VirtualNodeState {
     if !Double.IsFinite(item.X) || !Double.IsFinite(item.Y) { throw InvalidOperationException("Virtual item position must be finite") }
     var placement = VirtualPlacement{
       Index: item.Index,
-      X: float32(float64(originX) + item.X),
-      Y: float32(float64(originY) + item.Y),
+      X: float32(item.X),
+      Y: float32(item.Y),
       Item: listItems,
     }
     if let width = item.Width {
@@ -617,20 +626,30 @@ internal sealed class VirtualNodeState {
       componentType = if content is CellElement { content.CellType } else { content.GetType() }
       placement.ContentKeyed = content.Key != nil
     }
-    var same = false
+    var sameAccessibility = false
     if mounted.TryGetValue(key, out var previous) {
       marker = previous.Marker
-      same = sameVirtualPlacement(previous.Placement, placement)
+      sameAccessibility = sameVirtualAccessibility(previous.Placement, placement)
+      if !sameVirtualBox(previous.Placement, placement) { pendingGeometryChanged = true }
+      if !sameVirtualSize(previous.Placement, placement) { pendingSizeChanged = true }
+      if previous.Placement.Item != placement.Item || previous.Placement.Index != placement.Index { pendingAccessibilityChanged = true }
       componentType ??= previous.ComponentType
       if item.Content == nil { placement.ContentKeyed = previous.Placement.ContentKeyed }
     } else {
       if item.Content == nil { throw InvalidOperationException("Virtual item '$key' at index ${item.Index} in ${pending?.GetType().Name}.Realize has no mounted content: supply Content when the key is first realized.") }
       marker = VirtualRetainedBlob(key)
+      pendingGeometryChanged = true
+      pendingAccessibilityChanged = true
     }
+    let slot = pendingPlacements.Count
+    if slot >= placements.Count || !sameVirtualBox(placements[slot], placement) {
+      pendingGeometryChanged = true
+    }
+    pendingPlacements.Add(placement)
     next.Add(key, VirtualEntry{ Marker: marker, Placement: placement, ComponentType: componentType })
     if let content = item.Content {
       children.Add(virtualWrapper(key, virtualItem(content, key), placement))
-    } else if same {
+    } else if sameAccessibility {
       children.Add(marker)
     } else {
       children.Add(virtualWrapper(key, placement.ContentKeyed ? marker : VirtualRetainedBlob.Unkeyed, placement))
@@ -648,6 +667,29 @@ internal sealed class VirtualNodeState {
       ContextCause = LayoutCause.None
     }
     contextReader?.Commit()
+    if pendingSizeChanged {
+      for i in 0 ... owner.Children.Count {
+        let child = owner.Children[i]
+        guard let key = child.Key else { continue }
+        if mounted.TryGetValue(key, out var prev) && next.TryGetValue(key, out var curr)
+          && !sameVirtualSize(prev.Placement, curr.Placement) {
+          child.FlexMeasures.Clear()
+          child.LogicalLayout.RectSynced = false
+        }
+      }
+    }
+    let geometryChanged = pendingGeometryChanged || placements.Count != pendingPlacements.Count
+    let accessibilityChanged = pendingAccessibilityChanged || placements.Count != pendingPlacements.Count
+    let oldPlacements = placements
+    placements = pendingPlacements
+    pendingPlacements = oldPlacements
+    pendingPlacements.Clear()
+    pendingGeometryChanged = false
+    pendingSizeChanged = false
+    pendingAccessibilityChanged = false
+    LastGeometryChanged = geometryChanged
+    LastAccessibilityChanged = accessibilityChanged
+    if geometryChanged { FlexLayoutEngine.Invalidate(owner) }
     let old = mounted
     mounted = next
     next = old
@@ -686,6 +728,10 @@ internal sealed class VirtualNodeState {
     pendingSource = nil
     next.Clear()
     children.Clear()
+    pendingPlacements.Clear()
+    pendingGeometryChanged = false
+    pendingSizeChanged = false
+    pendingAccessibilityChanged = false
     pendingOwner = nil
     pendingAnchorNodes.Clear()
     pendingAnchorKey = nil
@@ -706,6 +752,9 @@ internal sealed class VirtualNodeState {
     Owner = nil
     source = nil
     mounted.Clear()
+    placements.Clear()
+    LastGeometryChanged = false
+    LastAccessibilityChanged = false
     anchorNodes.Clear()
     scrollKey = nil
     if let state = current {
@@ -718,10 +767,8 @@ internal sealed class VirtualNodeState {
 internal func validExtent(value float64) bool -> Double.IsFinite(value) && value >= 0.0 && value <= float64(Single.MaxValue)
 
 internal func virtualWrapper(key string, child Blob, placement VirtualPlacement) Blob {
-  let width Length = if placement.HasW { float64(placement.W) } else { Length.Auto }
-  let height Length = if placement.HasH { float64(placement.H) } else { Length.Auto }
   let accessibility Accessibility? = if placement.Item { Accessibility{ Role: AccessibilityRole.ListItem, PositionInSet: placement.Index } } else { nil }
-  return Container() {.Accessibility: accessibility,.Key: key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: width,.Height: height,.FlexShrink: 0.0,
+  return Container() {.Accessibility: accessibility, .Key: key,
     child,
   }
 }
@@ -734,10 +781,14 @@ internal func virtualGap(specific Length, fallback Length, basis float32) float3
 internal func virtualLength(value Length, basis float32) float32 ->
 value.IsPercent ? basis * float32(value.Magnitude) / 100.0F : float32(value.Magnitude)
 
-internal func sameVirtualPlacement(left VirtualPlacement, right VirtualPlacement) bool ->
-left.Index == right.Index && left.X == right.X && left.Y == right.Y
-  && left.W == right.W && left.H == right.H && left.HasW == right.HasW && left.HasH == right.HasH
-  && left.Item == right.Item
+internal func sameVirtualSize(left VirtualPlacement, right VirtualPlacement) bool ->
+left.W == right.W && left.H == right.H && left.HasW == right.HasW && left.HasH == right.HasH
+
+internal func sameVirtualBox(left VirtualPlacement, right VirtualPlacement) bool ->
+left.X == right.X && left.Y == right.Y && sameVirtualSize(left, right)
+
+internal func sameVirtualAccessibility(left VirtualPlacement, right VirtualPlacement) bool ->
+left.Item == right.Item && (!left.Item || left.Index == right.Index)
 
 internal func virtualItem(item Blob, key string) Blob {
   item.Freeze()

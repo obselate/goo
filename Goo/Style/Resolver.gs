@@ -486,11 +486,8 @@ internal partial class Resolver {
     if !initial && !applyingLayoutCommits && Owner?.DeferLayoutTargets == true
       && LayoutOrigin.IsApplication(LayoutOrigin.Current)
       && (styleEffects(e.Field) & (ReconcileEffects.Layout | ReconcileEffects.Content)) != ReconcileEffects.None {
-      // Virtual wrappers are positioned by layout, not by application declarations.
-      if n.Parent is not Node parent || Virtualization.State(parent) == nil || ScrollbarParts.Children(parent).Contains(n) {
-        deferLayoutTarget(n, e)
-        return
-      }
+      deferLayoutTarget(n, e)
+      return
     }
     if e.Payload is LengthDeclaration {
       if !initial && Owner?.Preferences.ReducedMotion != true && n.TransitionMs > 0.0

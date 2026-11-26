@@ -307,7 +307,7 @@ internal partial class FlexLayoutEngine {
             }
         } else if !arrange && !request.Baseline && Known(width) && Known(height) {
             FlexSize{Width: width, Height: height, Baseline: height}
-        } else if node.Children.Count == 0 {
+        } else if node.Children.Count == 0 || node.RetainedVirtualState != nil {
             let w = Known(width) ? width : box.Clamp(0.0F, true)
             let h = Known(height) ? height : box.Clamp(0.0F, false)
             FlexSize{Width: w, Height: h, Baseline: h}
