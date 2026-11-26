@@ -545,9 +545,87 @@ internal partial class Layout {
         syncable = false
         let x = visual.X + BoxGeometry.Inset(n, PhysicalEdge.Left)
         let y = visual.Y + BoxGeometry.Inset(n, PhysicalEdge.Top)
-        for child in state.Children {
-          readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), Density),
-            snapPlacement(y, float32(child.Bounds.Y), Density), hiddenSubtree)
+        let isOverlay = state.Algorithm is Overlay
+        let isDock = !isOverlay && (state.Algorithm is Dock)
+        var anyChildSizeOffset = false
+        if isOverlay {
+          for child in state.Children {
+            if child.Node.Display != Display.None && child.Node.RetainedLayoutTransition?.HasSizeOffset == true {
+              anyChildSizeOffset = true
+              break
+            }
+          }
+        }
+        let canProject = !hiddenSubtree && TransitionPhase != LayoutTransitionPhase.StandaloneSizes
+          && (HasWindowLayoutTransitions || standaloneTransitions) && (isOverlay || isDock)
+          && (n.RetainedLayoutTransition?.HasSizeOffset == true || anyChildSizeOffset)
+        if canProject {
+          let insetH = BoxGeometry.Inset(n, PhysicalEdge.Left) + BoxGeometry.Inset(n, PhysicalEdge.Right)
+          let insetV = BoxGeometry.Inset(n, PhysicalEdge.Top) + BoxGeometry.Inset(n, PhysicalEdge.Bottom)
+          let targetW = MathF.Max(0.0F, n.LogicalLayout.Snapped.W - insetH)
+          let targetH = MathF.Max(0.0F, n.LogicalLayout.Snapped.H - insetV)
+          let visibleW = MathF.Max(0.0F, visual.W - insetH)
+          let visibleH = MathF.Max(0.0F, visual.H - insetV)
+          let rtl = n.LogicalLayout.Direction == Direction.RightToLeft
+          if let overlay = state.Algorithm as Overlay {
+            for child in state.Children {
+              var projX = 0.0F
+              var projY = 0.0F
+              if child.Node.Display != Display.None {
+                LayoutTraits.TryGetNode(child.Node, Overlay.Placement, out var p)
+                let hAlign = p.HorizontalAlign ?? overlay.HorizontalAlign
+                let vAlign = p.VerticalAlign ?? overlay.VerticalAlign
+                let childTargetW = float64(child.Bounds.Width)
+                let childTargetH = float64(child.Bounds.Height)
+                let childSizeOffset = child.Node.RetainedLayoutTransition?.SizeOffset ?? System.Numerics.Vector2.Zero
+                let childVisW = Math.Max(0.0, childTargetW + float64(childSizeOffset.X))
+                let childVisH = Math.Max(0.0, childTargetH + float64(childSizeOffset.Y))
+                if hAlign != LayoutAlign.Stretch {
+                  projX = float32(Overlay.AlignOffset(hAlign, float64(visibleW), childVisW, rtl) - Overlay.AlignOffset(hAlign, float64(targetW), childTargetW, rtl))
+                }
+                if vAlign != LayoutAlign.Stretch {
+                  projY = float32(Overlay.AlignOffset(vAlign, float64(visibleH), childVisH, false) - Overlay.AlignOffset(vAlign, float64(targetH), childTargetH, false))
+                }
+              }
+              readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), Density),
+                snapPlacement(y, float32(child.Bounds.Y), Density), hiddenSubtree, projX, projY, projX, projY)
+            }
+          } else if let dock = state.Algorithm as Dock {
+            let deltaW = visibleW - targetW
+            let deltaH = visibleH - targetH
+            var lastVisible = -1
+            for idx in 0 ... state.Children.Count {
+              if state.Children[idx].Node.Display != Display.None { lastVisible = idx }
+            }
+            for idx in 0 ... state.Children.Count {
+              let child = state.Children[idx]
+              var projX = 0.0F
+              var projY = 0.0F
+              if child.Node.Display != Display.None {
+                let edge = if LayoutTraits.TryGetNode(child.Node, Dock.Edge, out var explicitEdge) {
+                  explicitEdge
+                } else {
+                  (dock.LastChildFill && idx == lastVisible) ? DockEdge.Fill : DockEdge.Start
+                }
+                let physical = if edge == DockEdge.Start {
+                  rtl ? DockEdge.Right : DockEdge.Left
+                } else if edge == DockEdge.End {
+                  rtl ? DockEdge.Left : DockEdge.Right
+                } else {
+                  edge
+                }
+                if physical == DockEdge.Bottom { projY = deltaH }
+                else if physical == DockEdge.Right { projX = deltaW }
+              }
+              readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), Density),
+                snapPlacement(y, float32(child.Bounds.Y), Density), hiddenSubtree, projX, projY, projX, projY)
+            }
+          }
+        } else {
+          for child in state.Children {
+            readRect(child.Node, x, y, snapPlacement(x, float32(child.Bounds.X), Density),
+              snapPlacement(y, float32(child.Bounds.Y), Density), hiddenSubtree)
+          }
         }
       } else if n.RetainedSizedState != nil {
         syncable = false

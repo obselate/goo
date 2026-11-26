@@ -32,17 +32,16 @@ internal partial class FlexLayoutEngine {
         internal func Invalidate(node Node) {
             var current Node? = node
             while let item = current {
-                let hadCache = item.FlexMeasures.HasCommitted || item.FlexMeasures.HasProbes
                 item.FlexMeasures.Clear()
                 item.LogicalLayout.RectSynced = false
-                if item.IsPortal || (!hadCache && item != node) {
+                if let custom = CustomLayouts.State(item) {
+                    custom.ChildInvalidated()
+                }
+                if item.IsPortal {
                     break
                 }
                 let parent = item.Parent
                 if let owner = parent {
-                    if let custom = CustomLayouts.State(owner) {
-                        custom.ChildInvalidated()
-                    }
                     if let editor = owner.EditorState {
                         editor.ClearParagraphs()
                         editor.Dirty = true

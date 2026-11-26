@@ -69,6 +69,18 @@ public interface LayoutAlgorithm {
   func Arrange(context LayoutContext, finalSize LayoutSize);
 }
 
+/// Selects how a child aligns within its allocated layout slot on one axis.
+public enum LayoutAlign {
+  /// Stretches the child to fill the available slot dimension.
+  Stretch;
+  /// Aligns the child to the start edge of the slot (mirrored horizontally in right-to-left layouts).
+  Start;
+  /// Centers the child within the slot.
+  Center;
+  /// Aligns the child to the end edge of the slot (mirrored horizontally in right-to-left layouts).
+  End
+}
+
 /// Selects a horizontal or vertical length reference.
 public enum LayoutAxis {
   /// Uses the available content width.
@@ -87,6 +99,10 @@ public class LayoutContext {
   public prop Direction Goo.Direction { get -> state.EffectiveDirection() }
   /// Gets the pixel density used for layout rounding during the current callback.
   public prop PixelDensity float64 { get -> state.EffectiveDensity() }
+  /// Gets the resolved vertical gap between rows or stacked items in layout units during the current callback.
+  public prop RowGap float64 { get -> state.RowGap() }
+  /// Gets the resolved horizontal gap between columns or adjacent items in layout units during the current callback.
+  public prop ColumnGap float64 { get -> state.ColumnGap() }
   /// Gets the Display mode of a retained child. Access outside a layout callback throws.
   /// @param index The zero-based child index, excluding Portals.
   /// @returns The child's Display value.

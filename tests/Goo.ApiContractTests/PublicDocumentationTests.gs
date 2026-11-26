@@ -302,6 +302,32 @@ class PublicDocumentationTests {
             "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutConstraint,Goo.LayoutConstraint)",
             "M:Goo.LayoutContext.MeasureChildBaseline(System.Int32,Goo.LayoutConstraint,Goo.LayoutConstraint)",
             "M:Goo.LayoutContext.ArrangeChild(System.Int32,Goo.ElementRect)",
+            "M:Goo.Overlay.#ctor",
+            "M:Goo.Overlay.Place(Goo.Blob,System.Nullable{Goo.LayoutAlign},System.Nullable{Goo.LayoutAlign},System.Boolean)",
+            "M:Goo.Overlay.Measure(Goo.LayoutContext,Goo.LayoutSize)",
+            "M:Goo.Overlay.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
+            "M:Goo.Dock.#ctor",
+            "M:Goo.Dock.Top(Goo.Blob)",
+            "M:Goo.Dock.Bottom(Goo.Blob)",
+            "M:Goo.Dock.Start(Goo.Blob)",
+            "M:Goo.Dock.End(Goo.Blob)",
+            "M:Goo.Dock.Left(Goo.Blob)",
+            "M:Goo.Dock.Right(Goo.Blob)",
+            "M:Goo.Dock.Fill(Goo.Blob)",
+            "M:Goo.Dock.Measure(Goo.LayoutContext,Goo.LayoutSize)",
+            "M:Goo.Dock.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
+            "M:Goo.GridTrack.Auto(System.Double,System.Nullable{System.Double})",
+            "M:Goo.GridTrack.Fixed(System.Double)",
+            "M:Goo.GridTrack.Fr(System.Double,System.Double,System.Nullable{System.Double})",
+            "M:Goo.GridTrack.MinContent(System.Double,System.Nullable{System.Double})",
+            "M:Goo.GridTrack.MaxContent(System.Double,System.Nullable{System.Double})",
+            "M:Goo.GridTrack.Repeat(System.Int32,Goo.GridTrack)",
+            "M:Goo.Grid.#ctor",
+            "M:Goo.Grid.Place(Goo.Blob,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.Int32,System.Nullable{Goo.LayoutAlign},System.Nullable{Goo.LayoutAlign})",
+            "M:Goo.Grid.Span(Goo.Blob,System.Int32,System.Int32)",
+            "M:Goo.Grid.Align(Goo.Blob,System.Nullable{Goo.LayoutAlign},System.Nullable{Goo.LayoutAlign})",
+            "M:Goo.Grid.Measure(Goo.LayoutContext,Goo.LayoutSize)",
+            "M:Goo.Grid.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
             "M:Goo.LayoutKey`1.#ctor",
             "M:Goo.LayoutKey`1.#ctor(`0)",
             "M:Goo.Blob.SetLayoutTrait``1(Goo.LayoutKey{``0},``0)",
@@ -746,6 +772,29 @@ class PublicDocumentationTests {
             "F:Goo.LayoutMeasureMode.AtMost",
             "F:Goo.LayoutMeasureMode.Exactly",
             "F:Goo.LayoutMeasureMode.MinContent",
+            "F:Goo.LayoutAlign.Stretch",
+            "F:Goo.LayoutAlign.Start",
+            "F:Goo.LayoutAlign.Center",
+            "F:Goo.LayoutAlign.End",
+            "F:Goo.Dock.Default",
+            "F:Goo.Dock.Edge",
+            "F:Goo.DockEdge.Start",
+            "F:Goo.DockEdge.End",
+            "F:Goo.DockEdge.Top",
+            "F:Goo.DockEdge.Bottom",
+            "F:Goo.DockEdge.Left",
+            "F:Goo.DockEdge.Right",
+            "F:Goo.DockEdge.Fill",
+            "F:Goo.Grid.Placement",
+            "F:Goo.GridUnit.Auto",
+            "F:Goo.GridUnit.Fixed",
+            "F:Goo.GridUnit.Fraction",
+            "F:Goo.GridUnit.MinContent",
+            "F:Goo.GridUnit.MaxContent",
+            "F:Goo.GridFlow.Row",
+            "F:Goo.GridFlow.Column",
+            "F:Goo.Overlay.Default",
+            "F:Goo.Overlay.Placement",
             "F:Goo.AccessibilityRole.Separator",
             "F:Goo.AccessibilityRole.TabPanel",
             "F:Goo.AccessibilityRole.Toolbar",
@@ -2218,6 +2267,93 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.LayoutContext.ArrangeChild(System.Int32,Goo.ElementRect)"] = DocumentationShape(
                 []string{"index", "bounds"},
+                System.Array.Empty[string](),
+                false
+            ),
+            ["M:Goo.Overlay.Place(Goo.Blob,System.Nullable{Goo.LayoutAlign},System.Nullable{Goo.LayoutAlign},System.Boolean)"] = DocumentationShape(
+                []string{"child", "horizontal", "vertical", "ignoreSize"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Overlay.Measure(Goo.LayoutContext,Goo.LayoutSize)"] = DocumentationShape(
+                []string{"context", "available"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Overlay.Arrange(Goo.LayoutContext,Goo.LayoutSize)"] = DocumentationShape(
+                []string{"context", "finalSize"},
+                System.Array.Empty[string](),
+                false
+            ),
+            ["M:Goo.Dock.Top(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.Bottom(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.Start(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.End(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.Left(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.Right(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.Fill(Goo.Blob)"] = DocumentationShape([]string{"child"}, System.Array.Empty[string](), true),
+            ["M:Goo.Dock.Measure(Goo.LayoutContext,Goo.LayoutSize)"] = DocumentationShape(
+                []string{"context", "available"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Dock.Arrange(Goo.LayoutContext,Goo.LayoutSize)"] = DocumentationShape(
+                []string{"context", "finalSize"},
+                System.Array.Empty[string](),
+                false
+            ),
+            ["M:Goo.GridTrack.Auto(System.Double,System.Nullable{System.Double})"] = DocumentationShape(
+                []string{"minimum", "maximum"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.GridTrack.Fixed(System.Double)"] = DocumentationShape(
+                []string{"size"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.GridTrack.Fr(System.Double,System.Double,System.Nullable{System.Double})"] = DocumentationShape(
+                []string{"weight", "minimum", "maximum"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.GridTrack.MinContent(System.Double,System.Nullable{System.Double})"] = DocumentationShape(
+                []string{"minimum", "maximum"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.GridTrack.MaxContent(System.Double,System.Nullable{System.Double})"] = DocumentationShape(
+                []string{"minimum", "maximum"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.GridTrack.Repeat(System.Int32,Goo.GridTrack)"] = DocumentationShape(
+                []string{"count", "track"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Grid.Place(Goo.Blob,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.Int32,System.Nullable{Goo.LayoutAlign},System.Nullable{Goo.LayoutAlign})"] = DocumentationShape(
+                []string{"child", "column", "row", "columnSpan", "rowSpan", "horizontal", "vertical"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Grid.Span(Goo.Blob,System.Int32,System.Int32)"] = DocumentationShape(
+                []string{"child", "columns", "rows"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Grid.Align(Goo.Blob,System.Nullable{Goo.LayoutAlign},System.Nullable{Goo.LayoutAlign})"] = DocumentationShape(
+                []string{"child", "horizontal", "vertical"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Grid.Measure(Goo.LayoutContext,Goo.LayoutSize)"] = DocumentationShape(
+                []string{"context", "available"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.Grid.Arrange(Goo.LayoutContext,Goo.LayoutSize)"] = DocumentationShape(
+                []string{"context", "finalSize"},
                 System.Array.Empty[string](),
                 false
             ),
