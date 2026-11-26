@@ -26,12 +26,13 @@ internal partial class FlexLayoutEngine {
     shared {
         internal let Shared FlexLayoutEngine = FlexLayoutEngine()
         private var frames int64
+        private var nextEngineId int32
         private let entryMetrics TextMetrics = TextMetrics()
 
         internal func Invalidate(node Node) {
             var current Node? = node
             while let item = current {
-                let hadCache = item.FlexMeasures.HasCommitted || item.FlexMeasures.Count > 0
+                let hadCache = item.FlexMeasures.HasCommitted || item.FlexMeasures.HasProbes
                 item.FlexMeasures.Clear()
                 if item.IsPortal || (!hadCache && item != node) {
                     break
@@ -61,6 +62,10 @@ internal partial class FlexLayoutEngine {
             node.HasCustomLayout ||
             node.RetainedSizedState != nil
     }
+
+    internal let EngineId uint32 = uint32(Interlocked.Increment(ref nextEngineId))
+
+    internal func ProbeCount(node Node) int32 -> FlexThreadState.Current().Probes.Count(node, EngineId)
     internal func RootRequest(width float32, height float32, density float32, direction Direction) FlexRequest ->
     FlexRequest{
         Width: FlexConstraint.Cap(width),
@@ -78,7 +83,13 @@ internal partial class FlexLayoutEngine {
 
     internal func MeasureSubtree(node Node, request FlexRequest) FlexSize {
         var key = Normalize(request)
-        return Solve(node, ref key, false, uint64(Interlocked.Increment(ref frames)))
+        let state = FlexThreadState.Current()
+        let savedTop = state.Arena.Top
+        try {
+            return Solve(node, ref key, false, uint64(Interlocked.Increment(ref frames)), state)
+        } finally {
+            state.Arena.Release(savedTop)
+        }
     }
 
     internal func MeasureIntrinsic(node Node, horizontal bool, minimum bool, request FlexRequest) float32 {
@@ -98,15 +109,20 @@ internal partial class FlexLayoutEngine {
     internal func ArrangeSubtree(node Node, request FlexRequest, x float32 = 0.0F, y float32 = 0.0F) FlexSize {
         var key = Normalize(request)
         let frame = uint64(Interlocked.Increment(ref frames))
-        let result = Solve(node, ref key, true, frame)
-        if node.LogicalLayout.Valid {
-            let margin = node.LogicalLayout.Margin
-            node.LogicalLayout.Raw.X = x + margin.Left + RelativeOffset(node, true, key.OwnerWidth, key.Direction)
-            node.LogicalLayout.Raw.Y = y + margin.Top + RelativeOffset(node, false, key.OwnerHeight, key.Direction)
-            node.LogicalLayout.Line = 0
-            FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, key.Density, frame, AbsoluteBlock{}, true)
+        let state = FlexThreadState.Current()
+        let savedTop = state.Arena.Top
+        try {
+            let result = Solve(node, ref key, true, frame, state)
+            if node.LogicalLayout.Valid {
+                let margin = node.LogicalLayout.Margin
+                node.LogicalLayout.Raw.X = x + margin.Left + RelativeOffset(node, true, key.OwnerWidth, key.Direction)
+                node.LogicalLayout.Raw.Y = y + margin.Top + RelativeOffset(node, false, key.OwnerHeight, key.Direction)
+                FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, key.Density, frame, AbsoluteBlock{}, state, true)
+            }
+            return result
+        } finally {
+            state.Arena.Release(savedTop)
         }
-        return result
     }
 
     private func Normalize(request FlexRequest) FlexRequest {
@@ -117,7 +133,7 @@ internal partial class FlexLayoutEngine {
     }
 
     private func Hide(node Node, frame uint64) {
-        if !node.LogicalLayout.Valid && node.LogicalLayout.Generation != 0uL && node.FlexMeasures.Count == 0 {
+        if !node.LogicalLayout.Valid && node.LogicalLayout.Generation != 0uL && !node.FlexMeasures.HasProbes {
             return
         }
         node.LogicalLayout = LayoutResult{Generation: frame}
@@ -193,15 +209,15 @@ internal partial class FlexLayoutEngine {
         && !DependsOnOwner(node.Width) && !DependsOnOwner(node.Height)
         && !DependsOnOwner(node.MinWidth) && !DependsOnOwner(node.MinHeight)
         && !DependsOnOwner(node.MaxWidth) && !DependsOnOwner(node.MaxHeight)
-        && !DependsOnOwner(node.Margin) && !DependsOnOwner(node.MarginLeft) && !DependsOnOwner(node.MarginTop)
+        && !DependsOnOwner(node.MarginLeft) && !DependsOnOwner(node.MarginTop)
         && !DependsOnOwner(node.MarginRight) && !DependsOnOwner(node.MarginBottom)
-        && !DependsOnOwner(node.Padding) && !DependsOnOwner(node.PaddingLeft) && !DependsOnOwner(node.PaddingTop)
+        && !DependsOnOwner(node.PaddingLeft) && !DependsOnOwner(node.PaddingTop)
         && !DependsOnOwner(node.PaddingRight) && !DependsOnOwner(node.PaddingBottom)
         node.FlexMeasures.OwnerIndependent = independent ? uint8(1) : uint8(2)
         return independent
     }
 
-    private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64, contentMain int32 = 0) FlexSize {
+    private func Solve(node Node, ref request FlexRequest, arrange bool, frame uint64, state FlexThreadState, contentMain int32 = 0) FlexSize {
         if node.Display == Display.None {
             if arrange {
                 Hide(node, frame)
@@ -219,7 +235,7 @@ internal partial class FlexLayoutEngine {
                 ContentAxes: node.LogicalLayout.ContentAxes
             }
         }
-        if !arrange && node.FlexMeasures.TryMeasure(in key, out var cached) {
+        if !arrange && node.FlexMeasures.HasProbes && state.Probes.TryMeasure(node, EngineId, in key, out var cached) {
             return cached
         }
         let box = ResolveBox(node, in request)
@@ -234,8 +250,9 @@ internal partial class FlexLayoutEngine {
                 height = Used(Transfer(box, width, false, node.Kind == NodeKind.Image), request.Height, box, false)
             }
         }
-        let result = if IsMeasured(node) {
-            if arrange && node.FlexMeasures.TryMeasure(in key, out var measured) {
+        let measuredLeaf = IsMeasured(node)
+        let result = if measuredLeaf {
+            if arrange && node.FlexMeasures.HasProbes && state.Probes.TryMeasure(node, EngineId, in key, out var measured) {
                 measured
             } else {
                 MeasureLeaf(node, in request, box, width, height)
@@ -247,7 +264,7 @@ internal partial class FlexLayoutEngine {
             let h = Known(height) ? height : box.Clamp(0.0F, false)
             FlexSize{Width: w, Height: h, Baseline: h}
         } else {
-            SolveFlex(node, ref request, box, direction, width, height, arrange, frame)
+            SolveFlex(node, ref request, box, direction, width, height, arrange, frame, state)
         }
         if arrange {
             node.LogicalLayout.Raw.W = result.Width
@@ -265,7 +282,7 @@ internal partial class FlexLayoutEngine {
             node.FlexMeasures.Committed = key
             node.FlexMeasures.HasCommitted = true
         } else {
-            node.FlexMeasures.Store(in key, result)
+            state.Probes.Store(node, EngineId, in key, result)
         }
         return result
     }

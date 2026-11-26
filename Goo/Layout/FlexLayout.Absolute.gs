@@ -37,7 +37,8 @@ internal partial class FlexLayoutEngine {
         parentY float64,
         in block AbsoluteBlock,
         density float32,
-        frame uint64
+        frame uint64,
+        state FlexThreadState
     ) {
         let direction = node.LogicalLayout.Direction
         var key = FlexRequest{
@@ -60,7 +61,7 @@ internal partial class FlexLayoutEngine {
         key.Height = !Known(box.Height) && Known(top) && Known(bottom) ? FlexConstraint.Exact(
             availableHeight
         ) : FlexConstraint{}
-        let measured = Solve(child, ref key, true, frame)
+        let measured = Solve(child, ref key, true, frame, state)
         let main = MainAxis(node, direction)
         let cross = CrossAxis(node, main, direction)
         child.LogicalLayout.Raw.X = if Known(left) || Known(right) {
@@ -99,7 +100,6 @@ internal partial class FlexLayoutEngine {
         } else {
             StaticOffset(node, child, box.Margin, main, cross, false, node.LogicalLayout.Raw.H, measured.Height)
         }
-        child.LogicalLayout.Line = 0
     }
 
     internal func AbsoluteOffset(

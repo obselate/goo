@@ -131,24 +131,19 @@ internal partial class FlexLayoutEngine {
         ? float32(Math.Max(1.0, Math.Round(float64(width) * density, MidpointRounding.AwayFromZero)) / density) : width
     }
 
-    private func EdgeLength(
-        edge NodeLength,
-        shorthand NodeLength
-    ) NodeLength -> edge.Unit == LengthUnit.Unset ? shorthand : edge
-
     internal func ResolveBox(node Node, in request FlexRequest) FlexBox {
         let ownerWidth = request.OwnerWidth
         let ownerHeight = request.OwnerHeight
         let entries = LengthDeclarations.Get(node)
         let width = ProjectedValue(node.Width, StyleField.Width, entries, ownerWidth)
         let height = ProjectedValue(node.Height, StyleField.Height, entries, ownerHeight)
-        let marginLeft = EdgeLength(node.MarginLeft, node.Margin)
-        let marginTop = EdgeLength(node.MarginTop, node.Margin)
-        let marginRight = EdgeLength(node.MarginRight, node.Margin)
-        let marginBottom = EdgeLength(node.MarginBottom, node.Margin)
+        let marginLeft = node.MarginLeft
+        let marginTop = node.MarginTop
+        let marginRight = node.MarginRight
+        let marginBottom = node.MarginBottom
         let borderLeft = BorderValue(node.BorderLeftWidth, request.Density)
         let shape = node.Kind == NodeKind.Shape
-        var ratio = float32(node.AspectRatio)
+        var ratio = node.AspectRatio
         if ratio <= 0.0F && shape && !request.Root && (!Known(width) || !Known(height)) {
             ratio = float32(node.ShapePath.ViewBoxWidth / node.ShapePath.ViewBoxHeight)
         }
@@ -206,7 +201,7 @@ internal partial class FlexLayoutEngine {
                     0.0F,
                     Zero(
                         ProjectedValue(
-                            EdgeLength(node.PaddingLeft, node.Padding),
+                            node.PaddingLeft,
                             StyleField.PaddingLeft,
                             entries,
                             ownerWidth,
@@ -218,7 +213,7 @@ internal partial class FlexLayoutEngine {
                     0.0F,
                     Zero(
                         ProjectedValue(
-                            EdgeLength(node.PaddingTop, node.Padding),
+                            node.PaddingTop,
                             StyleField.PaddingTop,
                             entries,
                             ownerWidth,
@@ -230,7 +225,7 @@ internal partial class FlexLayoutEngine {
                     0.0F,
                     Zero(
                         ProjectedValue(
-                            EdgeLength(node.PaddingRight, node.Padding),
+                            node.PaddingRight,
                             StyleField.PaddingRight,
                             entries,
                             ownerWidth,
@@ -242,7 +237,7 @@ internal partial class FlexLayoutEngine {
                     0.0F,
                     Zero(
                         ProjectedValue(
-                            EdgeLength(node.PaddingBottom, node.Padding),
+                            node.PaddingBottom,
                             StyleField.PaddingBottom,
                             entries,
                             ownerWidth,
@@ -357,6 +352,7 @@ internal partial class FlexLayoutEngine {
         density float32,
         frame uint64,
         in inherited AbsoluteBlock,
+        state FlexThreadState,
         root bool = false
     ) {
         if !node.LogicalLayout.Valid {
@@ -402,9 +398,9 @@ internal partial class FlexLayoutEngine {
                 continue
             }
             if child.Position == PositionType.Absolute {
-                PlaceAbsolute(node, child, absoluteX, absoluteY, in block, density, frame)
+                PlaceAbsolute(node, child, absoluteX, absoluteY, in block, density, frame, state)
             }
-            FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block)
+            FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block, state)
         }
         if density != 0.0F && !node.HasCustomLayout && node.Kind != NodeKind.Editor
         && node.OverflowX != Overflow.Scroll && node.OverflowY != Overflow.Scroll {

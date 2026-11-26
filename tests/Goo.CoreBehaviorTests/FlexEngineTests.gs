@@ -24,7 +24,7 @@ class FlexEngineTests {
                 key.OwnerWidth = float32(index * 100)
                 engine.MeasureSubtree(root, key)
             }
-            Assert.Equal(4, root.FlexMeasures.Count)
+            Assert.Equal(4, engine.ProbeCount(root))
             key.OwnerWidth = 100.0F
             Assert.Equal(30.0F, engine.MeasureSubtree(root, key).Width)
             Assert.Equal(6, calls)
