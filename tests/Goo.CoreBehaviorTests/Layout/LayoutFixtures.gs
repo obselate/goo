@@ -1762,6 +1762,28 @@ internal class LayoutFixtures {
     return true
   }
 
+  func ContentClipsPreserveDeliberateOverflow() bool {
+    for density in []float32{1.0F, 1.5F} {
+      let root = Reconciler{Res: Resolver{}}.Mount(Column{Width: 100, Height: 100,
+        Column{OverflowY: Overflow.Hidden,
+          Container{Height: 20, Position: PositionType.Relative, Top: 40}},
+        Column{OverflowY: Overflow.Hidden,
+          Container{Height: 20, Margin: Edges{Top: -6}}}})
+      try {
+        let layout = Layout()
+        layout.SetPixelDensity(density)
+        layout.Calculate(root, 100.0F, 100.0F)
+        let offset = root.Children[0]
+        let margin = root.Children[1]
+        if offset.Rect.Y != 0.0F || offset.Rect.H != 20.0F || offset.Children[0].Rect.Y != 40.0F
+          || margin.Rect.Y != 20.0F || margin.Rect.H != 14.0F || margin.Children[0].Rect.Y != 14.0F {
+            throw InvalidOperationException("density=$density, relative=${offset.Rect.Y},${offset.Rect.H}, negativeMargin=${margin.Rect.Y},${margin.Rect.H}")
+        }
+      } finally { NodeLifecycle.DisposeTree(root) }
+    }
+    return true
+  }
+
   func NestedBaselinesIgnorePixelSnappedPositions() bool {
     let pair = (size float64) -> Container{
       Width: 100, FlexDirection: FlexDirection.Row, AlignItems: AlignItems.Baseline,

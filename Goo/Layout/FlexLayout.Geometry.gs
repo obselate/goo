@@ -427,7 +427,13 @@ internal partial class FlexLayoutEngine {
         var top = float64(border.Top)
         var right = float64(snapped.W) - float64(border.Right)
         var bottom = float64(snapped.H) - float64(border.Bottom)
-        CollectContentBounds(node, 0.0, 0.0, horizontal, vertical, ref left, ref top, ref right, ref bottom)
+        let raw = node.LogicalLayout.Raw
+        let rawClip = FlexInsets{
+            Left: border.Left - 0.0001F, Top: border.Top - 0.0001F,
+            Right: raw.W - border.Right + 0.0001F, Bottom: raw.H - border.Bottom + 0.0001F
+        }
+        CollectContentBounds(node, 0.0, 0.0, 0.0, 0.0, in rawClip, horizontal, vertical,
+            ref left, ref top, ref right, ref bottom)
         left -= border.Left
         top -= border.Top
         right += border.Right
@@ -464,7 +470,8 @@ internal partial class FlexLayoutEngine {
     }
 
     private func CollectContentBounds(
-        node Node, x float64, y float64, horizontal bool, vertical bool,
+        node Node, x float64, y float64, rawX float64, rawY float64, in rawClip FlexInsets,
+        horizontal bool, vertical bool,
         ref left float64, ref top float64, ref right float64, ref bottom float64
     ) {
         for index in 0 ... node.Children.Count {
@@ -473,20 +480,26 @@ internal partial class FlexLayoutEngine {
                 continue
             }
             let box = child.LogicalLayout.Snapped
+            let raw = child.LogicalLayout.Raw
+            let rawChildX = rawX + raw.X
+            let rawChildY = rawY + raw.Y
             let childX = x + box.X
             let childY = y + box.Y
             if horizontal {
-                left = Math.Min(left, childX)
-                right = Math.Max(right, childX + box.W)
+                if rawChildX >= rawClip.Left && rawChildX <= rawClip.Right { left = Math.Min(left, childX) }
+                let end = rawChildX + raw.W
+                if end >= rawClip.Left && end <= rawClip.Right { right = Math.Max(right, childX + box.W) }
             }
             if vertical {
-                top = Math.Min(top, childY)
-                bottom = Math.Max(bottom, childY + box.H)
+                if rawChildY >= rawClip.Top && rawChildY <= rawClip.Bottom { top = Math.Min(top, childY) }
+                let end = rawChildY + raw.H
+                if end >= rawClip.Top && end <= rawClip.Bottom { bottom = Math.Max(bottom, childY + box.H) }
             }
             let visibleX = horizontal && child.OverflowX == Overflow.Visible
             let visibleY = vertical && child.OverflowY == Overflow.Visible
             if (visibleX || visibleY) && child.Children.Count != 0 && !IsMeasured(child) && !child.HasCustomLayout {
-                CollectContentBounds(child, childX, childY, visibleX, visibleY, ref left, ref top, ref right, ref bottom)
+                CollectContentBounds(child, childX, childY, rawChildX, rawChildY, in rawClip,
+                    visibleX, visibleY, ref left, ref top, ref right, ref bottom)
             }
         }
     }

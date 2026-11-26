@@ -558,6 +558,7 @@ class FixtureContractTests {
             yield Contract[LayoutFixtures]("NestedBaselinesIgnorePixelSnappedPositions")
             yield Contract[LayoutFixtures]("ContentSizingFollowsCurrentCachedLayoutPass")
             yield Contract[LayoutFixtures]("ContentClipsPreservePaddingAndSnapBorderedEdges")
+            yield Contract[LayoutFixtures]("ContentClipsPreserveDeliberateOverflow")
             yield Contract[LayoutFixtures]("PixelSnappingPreservesCachedLayoutsAcrossResizes")
             yield Contract[LayoutFixtures]("KeyedReorderRetainsLogicalLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
