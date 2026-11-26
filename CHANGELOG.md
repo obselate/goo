@@ -1,6 +1,21 @@
 # Changelog
 
 
+## 0.32.11 - 2026-11-26
+
+### Added
+
+- Add composable `Grid`, `Overlay`, and `Dock` built-in `LayoutAlgorithm`s, multi-solver dispatch, sparse typed `LayoutKey` traits, and an upgraded `LayoutContext` with `ColumnGap`, `RowGap`, `Direction`, `ContentSize`, and `MeasureChild` constraints.
+
+### Changed
+
+- Optimize Goo's managed flex layout engine with compact `Node` storage, a thread-static scratch arena, unified sub-layouts, lazy `MinContent` probing, `NoWrap` text fast paths, clean-subtree pruning, and direct `Virtual` item placement.
+- Source builds accept .NET SDK 10.0.403 or newer with the .NET 10 runtime installed; CI and release builds continue to use exactly SDK 10.0.403.
+
+### Fixed
+
+- Zero the Win32 GDI redirection surface (`BLACK_BRUSH`) on resize and paint and disable conflicting legacy `DwmEnableBlurBehindWindow` so transparent Windows Acrylic windows do not retain stale resize-edge marks.
+
 ## 0.32.10 - 2026-11-26
 
 ### Changed
