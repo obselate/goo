@@ -146,6 +146,9 @@ public partial class Window {
       if ownsStartupReport { VulkanStartupReport.Current?.StopCapture() }
       initializingGraphics = false
       windowTarget = target
+      if native is SdlHost && SdlHost.IsWayland() && target != nil {
+        native.CanMinimize = target.CanMinimizeNativeWindow
+      }
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
       if captureStartup {
         target?.RecordSdlWindowCreate(sdlStart, sdlEnd)
@@ -446,6 +449,7 @@ public partial class Window {
           return
         }
         if nativeHidePending && windowTarget?.QueueWorkPending != true { hideNative(native) }
+        (native as SdlHost?)?.ApplyPendingMinimize()
         if pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true {
           let geometry = pendingLayerGeometry!!
           pendingLayerGeometry = nil
@@ -662,6 +666,7 @@ public partial class Window {
     || nativeModal?.HasCompletion == true
     || LayerShell?.StillImage == true && (host as SdlHost?)?.StillImagePreparationReady == true
     || nativeHidePending && windowTarget?.QueueWorkPending != true
+    || (host as SdlHost?)?.MinimizeReady == true
     || pendingLayerGeometry != nil && windowTarget?.QueueWorkPending != true
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
