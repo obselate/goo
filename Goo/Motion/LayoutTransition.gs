@@ -312,6 +312,8 @@ internal sealed class LayoutTransitionState : MotionParticle {
 
 internal class LayoutTransitions {
   shared {
+    internal var ActiveCount int32
+
     internal func Value(n Node) LayoutTransition? -> n.RetainedLayoutTransition?.Value
 
     internal func Configure(n Node, value LayoutTransition?, pump MotionPump?,
@@ -325,6 +327,7 @@ internal class LayoutTransitions {
         } else {
           let created = LayoutTransitionState(n)
           n.RetainedLayoutTransition = created
+          ActiveCount++
           created
         }
         state.Configure(next, pump, invalidated)
@@ -342,6 +345,7 @@ internal class LayoutTransitions {
     internal func Dispose(n Node) {
       guard let state = n.RetainedLayoutTransition else { return }
       n.RetainedLayoutTransition = nil
+      if ActiveCount > 0 { ActiveCount-- }
       state.Dispose()
     }
   }

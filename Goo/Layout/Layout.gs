@@ -33,6 +33,7 @@ internal partial class Layout {
   internal var HasWindowLayoutTransitions bool
   private var standalone bool
   private var standaloneTransitions bool
+  private var pruneReadRect bool
   internal let Engine FlexLayoutEngine = FlexLayoutEngine.Shared
   internal var Density float32 = 1.0F
   internal var lastWidth float32
@@ -94,18 +95,25 @@ internal partial class Layout {
         request.Height = FlexConstraint.Exact(measuredHeight)
       }
       Engine.ArrangeSubtree(root, request)
+      let canPrune = LayoutTransitions.ActiveCount == 0 && SizedNodeState.ActiveCount == 0
       if overlayRoot == nil {
         standaloneTransitions = false
         TransitionPhase = LayoutTransitionPhase.StandaloneSizes
         try {
-          readRect(root, 0.0F, 0.0F)
+          pruneReadRect = canPrune
+          try {
+            readRect(root, 0.0F, 0.0F)
+          } finally { pruneReadRect = false }
           if standaloneTransitions {
             TransitionPhase = LayoutTransitionPhase.StandalonePositions
             readRect(root, 0.0F, 0.0F)
           }
         } finally { TransitionPhase = LayoutTransitionPhase.Immediate }
       } else {
-        readRect(root, 0.0F, 0.0F)
+        pruneReadRect = canPrune
+        try {
+          readRect(root, 0.0F, 0.0F)
+        } finally { pruneReadRect = false }
       }
     }
     lastRoot = root
@@ -474,8 +482,8 @@ internal partial class Layout {
 
   internal func readRect(n Node, originX float32, originY float32,
     placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false,
-    projectedX float32 = 0.0F, projectedY float32 = 0.0F, idealX float32 = 0.0F, idealY float32 = 0.0F) {
-      if !n.LogicalLayout.Valid && !hidden && n.Display != Display.None { return }
+    projectedX float32 = 0.0F, projectedY float32 = 0.0F, idealX float32 = 0.0F, idealY float32 = 0.0F) bool {
+      if !n.LogicalLayout.Valid && !hidden && n.Display != Display.None { return false }
       let localX = n.LogicalLayout.Snapped.X + placementX
       let localY = n.LogicalLayout.Snapped.Y + placementY
       if TransitionPhase == LayoutTransitionPhase.StandaloneSizes && n.RetainedLayoutTransition != nil {
@@ -486,8 +494,14 @@ internal partial class Layout {
       let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY,
         n.LogicalLayout.Snapped.W, n.LogicalLayout.Snapped.H,
         TransitionPhase, projectedX, projectedY, idealX, idealY)
-      n.Rect = visual
       let hiddenSubtree = hidden || n.Display == Display.None
+      if pruneReadRect && !hiddenSubtree && n.LogicalLayout.RectSynced
+        && projectedX == 0.0F && projectedY == 0.0F
+        && n.Rect.X == visual.X && n.Rect.Y == visual.Y && n.Rect.W == visual.W && n.Rect.H == visual.H
+        && n.PlacedScrollX == n.ScrollX && n.PlacedScrollY == n.ScrollY {
+        return true
+      }
+      n.Rect = visual
       let editor = n.Kind == NodeKind.Editor
       let custom = CustomLayouts.State(n)
       ScrollState.RefreshAxes(n)
@@ -507,7 +521,8 @@ internal partial class Layout {
           ScrollbarParts.ArrangeOwner(n, this)
         }
         n.HitContained = true
-        return
+        n.LogicalLayout.RectSynced = false
+        return false
       }
       if n.Kind == NodeKind.Image {
         for i in 0 ... n.Children.Count {
@@ -519,9 +534,15 @@ internal partial class Layout {
           ScrollbarParts.ArrangeOwner(n, this)
         }
         n.HitContained = false
-        return
+        n.LogicalLayout.RectSynced = false
+        return false
       }
+      var syncable = !hiddenSubtree && n.ScrollbarPartState == nil
+        && n.OverflowX != Overflow.Scroll && n.OverflowY != Overflow.Scroll
+        && !n.HasVisualTransform && n.RetainedLayoutTransition == nil
+        && !(n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke)
       if let state = custom {
+        syncable = false
         let x = visual.X + BoxGeometry.Inset(n, PhysicalEdge.Left)
         let y = visual.Y + BoxGeometry.Inset(n, PhysicalEdge.Top)
         for child in state.Children {
@@ -529,6 +550,7 @@ internal partial class Layout {
             snapPlacement(y, float32(child.Bounds.Y), Density), hiddenSubtree)
         }
       } else if n.RetainedSizedState != nil {
+        syncable = false
         arrangeSized(n, hiddenSubtree)
       } else {
         var ideal = false
@@ -541,8 +563,10 @@ internal partial class Layout {
           if !child.IsPortal {
             let offset = projected ? placement.Next(child) : Vector2.Zero
             let idealOffset = ideal ? idealPlacement.Next(child) : offset
-            readRect(child, visual.X, visual.Y, hidden: hiddenSubtree, projectedX: offset.X, projectedY: offset.Y,
-              idealX: idealOffset.X, idealY: idealOffset.Y)
+            if !readRect(child, visual.X, visual.Y, hidden: hiddenSubtree, projectedX: offset.X, projectedY: offset.Y,
+              idealX: idealOffset.X, idealY: idealOffset.Y) {
+              syncable = false
+            }
           }
         }
       }
@@ -562,6 +586,8 @@ internal partial class Layout {
       if !hiddenSubtree && n.ScrollbarPartState != nil {
         ScrollbarParts.ArrangeOwner(n, this)
       }
+      n.LogicalLayout.RectSynced = syncable
+      return syncable
     }
 
   private func snapPlacement(origin float32, offset float32, density float32) float32 ->

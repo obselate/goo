@@ -416,7 +416,8 @@ internal partial class FlexLayoutEngine {
         frame uint64,
         in inherited AbsoluteBlock,
         state FlexThreadState,
-        root bool = false
+        root bool = false,
+        parentOriginUnchanged bool = false
     ) {
         if !node.LogicalLayout.Valid {
             return
@@ -427,21 +428,39 @@ internal partial class FlexLayoutEngine {
         let measured = !node.HasCustomLayout && IsMeasured(node)
         let left = PixelRound(absoluteX, density, floor: measured)
         let top = PixelRound(absoluteY, density, floor: measured)
-        node
-            .LogicalLayout
-            .Snapped = density == 0.0F ? raw : Rect{
+        let newSnapped = density == 0.0F ? raw : Rect{
             X: float32(left - snappedX),
             Y: float32(top - snappedY),
             W: SnappedLength(absoluteX, raw.W, left, density, measured),
             H: SnappedLength(absoluteY, raw.H, top, density, measured)
         }
+        let oldSnapped = node.LogicalLayout.Snapped
+        let snappedSame = newSnapped.X == oldSnapped.X && newSnapped.Y == oldSnapped.Y
+            && newSnapped.W == oldSnapped.W && newSnapped.H == oldSnapped.H
+        let nodeOriginUnchanged = parentOriginUnchanged && !node.LogicalLayout.RawMoved
+            && node.LogicalLayout.Density == density
+        if nodeOriginUnchanged && node.LogicalLayout.Finalized && node.LogicalLayout.Generation != frame
+            && node.FlexMeasures.HasCommitted && snappedSame && SizedNodeState.ActiveCount == 0
+            && !(node.LogicalLayout.HasAbsoluteDescendant && !root && node.Position == PositionType.Static) {
+            return
+        }
+        node.LogicalLayout.Snapped = newSnapped
+        if !snappedSame {
+            node.LogicalLayout.RectSynced = false
+        }
         if IsMeasured(node) {
             if node.HasCustomLayout || node.Children.Count > 0 {
                 FinalizeMeasuredChildren(node, density, frame, state)
             }
+            node.LogicalLayout.HasAbsoluteDescendant = false
+            node.LogicalLayout.Finalized = true
+            node.LogicalLayout.RawMoved = false
             return
         }
         if node.Children.Count == 0 {
+            node.LogicalLayout.HasAbsoluteDescendant = false
+            node.LogicalLayout.Finalized = true
+            node.LogicalLayout.RawMoved = false
             return
         }
         let direction = node.LogicalLayout.Direction
@@ -457,6 +476,7 @@ internal partial class FlexLayoutEngine {
         } else {
             inherited
         }
+        var hasAbsDesc = false
         for index in 0 ... node.Children.Count {
             let child = node.Children[index]
             if child.IsPortal {
@@ -468,8 +488,13 @@ internal partial class FlexLayoutEngine {
             }
             if child.Position == PositionType.Absolute {
                 PlaceAbsolute(node, child, absoluteX, absoluteY, in block, density, frame, state)
+                hasAbsDesc = true
             }
-            FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block, state)
+            FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block, state, false, nodeOriginUnchanged)
+            if child.Position != PositionType.Absolute && child.Position == PositionType.Static
+                && child.LogicalLayout.HasAbsoluteDescendant {
+                hasAbsDesc = true
+            }
         }
         if density != 0.0F && !node.HasCustomLayout && node.Kind != NodeKind.Editor
         && node.OverflowX != Overflow.Scroll && node.OverflowY != Overflow.Scroll {
@@ -480,6 +505,9 @@ internal partial class FlexLayoutEngine {
                 ExpandContentClip(node, left, top, snappedX, snappedY, density, horizontal, vertical)
             }
         }
+        node.LogicalLayout.HasAbsoluteDescendant = hasAbsDesc
+        node.LogicalLayout.Finalized = true
+        node.LogicalLayout.RawMoved = false
     }
 
     private func ExpandContentClip(
@@ -518,6 +546,7 @@ internal partial class FlexLayoutEngine {
             W: float32(endX - dx),
             H: float32(endY - dy)
         }
+        node.LogicalLayout.RectSynced = false
         if dx != 0.0 || dy != 0.0 {
             for index in 0 ... node.Children.Count {
                 let child = node.Children[index]
@@ -529,6 +558,7 @@ internal partial class FlexLayoutEngine {
                     if dy != 0.0 {
                         child.LogicalLayout.Snapped.Y = (float32(y) + child.LogicalLayout.Snapped.Y) - float32(shiftedY)
                     }
+                    child.LogicalLayout.RectSynced = false
                 }
             }
         }

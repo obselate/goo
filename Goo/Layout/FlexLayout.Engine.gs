@@ -34,6 +34,7 @@ internal partial class FlexLayoutEngine {
             while let item = current {
                 let hadCache = item.FlexMeasures.HasCommitted || item.FlexMeasures.HasProbes
                 item.FlexMeasures.Clear()
+                item.LogicalLayout.RectSynced = false
                 if item.IsPortal || (!hadCache && item != node) {
                     break
                 }
@@ -155,9 +156,14 @@ internal partial class FlexLayoutEngine {
         let result = Solve(node, ref request, true, frame, state)
         if node.LogicalLayout.Valid {
             let margin = node.LogicalLayout.Margin
-            node.LogicalLayout.Raw.X = x + margin.Left + RelativeOffset(node, true, request.OwnerWidth, request.Direction)
-            node.LogicalLayout.Raw.Y = y + margin.Top + RelativeOffset(node, false, request.OwnerHeight, request.Direction)
-            FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, request.Density, frame, AbsoluteBlock{}, state, true)
+            let newX = x + margin.Left + RelativeOffset(node, true, request.OwnerWidth, request.Direction)
+            let newY = y + margin.Top + RelativeOffset(node, false, request.OwnerHeight, request.Direction)
+            if node.LogicalLayout.Raw.X != newX || node.LogicalLayout.Raw.Y != newY {
+                node.LogicalLayout.Raw.X = newX
+                node.LogicalLayout.Raw.Y = newY
+                node.LogicalLayout.RawMoved = true
+            }
+            FinalizeGeometry(node, 0.0, 0.0, 0.0, 0.0, request.Density, frame, AbsoluteBlock{}, state, true, true)
         }
         return result
     }
@@ -236,14 +242,13 @@ internal partial class FlexLayoutEngine {
     }
 
     private func DependsOnOwner(length NodeLength) bool -> length.Unit == LengthUnit.Percent ||
-        length.Unit == LengthUnit.Relative ||
-        length.Unit == LengthUnit.FitContent
+        length.Unit >= LengthUnit.Relative
 
     private func OwnerIndependent(node Node) bool {
         if node.FlexMeasures.OwnerIndependent != 0 {
             return node.FlexMeasures.OwnerIndependent == 1
         }
-        let independent = node.Children.Count == 0 && node.Kind != NodeKind.Editor && !node.HasCustomLayout
+        let independent = node.Kind != NodeKind.Editor && !node.HasCustomLayout
         && !DependsOnOwner(node.Width) && !DependsOnOwner(node.Height)
         && !DependsOnOwner(node.MinWidth) && !DependsOnOwner(node.MinHeight)
         && !DependsOnOwner(node.MaxWidth) && !DependsOnOwner(node.MaxHeight)
@@ -321,6 +326,8 @@ internal partial class FlexLayoutEngine {
             node.LogicalLayout.TextBaseline = result.TextBaseline
             node.LogicalLayout.ContentAxes = uint8(result.ContentAxes | contentMain)
             node.LogicalLayout.Valid = true
+            node.LogicalLayout.Finalized = false
+            node.LogicalLayout.RectSynced = false
             node.LogicalLayout.Generation = frame
             node.FlexMeasures.Committed = key
             node.FlexMeasures.HasCommitted = true

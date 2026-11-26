@@ -13,10 +13,21 @@ internal class Transforming {
   shared {
     private var values ConditionalWeakTable[Node, TransformValue]?
 
+    private func clearRectSyncedUp(n Node) {
+      var curr Node? = n
+      while let item = curr {
+        item.LogicalLayout.RectSynced = false
+        curr = item.Parent
+      }
+    }
+
     internal func Remove(n Node) {
       values?.Remove(n)
       n.HasTransformState = false
-      n.HasVisualTransform = false
+      if n.HasVisualTransform {
+        n.HasVisualTransform = false
+        clearRectSyncedUp(n)
+      }
     }
 
     internal func Get(n Node) TransformValue? {
@@ -25,7 +36,10 @@ internal class Transforming {
         if existing.TryGetValue(n, out var value) { return value }
       }
       n.HasTransformState = false
-      n.HasVisualTransform = false
+      if n.HasVisualTransform {
+        n.HasVisualTransform = false
+        clearRectSyncedUp(n)
+      }
       return nil
     }
 
@@ -205,7 +219,10 @@ internal class Transforming {
         || state.Rotate != 0.0F || state.Scale != 1.0F
         || state.ScaleX != 1.0F || state.ScaleY != 1.0F
         || state.SkewX != 0.0F || state.SkewY != 0.0F || state.Viewport != nil
-      n.HasVisualTransform = visual
+      if n.HasVisualTransform != visual {
+        n.HasVisualTransform = visual
+        clearRectSyncedUp(n)
+      }
       if visual || !isDefaultTranslation(state.TranslateX)
         || !isDefaultTranslation(state.TranslateY)
         || !isDefaultOrigin(state.OriginX) || !isDefaultOrigin(state.OriginY) {
