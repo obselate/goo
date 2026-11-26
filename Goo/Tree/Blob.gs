@@ -162,6 +162,10 @@ public open class Blob : Style {
     get -> (blobState & int32(2048)) != 0
     set -> blobState = value ? blobState | int32(2048) : blobState & ~int32(2048)
   }
+  internal prop HasLayoutTraits bool{
+    get -> (blobState & int32(8192)) != 0
+    set -> blobState = value ? blobState | int32(8192) : blobState & ~int32(8192)
+  }
   /// Gets the action that runs when the element is clicked.
   public prop OnClick Action? {
     get -> declarationOnClick
@@ -501,6 +505,46 @@ public open class Blob : Style {
 
   internal func updateSparseInputState() {
     blobState = InputMetadata.HasState(this) ? blobState | int32(32) : blobState & ~int32(32)
+  }
+
+  /// Attaches or replaces a typed child layout trait on this mutable element.
+  /// @typeparam T The trait value type.
+  /// @param key The trait key.
+  /// @param value The trait value.
+  public func SetLayoutTrait[T any](key LayoutKey[T], value T) {
+    CheckMutable()
+    if key == nil { throw ArgumentNullException("key") }
+    LayoutTraits.SetBlob(this, key, value)
+  }
+
+  /// Attaches or replaces a typed child layout trait on this mutable element and returns this element for fluent composition.
+  /// @typeparam T The trait value type.
+  /// @param key The trait key.
+  /// @param value The trait value.
+  /// @returns This element.
+  public func WithLayoutTrait[T any](key LayoutKey[T], value T) Blob {
+    SetLayoutTrait(key, value)
+    return this
+  }
+
+  /// Tries to read an attached child layout trait from this element.
+  /// @typeparam T The trait value type.
+  /// @param key The trait key.
+  /// @param value Receives the attached value, or the key default when absent.
+  /// @returns True when the trait is attached to this element.
+  public func TryGetLayoutTrait[T any](key LayoutKey[T], out value T) bool {
+    if key == nil { throw ArgumentNullException("key") }
+    return LayoutTraits.TryGetBlob(this, key, out value)
+  }
+
+  /// Removes an attached child layout trait from this mutable element.
+  /// @typeparam T The trait value type.
+  /// @param key The trait key.
+  /// @returns True when the trait was present and removed.
+  public func ClearLayoutTrait[T any](key LayoutKey[T]) bool {
+    CheckMutable()
+    if key == nil { throw ArgumentNullException("key") }
+    return LayoutTraits.ClearBlob(this, key)
   }
 
   shared {

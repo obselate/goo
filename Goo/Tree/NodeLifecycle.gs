@@ -26,6 +26,7 @@ internal class NodeLifecycle {
       ScrollActivityStates.Remove(n)
       CustomLayouts.Remove(n)
       LengthDeclarations.Remove(n)
+      if n.HasLayoutTraits { LayoutTraits.Remove(n) }
       Stacking.Remove(n)
       Portals.Remove(n)
       n.ResetForReuse()
@@ -51,6 +52,8 @@ internal class NodeLifecycle {
       }
       n.Retired = true
       LengthDeclarations.Remove(n)
+      if n.HasLayoutTraits { LayoutTraits.Remove(n) }
+      CustomLayouts.Remove(n)
       n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
       ElementHandles.Detach(n)

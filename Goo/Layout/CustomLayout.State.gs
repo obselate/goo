@@ -4,7 +4,7 @@ import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
-internal class CustomLayoutChild {
+internal struct CustomLayoutChild {
   internal var Node Node
   internal var Bounds ElementRect
   internal var Arranged bool
@@ -13,7 +13,7 @@ internal class CustomLayoutChild {
 internal class CustomLayoutState {
   internal let Node Node
   internal var Algorithm LayoutAlgorithm
-  internal var Children []CustomLayoutChild = []CustomLayoutChild{}
+  internal let Children List[CustomLayoutChild] = List[CustomLayoutChild]()
   internal var Active bool
   private let context LayoutContext
   private var arranging bool
@@ -27,6 +27,8 @@ internal class CustomLayoutState {
   internal var ContentWidth float32
   internal var ContentHeight float32
   private var availableSize LayoutSize
+  private var activeState FlexThreadState?
+  private var activeFrame uint64
 
   internal init(node Node, algorithm LayoutAlgorithm) {
     Node = node
@@ -40,32 +42,27 @@ internal class CustomLayoutState {
   }
 
   internal func SyncChildren() {
-    let count = Portals.SourceChildCount(Node)
-    var changed = Children.Length != count
-    if !changed {
-      var index int32
-      for child in Node.Children {
-        if !child.IsPortal && Children[index].Node != child {
-          changed = true
-          break
-        }
-        if !child.IsPortal { index++ }
+    let nodeCount = Node.Children.Count
+    var same = true
+    var slot = 0
+    for i in 0 ... nodeCount {
+      let child = Node.Children[i]
+      if child.IsPortal { continue }
+      if slot >= Children.Count || Children[slot].Node != child {
+        same = false
+        break
+      }
+      slot++
+    }
+    if same && slot == Children.Count { return }
+    Children.Clear()
+    for i in 0 ... nodeCount {
+      let child = Node.Children[i]
+      if !child.IsPortal {
+        Children.Add(CustomLayoutChild{Node: child})
       }
     }
-    if changed {
-      let old = Dictionary[Node, CustomLayoutChild]()
-      for child in Children { old[child.Node] = child }
-      let next = [count]CustomLayoutChild
-      var index int32
-      for child in Node.Children {
-        if !child.IsPortal {
-          next[index] = if old.TryGetValue(child, out var retained) { retained } else { CustomLayoutChild{Node: child} }
-          index++
-        }
-      }
-      Children = next
-      Invalidate()
-    }
+    Invalidate()
   }
 
   internal func ChildInvalidated() {
@@ -74,7 +71,31 @@ internal class CustomLayoutState {
 
   internal func ChildCount() int32 {
     RequireActive()
-    return Children.Length
+    return Children.Count
+  }
+
+  internal func EffectiveDirection() Direction {
+    RequireActive()
+    if Node.LogicalLayout.Valid { return Node.LogicalLayout.Direction }
+    return Node.Direction == Direction.Auto ? Direction.LeftToRight : Node.Direction
+  }
+
+  internal func EffectiveDensity() float64 {
+    RequireActive()
+    return float64(CustomLayouts.Density)
+  }
+
+  internal func ChildDisplay(index int32) Display -> Child(index).Node.Display
+
+  internal func TryGetChildTrait[T any](index int32, key LayoutKey[T], out value T) bool {
+    if key == nil { throw ArgumentNullException("key") }
+    let child = Child(index)
+    return LayoutTraits.TryGetNode(child.Node, key, out value)
+  }
+
+  internal func ChildTrait[T any](index int32, key LayoutKey[T]) T {
+    TryGetChildTrait(index, key, out var value)
+    return value
   }
 
   private func RequireActive() {
@@ -83,15 +104,17 @@ internal class CustomLayoutState {
 
   private func Child(index int32) CustomLayoutChild {
     RequireActive()
-    if index < 0 || index >= Children.Length { throw ArgumentOutOfRangeException("index") }
+    if index < 0 || index >= Children.Count { throw ArgumentOutOfRangeException("index") }
     return Children[index]
   }
 
-  private func Begin(isArrange bool) {
+  private func Begin(isArrange bool, state FlexThreadState, frame uint64) {
     if Active || CustomLayouts.Depth >= 64 { throw InvalidOperationException("${Algorithm.GetType().Name} reentered custom layout or exceeded 64 nested panels: remove recursive layout calls or reduce panel nesting.") }
     Active = true
     activeThreadId = Environment.CurrentManagedThreadId
     arranging = isArrange
+    activeState = state
+    activeFrame = frame
     calls = 0
     CustomLayouts.Depth++
   }
@@ -100,11 +123,13 @@ internal class CustomLayoutState {
     CustomLayouts.Depth--
     Active = false
     arranging = false
+    activeState = nil
+    activeFrame = 0uL
   }
 
-  internal func Measure(available LayoutSize) LayoutSize {
+  internal func Measure(available LayoutSize, state FlexThreadState, frame uint64) LayoutSize {
     SyncChildren()
-    Begin(false)
+    Begin(false, state, frame)
     try {
       availableSize = available
       let result = Algorithm.Measure(context, available)
@@ -126,24 +151,86 @@ internal class CustomLayoutState {
       + (percent == 0.0F ? 0.0F : percent * basis / 100.0F))
   }
 
-  internal func MeasureChild(index int32, available LayoutSize) LayoutSize {
+  private func validateConstraint(constraint LayoutConstraint) {
+    if constraint.Mode == LayoutMeasureMode.AtMost || constraint.Mode == LayoutMeasureMode.Exactly {
+      if !Double.IsFinite(constraint.Size) || constraint.Size < 0.0 || constraint.Size > float64(Single.MaxValue) {
+        throw ArgumentOutOfRangeException("constraint")
+      }
+    } else if constraint.Mode != LayoutMeasureMode.Unbounded && constraint.Mode != LayoutMeasureMode.MinContent {
+      throw ArgumentOutOfRangeException("constraint")
+    }
+  }
+
+  private func flexConstraint(constraint LayoutConstraint, margin float32) FlexConstraint -> switch constraint.Mode {
+    case LayoutMeasureMode.Exactly: FlexConstraint.Exact(float32(constraint.Size) - margin)
+    case LayoutMeasureMode.AtMost: FlexConstraint.Cap(float32(constraint.Size) - margin)
+    case LayoutMeasureMode.MinContent: FlexConstraint.Minimum()
+    case _: FlexConstraint{}
+  }
+
+  private func ownerBasis(constraint LayoutConstraint) float32 ->
+    constraint.Mode == LayoutMeasureMode.AtMost || constraint.Mode == LayoutMeasureMode.Exactly
+    ? float32(constraint.Size) : Single.NaN
+
+  private func measureCore(
+    index int32,
+    width LayoutConstraint,
+    height LayoutConstraint,
+    wantBaseline bool,
+    out baseline float64?
+  ) LayoutSize {
     let child = Child(index)
-    CustomLayouts.ValidateSize(available, true)
+    validateConstraint(width)
+    validateConstraint(height)
     calls++
-    if calls > Math.Min(65536, Math.Max(32, Children.Length * 16)) { throw InvalidOperationException("${Algorithm.GetType().Name}.MeasureChild exceeded the measurement budget for child $index after $calls calls: bound measurement loops and reuse measured sizes.") }
+    if calls > Math.Min(65536, Math.Max(32, Children.Count * 16)) { throw InvalidOperationException("${Algorithm.GetType().Name}.MeasureChild exceeded the measurement budget for child $index after $calls calls: bound measurement loops and reuse measured sizes.") }
     let n = child.Node
+    if n.Display == Display.None {
+      baseline = nil
+      return LayoutSize(0.0, 0.0)
+    }
     let engine = FlexLayoutEngine.Shared
-    let width = CustomLayouts.Constraint(available.Width)
-    let height = CustomLayouts.Constraint(available.Height)
-    var request = engine.RootRequest(width, height, CustomLayouts.Density, Node.Direction)
+    let ownerW = ownerBasis(width)
+    let ownerH = ownerBasis(height)
+    var request = engine.RootRequest(ownerW, ownerH, CustomLayouts.Density, Node.Direction)
     request.Override = FlexOverride.Capped
+    request.Baseline = wantBaseline
     let margin = engine.ResolveMargins(n, in request)
-    request.Width = FlexConstraint.Cap(width - margin.Sum(true))
-    request.Height = FlexConstraint.Cap(height - margin.Sum(false))
-    let measured = engine.MeasureSubtree(n, request)
-    return LayoutSize(
-      Math.Max(0.0, Math.Min(float64(measured.Width + margin.Sum(true)), available.Width)),
-      Math.Max(0.0, Math.Min(float64(measured.Height + margin.Sum(false)), available.Height)))
+    request.Width = flexConstraint(width, margin.Sum(true))
+    request.Height = flexConstraint(height, margin.Sum(false))
+    let threadState = activeState ?? FlexThreadState.Current()
+    let savedTop = threadState.Arena.Top
+    var measured FlexSize
+    try {
+      measured = engine.Solve(n, ref request, false, activeFrame, threadState)
+    } finally {
+      threadState.Arena.Release(savedTop)
+    }
+    baseline = if wantBaseline && measured.TextBaseline { float64(margin.Top + measured.Baseline) } else { nil }
+    var w = float64(measured.Width + margin.Sum(true))
+    var h = float64(measured.Height + margin.Sum(false))
+    if width.Mode == LayoutMeasureMode.AtMost { w = Math.Min(w, width.Size) }
+    if height.Mode == LayoutMeasureMode.AtMost { h = Math.Min(h, height.Size) }
+    return LayoutSize(Math.Max(0.0, w), Math.Max(0.0, h))
+  }
+
+  internal func MeasureChild(index int32, available LayoutSize) LayoutSize {
+    CustomLayouts.ValidateSize(available, true)
+    return measureCore(
+      index,
+      LayoutConstraint.AtMost(available.Width),
+      LayoutConstraint.AtMost(available.Height),
+      false,
+      out var ignored
+    )
+  }
+
+  internal func MeasureChild(index int32, width LayoutConstraint, height LayoutConstraint) LayoutSize ->
+    measureCore(index, width, height, false, out var ignored)
+
+  internal func MeasureChildBaseline(index int32, width LayoutConstraint, height LayoutConstraint) float64? {
+    measureCore(index, width, height, true, out var baseline)
+    return baseline
   }
 
   internal func ArrangeChild(index int32, bounds ElementRect) {
@@ -154,8 +241,7 @@ internal class CustomLayoutState {
     if !Double.IsFinite(bounds.X) || !Double.IsFinite(bounds.Y) || Math.Abs(bounds.X) > float64(Single.MaxValue) || Math.Abs(bounds.Y) > float64(Single.MaxValue) {
       throw ArgumentOutOfRangeException("bounds")
     }
-    child.Bounds = bounds
-    child.Arranged = true
+    Children[index] = CustomLayoutChild{Node: child.Node, Bounds: bounds, Arranged: true}
   }
 
   internal func Arrange(state FlexThreadState, frame uint64) {
@@ -166,15 +252,20 @@ internal class CustomLayoutState {
     let density = logical.Density
     if arrangedVersion == version && arrangedWidth == float64(width)
       && arrangedHeight == float64(height) && arrangedDensity == density { return }
-    Begin(true)
+    Begin(true, state, frame)
     try {
       arrangedVersion = 0L
-      for child in Children { child.Arranged = false }
+      for i in 0 ... Children.Count {
+        var child = Children[i]
+        child.Arranged = false
+        Children[i] = child
+      }
       availableSize = LayoutSize(float64(width), float64(height))
       Algorithm.Arrange(context, availableSize)
       ContentWidth = 0.0F
       ContentHeight = 0.0F
-      for child in Children {
+      for i in 0 ... Children.Count {
+        let child = Children[i]
         if !child.Arranged { throw InvalidOperationException("${Algorithm.GetType().Name}.Arrange omitted a child with key '${child.Node.Key ?? "<unkeyed>"}': call ArrangeChild once for every child.") }
         CustomLayouts.ArrangeRoot(child.Node, child.Bounds, Node.Direction, density, state, frame)
         let rect = child.Node.LogicalLayout.Snapped
@@ -193,7 +284,6 @@ internal class CustomLayoutState {
 internal class CustomLayouts {
   shared {
     private var blobs ConditionalWeakTable[Container, LayoutAlgorithm]?
-    private var nodes ConditionalWeakTable[Node, CustomLayoutState]?
     @ThreadStatic
     internal var Depth int32
     @ThreadStatic
@@ -222,25 +312,17 @@ internal class CustomLayouts {
       }
     }
 
-    internal func State(node Node) CustomLayoutState? {
-      if !node.HasCustomLayout { return nil }
-      if let values = nodes {
-        if values.TryGetValue(node, out var state) { return state }
-      }
-      return nil
-    }
+    internal func State(node Node) CustomLayoutState? -> node.RetainedCustomLayout
 
     internal func Configure(node Node, algorithm LayoutAlgorithm?) bool {
-      let current = State(node)
+      let current = node.RetainedCustomLayout
       if let selected = algorithm {
         if let state = current {
           if Object.ReferenceEquals(state.Algorithm, selected) { return false }
           state.Algorithm = selected
           state.Invalidate()
         } else {
-          nodes ??= ConditionalWeakTable[Node, CustomLayoutState]()
-          nodes?.Add(node, CustomLayoutState(node, selected))
-          node.HasCustomLayout = true
+          node.RetainedCustomLayout = CustomLayoutState(node, selected)
           FlexLayoutEngine.Invalidate(node)
         }
         return true
@@ -248,8 +330,7 @@ internal class CustomLayouts {
       guard let state = current else { return false }
       if state.Active { throw InvalidOperationException("${state.Algorithm.GetType().Name} changed its custom layout during a callback: defer the change until Measure or Arrange returns.") }
       FlexLayoutEngine.Invalidate(node)
-      nodes?.Remove(node)
-      node.HasCustomLayout = false
+      node.RetainedCustomLayout = nil
       return true
     }
 

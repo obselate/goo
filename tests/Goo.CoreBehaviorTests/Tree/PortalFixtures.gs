@@ -318,7 +318,7 @@ internal class PortalFixtures {
     guard let root = window.Tree else { return false }
     let source = root.Children[0]
     guard let layout = CustomLayouts.State(source) else { return false }
-    if layout.Children.Length != 1 || layout.ContentWidth != 20.0F
+    if layout.Children.Count != 1 || layout.ContentWidth != 20.0F
       || cell.ResizeHandle.BorderBox.Width != 100.0 {
         return false
       }
