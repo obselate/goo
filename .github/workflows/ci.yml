@@ -87,9 +87,7 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/packages.lock.json', '**/*.gsproj', '**/*.csproj', '**/*.props', 'global.json', '**/NuGet.config') }}
 
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
+      - uses: ./.github/actions/setup-goo-dotnet
 
 
       - name: Enforce G# formatting and lint
@@ -133,9 +131,7 @@ jobs:
           ref: ${{ steps.widgets-pin.outputs.commit }}
           path: goo-widgets
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
-        with:
-          global-json-file: global.json
+      - uses: ./.github/actions/setup-goo-dotnet
 
 
       - name: Verify shared gesture recognizers
@@ -219,9 +215,7 @@ jobs:
       - *widgets-pin
       - *widgets-checkout
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
-        with:
-          global-json-file: global.json
+      - uses: ./.github/actions/setup-goo-dotnet
       - &linux-apt-update
         name: Update Linux package lists
         id: linux-apt
@@ -325,10 +319,8 @@ jobs:
       - *widgets-checkout
 
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      - uses: ./.github/actions/setup-goo-dotnet
         if: needs.changes.outputs.full == 'true'
-        with:
-          global-json-file: global.json
 
       - name: Load release version
         if: needs.changes.outputs.full == 'true'
@@ -547,10 +539,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+      - uses: ./.github/actions/setup-goo-dotnet
         if: needs.changes.outputs.full == 'true'
-        with:
-          global-json-file: global.json
       - name: Download macOS native payloads
         if: needs.changes.outputs.full == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
@@ -653,10 +643,8 @@ jobs:
         if: needs.changes.outputs.full == 'true'
 
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      - uses: ./.github/actions/setup-goo-dotnet
         if: needs.changes.outputs.full == 'true'
-        with:
-          global-json-file: global.json
 
       - name: Load release version
         if: needs.changes.outputs.full == 'true'
@@ -845,9 +833,7 @@ jobs:
       - *nuget-cache
       - &linux-dotnet
         if: needs.changes.outputs.full == 'true'
-        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
-        with:
-          global-json-file: global.json
+        uses: ./.github/actions/setup-goo-dotnet
 
       - &linux-build-restore
         if: needs.changes.outputs.full == 'true'
@@ -2041,9 +2027,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
-        with:
-          global-json-file: global.json
+      - uses: ./.github/actions/setup-goo-dotnet
       - name: Restore pinned Windows text native payloads
         id: windows-native
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
@@ -2086,10 +2070,8 @@ jobs:
       - *widgets-pin
       - *widgets-checkout
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      - uses: ./.github/actions/setup-goo-dotnet
         if: needs.changes.outputs.full == 'true'
-        with:
-          global-json-file: global.json
       - name: Verify image cache path comparer
         run: dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj -c Release -p:TreatWarningsAsErrors=true --filter FullyQualifiedName~CacheEvictionUsesThePlatformPathComparer
       - name: Verify NativeAOT application hosting on Windows
@@ -2393,9 +2375,7 @@ jobs:
           fetch-depth: 0
 
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
+      - uses: ./.github/actions/setup-goo-dotnet
 
       - name: Load release version
         run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
@@ -2506,10 +2486,8 @@ jobs:
       - *widgets-pin
       - *widgets-checkout
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      - uses: ./.github/actions/setup-goo-dotnet
         if: needs.changes.outputs.full == 'true'
-        with:
-          global-json-file: global.json
 
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         if: needs.changes.outputs.full == 'true'
@@ -2724,10 +2702,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
       - *nuget-cache
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      - uses: ./.github/actions/setup-goo-dotnet
         if: needs.changes.outputs.full == 'true'
-        with:
-          global-json-file: global.json
 
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         if: needs.changes.outputs.full == 'true'

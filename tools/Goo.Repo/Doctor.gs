@@ -8,13 +8,18 @@ internal shared partial class Repo {
     private func Doctor() {
         Console.WriteLine("Read-only prerequisite checks. Optional Android tools are separate from desktop docs.")
         var missing = 0
-        let sdk = ReadCommand("dotnet", []string{"--list-sdks"})
+        let sdk = ReadCommand("dotnet", []string{"--version"}).Trim()
         let requiredSdk = JsonNode.Parse(File.ReadAllText("global.json"))!!["sdk"]!!["version"]!!.GetValue[string]()
         missing += Report(
-            ".NET SDK " + requiredSdk,
-            sdk.Split('\n').Any(line -> line.StartsWith(requiredSdk + " ")),
+            if sdk.Length == 0 { ".NET SDK " + requiredSdk + " or newer" } else { ".NET SDK " + sdk },
+            Version.TryParse(sdk, out var resolvedSdk) && resolvedSdk >= Version.Parse(requiredSdk),
             "mkdir -p artifacts && curl -fsSL https://dot.net/v1/dotnet-install.sh -o artifacts/dotnet-install.sh && bash artifacts/dotnet-install.sh --version " +
                 requiredSdk
+        )
+        missing += Report(
+            "Microsoft.NETCore.App 10.0 runtime (required by the G# compiler)",
+            ReadCommand("dotnet", []string{"--list-runtimes"}).Split('\n').Any(line -> line.StartsWith("Microsoft.NETCore.App 10.0.")),
+            "mkdir -p artifacts && curl -fsSL https://dot.net/v1/dotnet-install.sh -o artifacts/dotnet-install.sh && bash artifacts/dotnet-install.sh --runtime dotnet --channel 10.0"
         )
         missing += Report(
             "G# compiler and formatter",
