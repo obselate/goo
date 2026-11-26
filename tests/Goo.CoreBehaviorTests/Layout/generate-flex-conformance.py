@@ -159,10 +159,6 @@ def main():
     # Preserve observed Yoga geometry only while its input is unchanged.
     previous = {case["name"]: case for case in table["cases"] if "features" in case}
     cases = list(seeded_cases(args.seed))
-    for case in cases:
-        old = previous.get(case["name"])
-        if old and old["tree"] == case["tree"] and "deviation" in old:
-            case["deviation"] = old["deviation"]
     table["seed"] = args.seed
     table["cases"] = [case for case in table["cases"] if "features" not in case] + cases
     font = args.font.read_bytes()
@@ -175,9 +171,12 @@ const lengths = new Set(['width','height','minWidth','minHeight','maxWidth','max
 function cssLength(value) { return typeof value === 'number' ? value + 'px' : value; }
 function build(spec) {
   const el = document.createElement('div');
-  el.style.cssText = 'box-sizing:border-box;border:0 solid;min-width:auto;min-height:auto;font-weight:400;font-variation-settings:\"wght\" 400;';
+  el.style.cssText = 'box-sizing:border-box;position:relative;border:0 solid;min-width:auto;min-height:auto;font-weight:400;font-variation-settings:\"wght\" 400;';
   if (spec.text === undefined) el.style.cssText += 'display:flex;flex-direction:column;align-content:flex-start;';
-  else el.textContent = spec.text;
+  else {
+    el.textContent = spec.text;
+    el.style.overflowWrap = 'break-word';
+  }
   for (let [key, value] of Object.entries(spec.style || {})) {
     key = key[0].toLowerCase() + key.slice(1);
     if (['margin','padding','borderWidth'].includes(key) && typeof value === 'object') {
@@ -190,9 +189,12 @@ function build(spec) {
     if (key === 'direction') value = value === 'RightToLeft' ? 'rtl' : 'ltr';
     if (key === 'flexWrap' && value === 'NoWrap') value = 'nowrap';
     if (key === 'textWrap') { key = 'whiteSpace'; value = value === 'NoWrap' ? 'pre' : 'pre-wrap'; }
-    else if (key === 'textTrimming') { el.style.overflow = 'hidden'; key = 'textOverflow'; value = 'ellipsis'; }
+    else if (key === 'textTrimming') { key = 'textOverflow'; value = value === 'Ellipsis' ? 'ellipsis' : 'clip'; }
     else if (typeof value === 'string' && !lengths.has(key) && key !== 'fontFamily') value = value.replace(/[A-Z]/g, (c, i) => (i ? '-' : '') + c.toLowerCase());
     el.style[key] = typeof value === 'number' && lengths.has(key) ? value + 'px' : value;
+  }
+  if (spec.text !== undefined && spec.style.TextTrimming === 'Ellipsis' && !('MinWidth' in spec.style)) {
+    el.style.minWidth = '0px';
   }
   for (const child of spec.children || []) el.append(build(child));
   return el;
@@ -230,6 +232,10 @@ function boxes(root) {
         if not match:
             raise RuntimeError(result.stdout + result.stderr)
         generated = json.loads(html.unescape(match[1]))
+    for case in generated["cases"]:
+        old = previous.get(case["name"])
+        if old and old["tree"] == case["tree"] and "deviation" in old:
+            case["deviation"] = old["deviation"]
     generated["chromium"] = subprocess.check_output([args.chromium, "--version"], text=True).strip()
     path.write_text(json.dumps(generated, indent=2) + "\n")
     print(f"Recorded {len(generated['cases'])} cases with {generated['chromium']}")

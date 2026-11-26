@@ -3,8 +3,148 @@
   "fontFamily": "FlexConformance",
   "fontSha256": "71ffd45fe736c7d26eeae2d7cb9e62e09b80901ad3df9a564b3662876c717666",
   "fontSource": "tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf, wght=400",
-  "cssDefaults": "Border-box sizing, column flex containers, align-content flex-start, pre-wrap text, and overlay scrollbars with no reserved gutter.",
+  "cssDefaults": "Border-box sizing, relative positioning, column flex containers, align-content flex-start, pre-wrap text with emergency word breaks, and overlay scrollbars with no reserved gutter. Text trimming does not set the flex item's overflow.",
   "cases": [
+    {
+      "name": "text-wrap-breaks-overlong-word",
+      "viewport": [
+        400,
+        400
+      ],
+      "tolerance": 1,
+      "tree": {
+        "style": {
+          "Width": 64,
+          "Height": 160
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 20,
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2,
+              "TextWrap": "Wrap"
+            },
+            "text": "mmmm"
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          64,
+          160
+        ],
+        [
+          0,
+          0,
+          20,
+          76.75
+        ]
+      ]
+    },
+    {
+      "name": "nested-default-position-containing-block",
+      "viewport": [
+        400,
+        400
+      ],
+      "tree": {
+        "style": {
+          "Width": 140,
+          "Height": 90,
+          "Position": "Relative",
+          "Padding": 10
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 60,
+              "Height": 50,
+              "Margin": {
+                "Left": 20,
+                "Top": 9
+              }
+            },
+            "children": [
+              {
+                "style": {
+                  "Width": 10,
+                  "Height": 8,
+                  "Position": "Absolute",
+                  "Left": 5,
+                  "Top": 4
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          140,
+          90
+        ],
+        [
+          30,
+          19,
+          60,
+          50
+        ],
+        [
+          35,
+          23,
+          10,
+          8
+        ]
+      ]
+    },
+    {
+      "name": "text-ellipsis-keeps-overflow-minimum",
+      "viewport": [
+        400,
+        400
+      ],
+      "tolerance": 1,
+      "tree": {
+        "style": {
+          "Width": 64,
+          "Height": 60
+        },
+        "children": [
+          {
+            "style": {
+              "Width": 20,
+              "Height": 72,
+              "FontFamily": "FlexConformance",
+              "FontSize": 16,
+              "LineHeight": 1.2,
+              "TextWrap": "Wrap",
+              "TextTrimming": "Ellipsis"
+            },
+            "text": "mmmm"
+          }
+        ]
+      },
+      "boxes": [
+        [
+          0,
+          0,
+          64,
+          60
+        ],
+        [
+          0,
+          0,
+          20,
+          72
+        ]
+      ]
+    },
     {
       "name": "row-overflow-neither",
       "viewport": [
@@ -1540,7 +1680,7 @@
         ]
       },
       "deviation": {
-        "reason": "Visible-overflow items use their specified Width or Height as the automatic minimum. CSS uses min(specified size, content size). Empty CSS items can shrink to 0.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -1988,7 +2128,7 @@
       "tolerance": 1,
       "toleranceReason": "VendSans wght=400: Chromium Volume 46.640625px, Goo 47px. Text geometry snaps to whole Goo pixels.",
       "deviation": {
-        "reason": "The visible-overflow fixed sibling retains its specified Width of 120. CSS can shrink that empty item to its zero content minimum. The Volume text must retain its min-content word width in both layouts.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -2276,7 +2416,7 @@
       "tolerance": 1,
       "toleranceReason": "VendSans 16px at line-height 1.2 gives fractional 19.2px text heights. Text edges snap to Goo's whole-pixel grid.",
       "deviation": {
-        "reason": "Visible-overflow children retain their specified Height as the automatic minimum. CSS shrinks empty children toward 0.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -15194,7 +15334,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga stretches the auto cross-size item where Chromium leaves its cross-size at zero.",
+        "reason": "The Yoga multiline stretch pass adds leadPerLine (distributed space between/around lines) to the line cross size. A zero-width line still has zero cross size under space-between; only its position changes.",
         "boxes": [
           [
             0,
@@ -16237,7 +16377,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga stretches the auto cross-size item where Chromium leaves its cross-size at zero.",
+        "reason": "The Yoga multiline stretch pass adds leadPerLine (distributed space between/around lines) to the line cross size. A zero-width line still has zero cross size under space-between; only its position changes.",
         "boxes": [
           [
             0,
@@ -21817,7 +21957,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -22041,7 +22181,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -22265,7 +22405,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -22489,7 +22629,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -22713,7 +22853,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -22937,7 +23077,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -23161,7 +23301,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -23385,7 +23525,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -23609,7 +23749,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -23833,7 +23973,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -24057,7 +24197,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -24281,7 +24421,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium differ in physical inset geometry for this positioned flex item.",
+        "reason": "Yoga preloads physical offsets for both edges, then its parent-axis opposite-edge conversion flips the offset under row-reverse or column-reverse. The flex direction reverses item placement, not the sign of physical left/top. Absolute and static siblings agree in the sampled cases.",
         "boxes": [
           [
             0,
@@ -24626,7 +24766,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -24877,7 +25017,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -25128,7 +25268,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -25379,7 +25519,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -25630,7 +25770,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -25881,7 +26021,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -26132,7 +26272,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -26383,7 +26523,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -26634,7 +26774,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -26885,7 +27025,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -27136,7 +27276,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -27387,7 +27527,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium distribute flex space differently with mixed-unit min/max clamps and automatic sizes.",
+        "reason": "The line and initial bound pass use mainAxisOwnerSize (the container owner/viewport) instead of the container inner main size for child percentage min/max. Even at matching percentage bases, the shrink loop starts from clamped bases and uses raw scaled factors for its total instead of freezing inflexible items first and distributing from unclamped bases.",
         "boxes": [
           [
             0,
@@ -29912,7 +30052,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga does not establish the CSS non-replaced item\u2019s transferred main-axis automatic minimum from a definite cross size, and recalculates even a definite cross size from the flexed main size. The isolated override MinWidth:0 removes the first difference and demonstrates the second.",
         "boxes": [
           [
             0,
@@ -30193,7 +30333,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga prioritizes aspect-ratio transfer over stretch. CSS uses the line cross size for an auto cross dimension and does not change the main size to honor the ratio. The explicit flex-start control removes this difference.",
         "boxes": [
           [
             0,
@@ -30556,7 +30696,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga prioritizes aspect-ratio transfer over stretch. CSS uses the line cross size for an auto cross dimension and does not change the main size to honor the ratio. The explicit flex-start control removes this difference.",
         "boxes": [
           [
             0,
@@ -30673,7 +30813,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga does not establish the CSS non-replaced item\u2019s transferred main-axis automatic minimum from a definite cross size, and recalculates even a definite cross size from the flexed main size. The isolated override MinWidth:0 removes the first difference and demonstrates the second.",
         "boxes": [
           [
             0,
@@ -30872,7 +31012,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga does not establish the CSS non-replaced item\u2019s transferred main-axis automatic minimum from a definite cross size, and recalculates even a definite cross size from the flexed main size. The isolated override MinWidth:0 removes the first difference and demonstrates the second.",
         "boxes": [
           [
             0,
@@ -30989,7 +31129,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga prioritizes aspect-ratio transfer over stretch. CSS uses the line cross size for an auto cross dimension and does not change the main size to honor the ratio. The explicit flex-start control removes this difference.",
         "boxes": [
           [
             0,
@@ -31352,7 +31492,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga prioritizes aspect-ratio transfer over stretch. CSS uses the line cross size for an auto cross dimension and does not change the main size to honor the ratio. The explicit flex-start control removes this difference.",
         "boxes": [
           [
             0,
@@ -31469,7 +31609,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga does not establish the CSS non-replaced item\u2019s transferred main-axis automatic minimum from a definite cross size, and recalculates even a definite cross size from the flexed main size. The isolated override MinWidth:0 removes the first difference and demonstrates the second.",
         "boxes": [
           [
             0,
@@ -31750,7 +31890,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga prioritizes aspect-ratio transfer over stretch. CSS uses the line cross size for an auto cross dimension and does not change the main size to honor the ratio. The explicit flex-start control removes this difference.",
         "boxes": [
           [
             0,
@@ -32113,7 +32253,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga prioritizes aspect-ratio transfer over stretch. CSS uses the line cross size for an auto cross dimension and does not change the main size to honor the ratio. The explicit flex-start control removes this difference.",
         "boxes": [
           [
             0,
@@ -32230,7 +32370,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve auto dimensions differently when aspect ratio participates in flex sizing.",
+        "reason": "Yoga does not establish the CSS non-replaced item\u2019s transferred main-axis automatic minimum from a definite cross size, and recalculates even a definite cross size from the flexed main size. The isolated override MinWidth:0 removes the first difference and demonstrates the second.",
         "boxes": [
           [
             0,
@@ -34662,7 +34802,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -34800,7 +34940,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -34938,7 +35078,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35076,7 +35216,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35214,7 +35354,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35352,7 +35492,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35490,7 +35630,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35628,7 +35768,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35766,7 +35906,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -35904,7 +36044,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36042,7 +36182,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36180,7 +36320,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36318,7 +36458,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36456,7 +36596,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36594,7 +36734,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36732,7 +36872,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -36870,7 +37010,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37008,7 +37148,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37146,7 +37286,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37284,7 +37424,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37422,7 +37562,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37560,7 +37700,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37698,7 +37838,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37836,7 +37976,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -37974,7 +38114,7 @@
         ]
       ],
       "deviation": {
-        "reason": "The visible siblings use Goo\u2019s definite-size automatic minimum; Chromium uses the lesser of content and specified size.",
+        "reason": "Documented Goo policy: with visible overflow a definite main size becomes the automatic minimum. CSS caps an intrinsic content-based minimum at the specified size; empty visible items can shrink below their preferred size. CSS and Goo both use zero for hidden/scroll in these cases.",
         "boxes": [
           [
             0,
@@ -38106,7 +38246,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38232,7 +38372,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38358,7 +38498,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38484,7 +38624,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38610,7 +38750,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38736,7 +38876,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38862,7 +39002,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -38988,7 +39128,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39114,7 +39254,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39240,7 +39380,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39366,7 +39506,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39492,7 +39632,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39618,7 +39758,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39744,7 +39884,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39870,7 +40010,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -39996,7 +40136,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40122,7 +40262,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40248,7 +40388,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40374,7 +40514,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40500,7 +40640,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40626,7 +40766,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40752,7 +40892,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -40878,7 +41018,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -41004,7 +41144,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -41130,7 +41270,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga uses the bottom edge of a plain text box as its baseline; Chromium uses the font baseline.",
+        "reason": "The Goo text adapter registers measure but not baseline. Yoga substitutes the border-box bottom instead of the text\u2019s first font baseline. All 25 cases match within tolerance when only baseline alignment is replaced with flex-start; this is not a font mismatch.",
         "boxes": [
           [
             0,
@@ -41494,19 +41634,19 @@
           0,
           0,
           16.796875,
-          31.1875
+          93.5625
         ],
         [
           3.359375,
           0,
           13.4375,
-          31.1875
+          93.5625
         ],
         [
           3.359375,
           0,
           12.171875,
-          31.1875
+          93.5625
         ],
         [
           15.53125,
@@ -41540,7 +41680,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -41794,17 +41934,17 @@
           0,
           0,
           24,
-          41.59375
+          58.390625
         ],
         [
           0,
           0,
           24,
-          33.59375
+          50.390625
         ],
         [
           0,
-          33.59375,
+          50.390625,
           5,
           8
         ],
@@ -41826,60 +41966,7 @@
           26,
           20
         ]
-      ],
-      "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
-        "boxes": [
-          [
-            0,
-            0,
-            117,
-            138
-          ],
-          [
-            0,
-            0,
-            30,
-            22
-          ],
-          [
-            0,
-            0,
-            24,
-            58
-          ],
-          [
-            0,
-            0,
-            24,
-            51
-          ],
-          [
-            0,
-            50,
-            5,
-            8
-          ],
-          [
-            30,
-            0,
-            26,
-            12
-          ],
-          [
-            56,
-            0,
-            30,
-            12
-          ],
-          [
-            86,
-            0,
-            26,
-            20
-          ]
-        ]
-      }
+      ]
     },
     {
       "name": "seeded-nested-05",
@@ -42033,7 +42120,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "The deliberate visible definite-size minimum prevents nested siblings from shrinking. Giving only definite main sizes that same floor in a separate Chromium control reproduces all six cases within the suite tolerance.",
         "boxes": [
           [
             0,
@@ -42168,35 +42255,35 @@
           0,
           0,
           16,
-          33.265625
+          35
         ],
         [
           0,
           0,
           16,
-          28.78125
+          57.5625
         ],
         [
           0,
-          33.265625,
+          35,
           23,
-          20.90625
+          20.46875
         ],
         [
           0,
-          54.171875,
+          55.46875,
           14,
-          33.265625
+          32.546875
         ],
         [
           0,
-          87.4375,
+          88.015625,
           21,
-          27.5625
+          26.984375
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -42362,7 +42449,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "The deliberate visible definite-size minimum prevents nested siblings from shrinking. Giving only definite main sizes that same floor in a separate Chromium control reproduces all six cases within the suite tolerance.",
         "boxes": [
           [
             0,
@@ -42521,23 +42608,23 @@
           0,
           0,
           23,
-          47.1875
+          78.375
         ],
         [
           0,
           8,
           18.390625,
-          39.1875
+          70.375
         ],
         [
           0,
           8,
           18.390625,
-          31.1875
+          62.375
         ],
         [
           0,
-          39.1875,
+          70.375,
           5,
           8
         ],
@@ -42567,7 +42654,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "The deliberate visible definite-size minimum prevents nested siblings from shrinking. Giving only definite main sizes that same floor in a separate Chromium control reproduces all six cases within the suite tolerance.",
         "boxes": [
           [
             0,
@@ -42821,13 +42908,13 @@
           0,
           0,
           20,
-          28.78125
+          57.5625
         ],
         [
           0,
           0,
           17.984375,
-          28.78125
+          57.5625
         ],
         [
           17.984375,
@@ -42855,7 +42942,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -43060,7 +43147,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "The deliberate visible definite-size minimum prevents nested siblings from shrinking. Giving only definite main sizes that same floor in a separate Chromium control reproduces all six cases within the suite tolerance.",
         "boxes": [
           [
             0,
@@ -43223,7 +43310,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -43495,19 +43582,19 @@
           0,
           0,
           17.59375,
-          28.78125
+          86.34375
         ],
         [
           3.53125,
           0,
           14.0625,
-          28.78125
+          86.34375
         ],
         [
           3.53125,
           0,
           12.640625,
-          28.78125
+          86.34375
         ],
         [
           16.171875,
@@ -43541,7 +43628,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -44057,7 +44144,7 @@
           0,
           0,
           17,
-          24
+          36
         ],
         [
           0,
@@ -44079,7 +44166,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -44245,7 +44332,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "The deliberate visible definite-size minimum prevents nested siblings from shrinking. Giving only definite main sizes that same floor in a separate Chromium control reproduces all six cases within the suite tolerance.",
         "boxes": [
           [
             0,
@@ -44404,23 +44491,23 @@
           0,
           0,
           26.390625,
-          47.1875
+          78.375
         ],
         [
           0,
           8,
           21.109375,
-          39.1875
+          70.375
         ],
         [
           0,
           8,
           21.109375,
-          31.1875
+          62.375
         ],
         [
           0,
-          39.1875,
+          70.375,
           5,
           8
         ],
@@ -44448,72 +44535,7 @@
           26,
           15
         ]
-      ],
-      "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
-        "boxes": [
-          [
-            0,
-            0,
-            149,
-            110
-          ],
-          [
-            0,
-            0,
-            33,
-            24
-          ],
-          [
-            0,
-            0,
-            26,
-            78
-          ],
-          [
-            0,
-            8,
-            21,
-            70
-          ],
-          [
-            0,
-            8,
-            22,
-            63
-          ],
-          [
-            0,
-            70,
-            5,
-            8
-          ],
-          [
-            0,
-            0,
-            5,
-            8
-          ],
-          [
-            33,
-            0,
-            34,
-            12
-          ],
-          [
-            67,
-            0,
-            36,
-            25
-          ],
-          [
-            103,
-            0,
-            26,
-            15
-          ]
-        ]
-      }
+      ]
     },
     {
       "name": "seeded-nested-21",
@@ -44704,13 +44726,13 @@
           0,
           0,
           18.390625,
-          28.78125
+          57.5625
         ],
         [
           0,
           0,
           16.53125,
-          28.78125
+          57.5625
         ],
         [
           16.53125,
@@ -44738,7 +44760,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
@@ -44943,7 +44965,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "The deliberate visible definite-size minimum prevents nested siblings from shrinking. Giving only definite main sizes that same floor in a separate Chromium control reproduces all six cases within the suite tolerance.",
         "boxes": [
           [
             0,
@@ -45106,7 +45128,7 @@
         ]
       ],
       "deviation": {
-        "reason": "Goo/Yoga and Chromium resolve nested auto and percentage constraints or pinned-font text measurements differently.",
+        "reason": "Yoga/Goo use the available block height for the measured basis/fit-content path, then do not restore the wrapped block\u2019s CSS content minimum. This remains after matching emergency wrapping and Goo\u2019s definite-size minimum; explicit zero minima make representative cases match. The original nested cases with narrow row children also exercise definite-size minima on siblings.",
         "boxes": [
           [
             0,
