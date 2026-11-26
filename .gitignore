@@ -158,6 +158,8 @@
 !/tools/Goo.ReleaseCheck/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
+!/tools/Goo.LayoutBenchmark/
+!/tools/Goo.LayoutBenchmark/**
 !/tools/Goo.Investigation/
 !/tools/Goo.Investigation/**
 !/tools/Goo.HostChecks/

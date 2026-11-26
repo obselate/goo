@@ -146,7 +146,7 @@ internal class FlexConformanceFixtures {
             let converted object = if type == typeof(Length) {
                 cast[object](ReadLength(value))
             } else if type == typeof(Edges) {
-                if value.ValueKind == JsonValueKind.Number {
+                if value.ValueKind != JsonValueKind.Object {
                     cast[object](Edges(ReadLength(value)))
                 } else {
                     cast[object](
@@ -186,10 +186,11 @@ internal class FlexConformanceFixtures {
         0
     }
 
-    private func ReadLength(value JsonElement) Length -> if value.ValueKind == JsonValueKind.Number {
-        value.GetDouble()
-    } else {
-        Percent(Double.Parse(value.GetString()!!.TrimEnd('%'), CultureInfo.InvariantCulture))
+    private func ReadLength(value JsonElement) Length {
+        if value.ValueKind == JsonValueKind.Number { return value.GetDouble() }
+        let text = value.GetString() ?? throw InvalidOperationException("Expected an auto or percentage length")
+        if text == "auto" { return Length.Auto }
+        return Percent(Double.Parse(text.TrimEnd('%'), CultureInfo.InvariantCulture))
     }
 
     private func Collect(node Node, boxes List[[]float32]) {
