@@ -67,7 +67,7 @@ internal partial class FlexLayoutEngine {
         let measured = Solve(child, ref key, true, frame, state)
         let main = MainAxis(node, direction)
         let cross = CrossAxis(node, main, direction)
-        child.LogicalLayout.Raw.X = if Known(left) || Known(right) {
+        let absX = if Known(left) || Known(right) {
             float32(
                 block.X - parentX +
                     AbsoluteOffset(
@@ -85,7 +85,7 @@ internal partial class FlexLayoutEngine {
         } else {
             StaticOffset(node, child, box.Margin, main, cross, true, node.LogicalLayout.Raw.W, measured.Width)
         }
-        child.LogicalLayout.Raw.Y = if Known(top) || Known(bottom) {
+        let absY = if Known(top) || Known(bottom) {
             float32(
                 block.Y - parentY +
                     AbsoluteOffset(
@@ -102,6 +102,11 @@ internal partial class FlexLayoutEngine {
             )
         } else {
             StaticOffset(node, child, box.Margin, main, cross, false, node.LogicalLayout.Raw.H, measured.Height)
+        }
+        if child.LogicalLayout.Raw.X != absX || child.LogicalLayout.Raw.Y != absY {
+            child.LogicalLayout.Raw.X = absX
+            child.LogicalLayout.Raw.Y = absY
+            child.LogicalLayout.RawMoved = true
         }
     }
 

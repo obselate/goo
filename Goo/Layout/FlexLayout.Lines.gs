@@ -93,6 +93,8 @@ internal partial class FlexLayoutEngine {
             ProjectedValue(child.FlexBasis, StyleField.FlexBasis, LengthDeclarations.Get(child), mainBasis)
         }
         var intrinsicBasis = false
+        var basisFromContent = false
+        var basisIsMinContent = false
         if !Known(basis) {
             basis = Known(preferred) ? preferred : transfer
             if !Known(basis) {
@@ -107,10 +109,14 @@ internal partial class FlexLayoutEngine {
                 let size = Solve(child, ref probe, false, frame, state)
                 basis = axis.Select(size.Width, size.Height)
                 intrinsicBasis = (size.ContentAxes & (horizontal ? 1 : 2)) != 0
+                basisFromContent = true
+                basisIsMinContent = intrinsic == FlexMeasureMode.MinContent
             }
         }
         var usedMin = MathF.Max(decorations, minimum)
         var policyMin = 0.0F
+        var needsAutoMin = false
+        var autoMinCap = 0.0F
         let mainMin = horizontal ? child.MinWidth : child.MinHeight
         if (mainMin.Unit == LengthUnit.Unset || mainMin.Unit == LengthUnit.Auto)
         && child.OverflowX == Overflow.Visible && child.OverflowY == Overflow.Visible
@@ -121,33 +127,45 @@ internal partial class FlexLayoutEngine {
             if !Known(preferred) || basis < MathF.Min(preferred, maximum)
             || policyMin < MathF.Min(preferred, maximum) && child.FlexShrink != 0.0F {
                 var content = decorations
+                var deferred = false
                 if child.HasCustomLayout && Known(preferred) {
                     content = preferred
                 } else if child.Children.Count > 0 || IsMeasured(child) {
-                    var probe = request
-                    SetAxis(ref probe, !horizontal, replaced && stretch ? FlexConstraint{} : crossRequest)
-                    SetAxis(ref probe, horizontal, FlexConstraint.Minimum())
-                    probe.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
-                    let size = Solve(child, ref probe, false, frame, state)
-                    content = axis.Select(size.Width, size.Height)
-                }
-                if box.Ratio > 0.0F {
-                    let crossMin = !horizontal ? box.MinWidth : box.MinHeight
-                    let crossMax = !horizontal ? box.MaxWidth : box.MaxHeight
-                    if Known(crossMax) {
-                        content = MathF.Min(content, Transfer(box, crossMax, horizontal, replaced))
-                    }
-                    if crossMin > 0.0F {
-                        content = MathF.Max(content, Transfer(box, crossMin, horizontal, replaced))
-                    }
-                    if Known(transfer) {
-                        content = replaced ? MathF.Min(content, transfer) : MathF.Max(content, transfer)
+                    if basisIsMinContent && !(replaced && stretch) {
+                        content = basis
+                    } else if box.Ratio <= 0.0F && !(replaced && stretch)
+                    && (basisFromContent || (Known(preferred) && basis >= MathF.Min(preferred, maximum))) {
+                        deferred = true
+                        needsAutoMin = true
+                        autoMinCap = Known(preferred) ? MathF.Min(preferred, maximum) : maximum
+                    } else {
+                        var probe = request
+                        SetAxis(ref probe, !horizontal, replaced && stretch ? FlexConstraint{} : crossRequest)
+                        SetAxis(ref probe, horizontal, FlexConstraint.Minimum())
+                        probe.Override = horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
+                        let size = Solve(child, ref probe, false, frame, state)
+                        content = axis.Select(size.Width, size.Height)
                     }
                 }
-                if Known(preferred) {
-                    content = MathF.Min(content, preferred)
+                if !deferred {
+                    if box.Ratio > 0.0F {
+                        let crossMin = !horizontal ? box.MinWidth : box.MinHeight
+                        let crossMax = !horizontal ? box.MaxWidth : box.MaxHeight
+                        if Known(crossMax) {
+                            content = MathF.Min(content, Transfer(box, crossMax, horizontal, replaced))
+                        }
+                        if crossMin > 0.0F {
+                            content = MathF.Max(content, Transfer(box, crossMin, horizontal, replaced))
+                        }
+                        if Known(transfer) {
+                            content = replaced ? MathF.Min(content, transfer) : MathF.Max(content, transfer)
+                        }
+                    }
+                    if Known(preferred) {
+                        content = MathF.Min(content, preferred)
+                    }
+                    usedMin = MathF.Max(usedMin, MathF.Min(content, maximum))
                 }
-                usedMin = MathF.Max(usedMin, MathF.Min(content, maximum))
             }
         }
         state.Arena.Items[slot] = FlexItem{
@@ -163,6 +181,8 @@ internal partial class FlexLayoutEngine {
             Align: align,
             Stretch: stretch,
             IntrinsicBasis: intrinsicBasis,
+            NeedsAutoMin: needsAutoMin,
+            AutoMinCap: autoMinCap,
             CrossRequest: crossRequest
         }
     }
@@ -220,6 +240,7 @@ internal partial class FlexLayoutEngine {
         var lines = 0
         var occupied = 0.0F
         var widest = 0.0F
+        var hasBaseline = false
         for index in 0 ... node.Children.Count {
             let child = node.Children[index]
             if !InFlow(child) {
@@ -240,6 +261,9 @@ internal partial class FlexLayoutEngine {
                 crossConstraint.Mode,
                 frame
             )
+            if arena.Items[slot].Align == AlignSelf.Baseline {
+                hasBaseline = true
+            }
             let outer = arena.Items[slot].Hypothetical + arena.Items[slot].Margin.Sum(horizontal)
             if wraps && count > 0 && Known(lineLimit) && occupied + mainGap + outer > lineLimit {
                 arena.Items[lineFirstSlot].End = slot
@@ -280,7 +304,13 @@ internal partial class FlexLayoutEngine {
         var lineSlot = scratchBase
         while lineSlot < arenaEnd {
             let end = arena.Items[lineSlot].End
-            ResolveFlexibleLengths(node, arena, lineSlot, end, main, availableMain, mainGap)
+            ResolveFlexibleLengths(node, arena, lineSlot, end, main, availableMain, mainGap, in childRequest, frame, state)
+            if !wraps && Known(ownCross) && !hasBaseline {
+                arena.Items[lineSlot].Ascent = 0.0F
+                arena.Items[lineSlot].LineCross = 0.0F
+                lineSlot = end
+                continue
+            }
             var lineCross = 0.0F
             var ascent = 0.0F
             var descent = 0.0F
@@ -364,11 +394,34 @@ internal partial class FlexLayoutEngine {
         end int32,
         axis FlexAxis,
         available float32,
-        gap float32
+        gap float32,
+        in childRequest FlexRequest,
+        frame uint64,
+        state FlexThreadState
     ) {
-        let items = arena.Items
         let count = end - start
-        let grow = items[start].Occupied < available
+        let grow = arena.Items[start].Occupied < available
+        if !grow {
+            for slot in start ... end {
+                if arena.Items[slot].NeedsAutoMin {
+                    let child = node.Children[arena.Items[slot].ChildIndex]
+                    if child.FlexShrink != 0.0F {
+                        var probe = childRequest
+                        SetAxis(ref probe, !axis.Horizontal, arena.Items[slot].CrossRequest)
+                        SetAxis(ref probe, axis.Horizontal, FlexConstraint.Minimum())
+                        probe.Override = axis.Horizontal ? FlexOverride.WidthIntrinsic : FlexOverride.HeightIntrinsic
+                        let size = Solve(child, ref probe, false, frame, state)
+                        let content = axis.Select(size.Width, size.Height)
+                        arena.Items[slot].Minimum = MathF.Max(
+                            arena.Items[slot].Minimum,
+                            MathF.Min(content, arena.Items[slot].AutoMinCap)
+                        )
+                    }
+                    arena.Items[slot].NeedsAutoMin = false
+                }
+            }
+        }
+        let items = arena.Items
         let gaps = gap * (count - 1)
         var initial = float64(available - gaps)
         var remaining = 0
@@ -431,6 +484,9 @@ internal partial class FlexLayoutEngine {
                 let delta = clamped - target
                 items[slot].Violation = delta > 0.0 ? 1 : (delta < 0.0 ? -1 : 0)
                 violation += delta
+            }
+            if violation == 0.0 {
+                break
             }
             for slot in start ... end {
                 if items[slot].Frozen {
@@ -499,17 +555,19 @@ internal partial class FlexLayoutEngine {
             for slot in lineSlot ... end {
                 let item = arena.Items[slot]
                 free -= item.Main + item.Margin.Sum(horizontal)
-                if main.AutoStart(item.AutoMargins) {
-                    autoCount++
-                }
-                if main.AutoEnd(item.AutoMargins) {
-                    autoCount++
+                if item.AutoMargins != 0 {
+                    if main.AutoStart(item.AutoMargins) {
+                        autoCount++
+                    }
+                    if main.AutoEnd(item.AutoMargins) {
+                        autoCount++
+                    }
                 }
             }
             let autoSpace = autoCount > 0 && free > 0.0F ? free / autoCount : 0.0F
             var spacing float32
             var start = box.Padding.Start(main) + box.Border.Start(main)
-            if autoSpace == 0.0F {
+            if autoSpace == 0.0F && node.JustifyContent != JustifyContent.FlexStart {
                 start += Distribute(node.JustifyContent, free, count, out spacing)
             }
             for slot in lineSlot ... end {
@@ -559,9 +617,10 @@ internal partial class FlexLayoutEngine {
                         RelativeOffset(child, true, request.OwnerWidth, direction: request.Direction)
                     let y = (horizontal ? crossPosition : mainPosition) +
                         RelativeOffset(child, false, request.OwnerHeight, direction: request.Direction)
-                    if arrange {
+                    if arrange && (child.LogicalLayout.Raw.X != x || child.LogicalLayout.Raw.Y != y) {
                         child.LogicalLayout.Raw.X = x
                         child.LogicalLayout.Raw.Y = y
+                        child.LogicalLayout.RawMoved = true
                     }
                     if isBaseline {
                         result.Baseline = y + childBaseline

@@ -127,26 +127,46 @@ internal struct LayoutResult {
     internal var Baseline float32
     internal var Density float32
     internal var Generation uint64
-    private var flags uint8
+    private var flags uint16
 
     internal prop Direction Direction {
-        get -> Direction(int32(flags & uint8(3)))
-        set -> flags = (flags & ~uint8(3)) | (uint8(int32(value)) & uint8(3))
+        get -> Direction(int32(flags & uint16(3)))
+        set -> flags = (flags & ~uint16(3)) | (uint16(int32(value)) & uint16(3))
     }
 
     internal prop Valid bool {
-        get -> (flags & uint8(4)) != uint8(0)
-        set -> flags = value ? flags | uint8(4) : flags & ~uint8(4)
+        get -> (flags & uint16(4)) != uint16(0)
+        set -> flags = value ? flags | uint16(4) : flags & ~uint16(4)
     }
 
     internal prop TextBaseline bool {
-        get -> (flags & uint8(8)) != uint8(0)
-        set -> flags = value ? flags | uint8(8) : flags & ~uint8(8)
+        get -> (flags & uint16(8)) != uint16(0)
+        set -> flags = value ? flags | uint16(8) : flags & ~uint16(8)
     }
 
     internal prop ContentAxes uint8 {
-        get -> (flags >> 4) & uint8(3)
-        set -> flags = (flags & ~uint8(48)) | ((value & uint8(3)) << 4)
+        get -> uint8((flags >> 4) & uint16(3))
+        set -> flags = (flags & ~uint16(48)) | ((uint16(value) & uint16(3)) << 4)
+    }
+
+    internal prop Finalized bool {
+        get -> (flags & uint16(64)) != uint16(0)
+        set -> flags = value ? flags | uint16(64) : flags & ~uint16(64)
+    }
+
+    internal prop RawMoved bool {
+        get -> (flags & uint16(128)) != uint16(0)
+        set -> flags = value ? flags | uint16(128) : flags & ~uint16(128)
+    }
+
+    internal prop HasAbsoluteDescendant bool {
+        get -> (flags & uint16(256)) != uint16(0)
+        set -> flags = value ? flags | uint16(256) : flags & ~uint16(256)
+    }
+
+    internal prop RectSynced bool {
+        get -> (flags & uint16(512)) != uint16(0)
+        set -> flags = value ? flags | uint16(512) : flags & ~uint16(512)
     }
 }
 
@@ -312,6 +332,8 @@ internal struct FlexItem {
     internal var Stretch bool
     internal var Frozen bool
     internal var IntrinsicBasis bool
+    internal var NeedsAutoMin bool
+    internal var AutoMinCap float32
     internal var Violation int32
     internal var End int32
     internal var Occupied float32
