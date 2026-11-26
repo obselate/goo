@@ -2,3 +2,4 @@
 *.glsl text eol=lf
 *.spv binary
 docs/perf/evidence/** -text -whitespace
+tests/Goo.CoreBehaviorTests/Layout/flex-conformance.json linguist-generated=true

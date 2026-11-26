@@ -156,28 +156,36 @@ def main():
     args = parser.parse_args()
     path = pathlib.Path(__file__).with_name("flex-conformance.json")
     table = json.loads(path.read_text())
-    # Preserve observed Yoga geometry only while its input is unchanged.
-    previous = {case["name"]: case for case in table["cases"] if "features" in case}
     cases = list(seeded_cases(args.seed))
     table["seed"] = args.seed
-    table["cases"] = [case for case in table["cases"] if "features" not in case] + cases
+    table["cases"] = [{key: value for key, value in case.items() if key != "deviation"}
+                      for case in table["cases"] if "features" not in case] + cases
+    table.pop("deviationEngine", None)
     overlaps = {
         "seeded-aspect-ratio-00", "seeded-aspect-ratio-08", "seeded-aspect-ratio-10",
         "seeded-aspect-ratio-11", "seeded-aspect-ratio-16", "seeded-aspect-ratio-19", "seeded-aspect-ratio-24",
         "seeded-nested-02", "seeded-nested-06", "seeded-nested-10", "seeded-nested-14", "seeded-nested-22",
     }
-    compatibility = {}
-    for case in table["cases"]:
-        name = case["name"]
-        old = previous.get(name, case)
-        if old["tree"] != case["tree"]:
-            continue
-        reason = old.get("deviation", {}).get("reason", "")
-        if name in overlaps:
-            compatibility[name] = {"reason": "Overlaps definite-size minimum"}
-        elif reason.startswith(("Documented Goo policy:", "The deliberate visible definite-size minimum")):
-            compatibility[name] = {"reason": "Retains the definite main size as the visible automatic minimum"}
-    table["gooAutomaticMinimum"] = compatibility
+    definite_minimum = {
+        "all-frozen-fractional-column", "text-minimum-volume", "visible-specified-minimum",
+        "seeded-nested-05", "seeded-nested-07", "seeded-nested-08", "seeded-nested-11",
+        "seeded-nested-19", "seeded-nested-23",
+        "seeded-overflow-00", "seeded-overflow-01", "seeded-overflow-02", "seeded-overflow-03",
+        "seeded-overflow-04", "seeded-overflow-05", "seeded-overflow-06", "seeded-overflow-07",
+        "seeded-overflow-08", "seeded-overflow-09", "seeded-overflow-10", "seeded-overflow-11",
+        "seeded-overflow-12", "seeded-overflow-13", "seeded-overflow-14", "seeded-overflow-15",
+        "seeded-overflow-16", "seeded-overflow-17", "seeded-overflow-18", "seeded-overflow-19",
+        "seeded-overflow-20", "seeded-overflow-21", "seeded-overflow-22", "seeded-overflow-23",
+        "seeded-overflow-24",
+    }
+    missing = (definite_minimum | overlaps) - {case["name"] for case in table["cases"]}
+    if missing:
+        raise ValueError(f"Missing automatic-minimum cases: {', '.join(sorted(missing))}")
+    table["gooAutomaticMinimum"] = {
+        case["name"]: {"reason": ("Overlaps definite-size minimum" if case["name"] in overlaps
+                                  else "Retains the definite main size as the visible automatic minimum")}
+        for case in table["cases"] if case["name"] in definite_minimum or case["name"] in overlaps
+    }
     font = args.font.read_bytes()
     digest = hashlib.sha256(font).hexdigest()
     if digest != table["fontSha256"]:
@@ -264,13 +272,14 @@ function boxes(root) {
         if not match:
             raise RuntimeError(result.stdout + result.stderr)
         generated = json.loads(html.unescape(match[1]))
-    for case in generated["cases"]:
-        old = previous.get(case["name"])
-        if old and old["tree"] == case["tree"] and "deviation" in old:
-            case["deviation"] = old["deviation"]
     generated["chromium"] = subprocess.check_output([args.chromium, "--version"], text=True).strip()
-    path.write_text(json.dumps(generated, indent=2) + "\n")
-    print(f"Recorded {len(generated['cases'])} cases with {generated['chromium']}")
+    cases = generated.pop("cases")
+    separators = (",", ":")
+    rows = ",\n".join("    " + json.dumps(case, separators=separators) for case in cases)
+    metadata = ",\n".join("  " + json.dumps(key) + ": " + json.dumps(value, separators=separators)
+                          for key, value in generated.items())
+    path.write_text('{\n  "cases": [\n' + rows + "\n  ],\n" + metadata + "\n}\n")
+    print(f"Recorded {len(cases)} cases with {generated['chromium']}")
 
 
 if __name__ == "__main__":
