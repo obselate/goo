@@ -477,26 +477,33 @@ internal partial class FlexLayoutEngine {
             inherited
         }
         var hasAbsDesc = false
-        for index in 0 ... node.Children.Count {
-            let child = node.Children[index]
-            if child.IsPortal {
-                continue
-            }
-            if child.Display == Display.None {
-                Hide(child, frame)
-                continue
-            }
-            if child.Position == PositionType.Absolute {
-                PlaceAbsolute(node, child, absoluteX, absoluteY, in block, density, frame, state)
-                hasAbsDesc = true
-            }
-            FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block, state, false, nodeOriginUnchanged)
-            if child.Position != PositionType.Absolute && child.Position == PositionType.Static
-                && child.LogicalLayout.HasAbsoluteDescendant {
-                hasAbsDesc = true
+        if let virtualState = node.RetainedVirtualState {
+            hasAbsDesc = FinalizeVirtualChildren(
+                node, virtualState, absoluteX, absoluteY, left, top, density, frame, in block, state, nodeOriginUnchanged
+            )
+        } else {
+            for index in 0 ... node.Children.Count {
+                let child = node.Children[index]
+                if child.IsPortal {
+                    continue
+                }
+                if child.Display == Display.None {
+                    Hide(child, frame)
+                    continue
+                }
+                if child.Position == PositionType.Absolute {
+                    PlaceAbsolute(node, child, absoluteX, absoluteY, in block, density, frame, state)
+                    hasAbsDesc = true
+                }
+                FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block, state, false, nodeOriginUnchanged)
+                if child.Position != PositionType.Absolute && child.Position == PositionType.Static
+                    && child.LogicalLayout.HasAbsoluteDescendant {
+                    hasAbsDesc = true
+                }
             }
         }
         if density != 0.0F && !node.HasCustomLayout && node.Kind != NodeKind.Editor
+        && node.RetainedVirtualState == nil
         && node.OverflowX != Overflow.Scroll && node.OverflowY != Overflow.Scroll {
             let axes = node.LogicalLayout.ContentAxes
             let horizontal = (axes & 1) != 0 && node.OverflowX == Overflow.Hidden
@@ -508,6 +515,68 @@ internal partial class FlexLayoutEngine {
         node.LogicalLayout.HasAbsoluteDescendant = hasAbsDesc
         node.LogicalLayout.Finalized = true
         node.LogicalLayout.RawMoved = false
+    }
+
+    private func FinalizeVirtualChildren(
+        node Node,
+        virtualState VirtualNodeState,
+        absoluteX float64,
+        absoluteY float64,
+        left float64,
+        top float64,
+        density float32,
+        frame uint64,
+        in block AbsoluteBlock,
+        state FlexThreadState,
+        nodeOriginUnchanged bool
+    ) bool {
+        let logical = node.LogicalLayout
+        let border = logical.Border
+        let padding = logical.Padding
+        let contentLeft = border.Left + padding.Left
+        let contentTop = border.Top + padding.Top
+        let contentWidth = Inner(logical.Raw.W, border.Sum(true) + padding.Sum(true))
+        let contentHeight = Inner(logical.Raw.H, border.Sum(false) + padding.Sum(false))
+        let direction = logical.Direction
+        let placementCount = virtualState.PlacementCount
+        var hasAbsDesc = false
+        for index in 0 ... node.Children.Count {
+            let child = node.Children[index]
+            if child.IsPortal {
+                continue
+            }
+            if child.Display == Display.None {
+                Hide(child, frame)
+                continue
+            }
+            if index < placementCount {
+                let placement = virtualState.PlacementAt(index)
+                var key = FlexRequest{
+                    Width: placement.HasW ? FlexConstraint.Exact(placement.W) : FlexConstraint{},
+                    Height: placement.HasH ? FlexConstraint.Exact(placement.H) : FlexConstraint{},
+                    OwnerWidth: contentWidth,
+                    OwnerHeight: contentHeight,
+                    Direction: direction,
+                    Density: density
+                }
+                Solve(child, ref key, true, frame, state)
+                let rawX = contentLeft + placement.X
+                let rawY = contentTop + placement.Y
+                if child.LogicalLayout.Raw.X != rawX || child.LogicalLayout.Raw.Y != rawY {
+                    child.LogicalLayout.Raw.X = rawX
+                    child.LogicalLayout.Raw.Y = rawY
+                    child.LogicalLayout.RawMoved = true
+                }
+            } else if child.Position == PositionType.Absolute {
+                PlaceAbsolute(node, child, absoluteX, absoluteY, in block, density, frame, state)
+                hasAbsDesc = true
+            }
+            FinalizeGeometry(child, absoluteX, absoluteY, left, top, density, frame, in block, state, false, nodeOriginUnchanged)
+            if child.Position == PositionType.Static && child.LogicalLayout.HasAbsoluteDescendant {
+                hasAbsDesc = true
+            }
+        }
+        return hasAbsDesc
     }
 
     private func ExpandContentClip(

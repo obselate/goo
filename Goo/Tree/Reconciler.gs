@@ -366,13 +366,16 @@ internal partial class Reconciler {
       if verifyingCell != nil && state.HasStateChanges { verifyingCell = nil }
       diffChildren(n, children)
       state.Commit()
+      if state.LastGeometryChanged {
+        MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
+      }
       // Items added or removed out of view leave the children unchanged, but the scroll extent and the
       // announced item count still change, so re-read the rects and refresh accessibility.
       let next = state.Extent()
       if next?.Width != extent?.Width || next?.Height != extent?.Height {
         MarkEffects(ReconcileEffects.Rect | ReconcileEffects.Paint)
       }
-      if state.ItemCount() != count {
+      if state.LastAccessibilityChanged || state.ItemCount() != count {
         MarkEffects(ReconcileEffects.Accessibility)
       }
       return n

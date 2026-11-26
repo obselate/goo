@@ -148,6 +148,7 @@ internal struct LayoutPlacement {
 
   shared {
     internal func NeedsProjection(n Node, ref ideal bool) bool {
+      if n.RetainedVirtualState != nil { return false }
       let count = n.Children.Count
       if count == 0 || !n.LogicalLayout.Valid { return false }
       var active = n.RetainedLayoutTransition?.HasSizeOffset == true
