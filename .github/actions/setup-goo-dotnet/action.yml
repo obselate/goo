@@ -1,0 +1,24 @@
+name: Set up the Goo .NET SDK
+description: Install and verify the exact SDK version declared in global.json.
+runs:
+  using: composite
+  steps:
+    - id: sdk
+      shell: bash
+      run: |
+        version=$(jq -er '.sdk.version' global.json)
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      env:
+        DOTNET_INSTALL_DIR: ${{ runner.temp }}/goo-dotnet
+        DOTNET_MULTILEVEL_LOOKUP: 0
+      with:
+        dotnet-version: ${{ steps.sdk.outputs.version }}
+    - name: Verify resolved SDK
+      shell: bash
+      env:
+        EXPECTED_SDK: ${{ steps.sdk.outputs.version }}
+      run: |
+        actual=$(dotnet --version)
+        echo "Resolved .NET SDK: $actual (expected $EXPECTED_SDK)"
+        test "$actual" = "$EXPECTED_SDK"

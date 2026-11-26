@@ -16,6 +16,11 @@
 !/.agents/plugins/marketplace.json
 !/.github/
 /.github/*
+!/.github/actions/
+/.github/actions/*
+!/.github/actions/setup-goo-dotnet/
+/.github/actions/setup-goo-dotnet/*
+!/.github/actions/setup-goo-dotnet/action.yml
 !/.github/workflows/
 /.github/workflows/*
 !/.github/workflows/ci.yml
