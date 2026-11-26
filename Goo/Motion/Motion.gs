@@ -372,7 +372,7 @@ internal func motionNodeVisible(node Node?, window Window?) bool {
     if ancestor.PaintInputHidden { return false }
     current = ancestor.Parent
   }
-  if n.Yoga == nil { return true }
+  if !n.LogicalLayout.Valid { return true }
   let bounds = TransformGeometry.BoundsToWindow(n)
   return TransformGeometry.VisibleBoundsToWindow(n,
     ElementRect{ X: float64(bounds.X), Y: float64(bounds.Y),

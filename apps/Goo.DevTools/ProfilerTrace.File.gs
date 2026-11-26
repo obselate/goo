@@ -415,9 +415,7 @@ internal partial class ProfilerTrace {
         }
         for value in metadata.GetProperty("windowNames").EnumerateObject() {
             if WindowNames.Count >= 512 ||
-                value
-                .Name
-                .Length > NameLimit ||
+                value.Name.Length > NameLimit ||
                 (value.Value.GetString() ?? "").Length > NameLimit {
                 throw InvalidDataException("Invalid trace window names")
             }

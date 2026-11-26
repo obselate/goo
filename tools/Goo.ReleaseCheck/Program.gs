@@ -22,7 +22,7 @@ internal shared partial class ReleaseCheck {
     internal func Execute(arguments[]string) {
         if arguments.Any(a -> a == "--help" || a == "-h") {
             Console.WriteLine("Usage: Goo.ReleaseCheck --manifests DIRECTORY --version VERSION\n" +
-                "       Goo.ReleaseCheck --package FILE --symbols FILE --bundle DIRECTORY\n" +
+                "       Goo.ReleaseCheck --package FILE --bundle DIRECTORY\n" +
                 "       Goo.ReleaseCheck --software-renderer FILE [--renderer-publish DIRECTORY]")
             return
         }
@@ -30,7 +30,7 @@ internal shared partial class ReleaseCheck {
         var index = 0
         while index < arguments.Length {
             Require(index + 1 < arguments.Length, "Expected option and path pairs")
-            Require([]string{"--manifests", "--version", "--package", "--symbols", "--bundle", "--software-renderer", "--renderer-publish"}.Contains(arguments[index]), "Unknown option: " + arguments[index])
+            Require([]string{"--manifests", "--version", "--package", "--bundle", "--software-renderer", "--renderer-publish"}.Contains(arguments[index]), "Unknown option: " + arguments[index])
             Require(values.TryAdd(arguments[index], arguments[index + 1]), "Duplicate option: " + arguments[index])
             index += 2
         }
@@ -49,12 +49,10 @@ internal shared partial class ReleaseCheck {
             return
         }
         Require(
-            values.Count == 3 && values.ContainsKey("--package") && values.ContainsKey("--symbols") &&
-                values.ContainsKey("--bundle"),
-            "Expected --package, --symbols and --bundle"
+            values.Count == 2 && values.ContainsKey("--package") && values.ContainsKey("--bundle"),
+            "Expected --package FILE --bundle DIRECTORY"
         )
         let digest = ValidatePackage(values["--package"])
-        ValidateSymbols(values["--package"], values["--symbols"])
         ValidateBundle(values["--bundle"], digest)
     }
 

@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 import System.Collections.Generic
 
@@ -292,25 +291,16 @@ internal partial class ScrollbarParts {
                 root.Rect = bounds
                 return
             }
-            partLayout.Calculate(root, bounds.W, bounds.H)
-            guard let yoga = root.Yoga else {
-                root.Rect = bounds
-                return
-            }
-            YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga, bounds.W)
-            YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga, bounds.W)
-            YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga, bounds.H)
-            YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga, bounds.H)
-            YGNodeStyleAPI.YGNodeStyleSetWidth(yoga, bounds.W)
-            YGNodeStyleAPI.YGNodeStyleSetHeight(yoga, bounds.H)
-            YGNodeAPI.YGNodeCalculateLayout(yoga, bounds.W, bounds.H, yogaDirection(root.Direction))
+            let density = root.Parent?.LogicalLayout.Density ?? 1.0F
+            let engine = partLayout.Engine
+            var request = engine.RootRequest(bounds.W, bounds.H, density, root.Direction)
+            request.Override = FlexOverride.AssignedBox
+            request.Width = FlexConstraint.Exact(bounds.W)
+            request.Height = FlexConstraint.Exact(bounds.H)
+            partLayout.SetPixelDensity(density)
+            partLayout.resolveLengths(root, CustomLayouts.ViewportWidth, CustomLayouts.ViewportHeight)
+            engine.ArrangeSubtree(root, request)
             partLayout.readRect(root, 0.0F, 0.0F)
-            syncYogaField(root, StyleField.Width)
-            syncYogaField(root, StyleField.Height)
-            syncYogaField(root, StyleField.MinWidth)
-            syncYogaField(root, StyleField.MinHeight)
-            syncYogaField(root, StyleField.MaxWidth)
-            syncYogaField(root, StyleField.MaxHeight)
             let origin = root.Rect
             offset(root, bounds.X - origin.X, bounds.Y - origin.Y)
             root.Rect = bounds

@@ -1,7 +1,8 @@
 package Goo
 
-import Facebook.Yoga
 import System
+
+internal enum PhysicalEdge { Left; Top; Right; Bottom }
 
 internal class BoxGeometry {
   shared {
@@ -28,59 +29,61 @@ internal class BoxGeometry {
       return dx * dx + dy * dy <= radius * radius
     }
 
-    internal func ContentLeft(n Node) float32 -> n.Rect.X + BorderWidth(n, YGEdge.Left) + padding(n, YGEdge.Left)
+    internal func ContentLeft(n Node) float32 -> n.Rect.X + BorderWidth(n, PhysicalEdge.Left) + padding(n, PhysicalEdge.Left)
 
-    internal func ContentTop(n Node) float32 -> n.Rect.Y + BorderWidth(n, YGEdge.Top) + padding(n, YGEdge.Top)
+    internal func ContentTop(n Node) float32 -> n.Rect.Y + BorderWidth(n, PhysicalEdge.Top) + padding(n, PhysicalEdge.Top)
 
     internal func LayoutWidth(n Node) float32 ->
-      n.RetainedLayoutTransition != nil && n.Yoga is {} yoga ? YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga) : n.Rect.W
+      n.RetainedLayoutTransition != nil && n.LogicalLayout.Valid ? n.LogicalLayout.Snapped.W : n.Rect.W
 
     internal func LayoutHeight(n Node) float32 ->
-      n.RetainedLayoutTransition != nil && n.Yoga is {} yoga ? YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) : n.Rect.H
+      n.RetainedLayoutTransition != nil && n.LogicalLayout.Valid ? n.LogicalLayout.Snapped.H : n.Rect.H
 
     internal func ContentWidth(n Node, layout bool = false) float32 {
-      let width = (layout ? LayoutWidth(n) : n.Rect.W) - BorderWidth(n, YGEdge.Left) - BorderWidth(n, YGEdge.Right)
-      -padding(n, YGEdge.Left) - padding(n, YGEdge.Right)
+      let width = (layout ? LayoutWidth(n) : n.Rect.W) - BorderWidth(n, PhysicalEdge.Left) - BorderWidth(n, PhysicalEdge.Right)
+      -padding(n, PhysicalEdge.Left) - padding(n, PhysicalEdge.Right)
       return width > 0.0F ? width : 0.0F
     }
 
     internal func ContentHeight(n Node, layout bool = false) float32 {
-      let height = (layout ? LayoutHeight(n) : n.Rect.H) - BorderWidth(n, YGEdge.Top) - BorderWidth(n, YGEdge.Bottom)
-      -padding(n, YGEdge.Top) - padding(n, YGEdge.Bottom)
+      let height = (layout ? LayoutHeight(n) : n.Rect.H) - BorderWidth(n, PhysicalEdge.Top) - BorderWidth(n, PhysicalEdge.Bottom)
+      -padding(n, PhysicalEdge.Top) - padding(n, PhysicalEdge.Bottom)
       return height > 0.0F ? height : 0.0F
     }
 
-    internal func PaddingEdgeLeft(n Node) float32 -> n.Rect.X + BorderWidth(n, YGEdge.Left)
+    internal func PaddingEdgeLeft(n Node) float32 -> n.Rect.X + BorderWidth(n, PhysicalEdge.Left)
 
-    internal func PaddingEdgeTop(n Node) float32 -> n.Rect.Y + BorderWidth(n, YGEdge.Top)
+    internal func PaddingEdgeTop(n Node) float32 -> n.Rect.Y + BorderWidth(n, PhysicalEdge.Top)
 
     internal func PaddingEdgeWidth(n Node) float32 {
-      let width = n.Rect.W - BorderWidth(n, YGEdge.Left) - BorderWidth(n, YGEdge.Right)
+      let width = n.Rect.W - BorderWidth(n, PhysicalEdge.Left) - BorderWidth(n, PhysicalEdge.Right)
       return width > 0.0F ? width : 0.0F
     }
 
     internal func PaddingEdgeHeight(n Node) float32 {
-      let height = n.Rect.H - BorderWidth(n, YGEdge.Top) - BorderWidth(n, YGEdge.Bottom)
+      let height = n.Rect.H - BorderWidth(n, PhysicalEdge.Top) - BorderWidth(n, PhysicalEdge.Bottom)
       return height > 0.0F ? height : 0.0F
     }
 
-    internal func PaddingRight(n Node) float32 -> padding(n, YGEdge.Right)
+    internal func Inset(n Node, edge PhysicalEdge) float32 -> BorderWidth(n, edge) + padding(n, edge)
 
-    internal func PaddingBottom(n Node) float32 -> padding(n, YGEdge.Bottom)
+    internal func PaddingRight(n Node) float32 -> padding(n, PhysicalEdge.Right)
+
+    internal func PaddingBottom(n Node) float32 -> padding(n, PhysicalEdge.Bottom)
 
     internal func ViewportWidth(n Node) float32 -> scrollViewportWidth(n)
 
     internal func ViewportHeight(n Node) float32 -> scrollViewportHeight(n)
 
-    private func padding(n Node, edge YGEdge) float32 -> resolveEdgePadding(n, edge, 0.0F)
+    private func padding(n Node, edge PhysicalEdge) float32 -> resolveEdgePadding(n, edge, 0.0F)
 
-    internal func BorderWidth(n Node, edge YGEdge) float32 {
-      if let yoga = n.Yoga { return YGNodeLayoutAPI.YGNodeLayoutGetBorder(yoga, edge) }
+    internal func BorderWidth(n Node, edge PhysicalEdge) float32 {
+      if n.LogicalLayout.Valid { return n.LogicalLayout.Border.Get(edge) }
       let width = switch edge {
-        case YGEdge.Left: n.BorderLeftWidth
-        case YGEdge.Top: n.BorderTopWidth
-        case YGEdge.Right: n.BorderRightWidth
-        case YGEdge.Bottom: n.BorderBottomWidth
+        case PhysicalEdge.Left: n.BorderLeftWidth
+        case PhysicalEdge.Top: n.BorderTopWidth
+        case PhysicalEdge.Right: n.BorderRightWidth
+        case PhysicalEdge.Bottom: n.BorderBottomWidth
         default: NodeLength {}
       }
       return width.Px

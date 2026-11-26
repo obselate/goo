@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 
 internal partial class VulkanSceneCompiler {
@@ -743,10 +742,10 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func PaddingEdgeBounds(node Node, bounds ConservativeBounds) ConservativeBounds {
-    let left = BoxGeometry.BorderWidth(node, YGEdge.Left)
-    let top = BoxGeometry.BorderWidth(node, YGEdge.Top)
-    let right = BoxGeometry.BorderWidth(node, YGEdge.Right)
-    let bottom = BoxGeometry.BorderWidth(node, YGEdge.Bottom)
+    let left = BoxGeometry.BorderWidth(node, PhysicalEdge.Left)
+    let top = BoxGeometry.BorderWidth(node, PhysicalEdge.Top)
+    let right = BoxGeometry.BorderWidth(node, PhysicalEdge.Right)
+    let bottom = BoxGeometry.BorderWidth(node, PhysicalEdge.Bottom)
     let width = bounds.Width - left - right
     let height = bounds.Height - top - bottom
     if width <= 0.0F || height <= 0.0F {
@@ -788,8 +787,8 @@ internal partial class VulkanSceneCompiler {
     left bool,
     top bool) float32{
       let radius = Radius(value, fallback, bounds)
-      let xInset = BoxGeometry.BorderWidth(node, left ? YGEdge.Left : YGEdge.Right)
-      let yInset = BoxGeometry.BorderWidth(node, top ? YGEdge.Top : YGEdge.Bottom)
+      let xInset = BoxGeometry.BorderWidth(node, left ? PhysicalEdge.Left : PhysicalEdge.Right)
+      let yInset = BoxGeometry.BorderWidth(node, top ? PhysicalEdge.Top : PhysicalEdge.Bottom)
       let inset = xInset > yInset ? xInset : yInset
       let result = radius - inset
       let limit = MinDimension(insetBounds) * 0.5F

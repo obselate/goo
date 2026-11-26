@@ -16,9 +16,8 @@
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IsPackable>true</IsPackable>
+    <IncludeSymbols>false</IncludeSymbols>
     <DebugType>embedded</DebugType>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <GooTestFixturesProps Condition="'$(GooTestFixturesProps)' == ''">$(MSBuildThisFileDirectory)../tests/Shared/Goo.TestFixtures.props</GooTestFixturesProps>
   </PropertyGroup>
   <ItemGroup>
@@ -31,6 +30,7 @@
     <InternalsVisibleTo Include="Goo.Audio" />
     <InternalsVisibleTo Include="Goo.DevTools.Cli" />
     <InternalsVisibleTo Include="Goo.InputFuzz" />
+    <InternalsVisibleTo Include="Goo.LayoutBenchmark" Condition="'$(IncludeLayoutBenchmark)' == 'true'" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <VulkanShaderAsset Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json" />
     <BuiltinShaderEffect Include="Shaders/Effects/*.goo-effect" />
@@ -38,8 +38,6 @@
                       LogicalName="Goo.Effects.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Rendering/Text/Data/*.bin"
                       LogicalName="Goo.Text.Data.%(Filename)%(Extension)" />
-    <ProjectReference Include="$(MSBuildProjectDirectory)/../vendor/Yoga.Net/src/Yoga.Net/Yoga.Net.csproj"
-                      PrivateAssets="all" />
     <PackageReference Include="Hexa.NET.SDL3" ExcludeAssets="native" />
     <PackageReference Include="Unicode.Bidi" />
     <PackageReference Include="Tmds.DBus.Protocol" />

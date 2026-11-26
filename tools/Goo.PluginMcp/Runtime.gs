@@ -229,8 +229,8 @@ partial class GooServer {
         let hello = messages.FirstOrDefault(x -> S(x, "type") == "hello") ?? JsonObject()
         let result = messages.LastOrDefault(x -> Truthy(x["id"]))
         if result == nil || !B(result, "ok") || Truthy(result["error"]) || S(result, "type") == "error" {
-            let detail = if result?["error"] is JsonObject {
-                result!!["error"]!!.AsObject()
+            let detail = if result?["error"] is JsonObject error {
+                error
             } else {
                 JsonObject()
             }

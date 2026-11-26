@@ -1,6 +1,5 @@
 package Goo
 
-import Facebook.Yoga
 import System
 
 internal data struct ResolvedShapeGeometry(Content Rect, Mapping PathMapping, Path VectorPath,
@@ -25,10 +24,10 @@ internal partial class ShapeGeometry {
         strokeWidth * MathF.Max(fit.ScaleX, fit.ScaleY)
       } else { 0.0F }
       let halfStroke = strokeInset * 0.5F
-      let left = resolveEdgePadding(n, YGEdge.Left, bounds.W)
-      let top = resolveEdgePadding(n, YGEdge.Top, bounds.W)
-      let right = resolveEdgePadding(n, YGEdge.Right, bounds.W)
-      let bottom = resolveEdgePadding(n, YGEdge.Bottom, bounds.W)
+      let left = resolveEdgePadding(n, PhysicalEdge.Left, bounds.W)
+      let top = resolveEdgePadding(n, PhysicalEdge.Top, bounds.W)
+      let right = resolveEdgePadding(n, PhysicalEdge.Right, bounds.W)
+      let bottom = resolveEdgePadding(n, PhysicalEdge.Bottom, bounds.W)
       let content = Rect{
         X: bounds.X + left + halfStroke,
         Y: bounds.Y + top + halfStroke,

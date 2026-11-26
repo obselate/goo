@@ -84,18 +84,25 @@ internal class FlexConformanceFixtures {
         return true
     }
     func Run(table JsonElement, failures List[string], output Action[string]) int32 {
+        let layout = Layout()
+        layout.SetPixelDensity(0.0F)
+        let policies = table.GetProperty("gooAutomaticMinimum")
+        let useGooMinimum = !FlexLayoutEngine.UsesChromiumAutomaticMinimum
+        var policyMatches = 0
+        var chromiumMatches = 0
         var count = 0
         for test in table.GetProperty("cases").EnumerateArray() {
             let name = test.GetProperty("name").GetString()!!
             let root = Reconciler{Res: Resolver{}}.Mount(Build(test.GetProperty("tree")))
             try {
                 let viewport = test.GetProperty("viewport")
-                Layout().Calculate(root, viewport[0].GetSingle(), viewport[1].GetSingle())
                 let actual = List[[]float32]()
-                Collect(root, actual)
+                layout.Calculate(root, viewport[0].GetSingle(), viewport[1].GetSingle())
+                CollectRaw(root, actual, -root.LogicalLayout.Raw.X, -root.LogicalLayout.Raw.Y)
                 let reference = test.GetProperty("boxes")
-                let expected = if test.TryGetProperty("deviation", out var deviation) {
-                    deviation.GetProperty("boxes")
+                let hasControl = policies.TryGetProperty(name, out var control)
+                let expected = if useGooMinimum && hasControl {
+                    control.GetProperty("boxes")
                 } else {
                     reference
                 }
@@ -104,32 +111,38 @@ internal class FlexConformanceFixtures {
                 } else {
                     0.0F
                 }
-                var matches = actual.Count == expected.GetArrayLength()
-                for i in 0 ... Math.Min(actual.Count, expected.GetArrayLength()) {
-                    for axis in 0 ... 4 {
-                        if !Single.IsFinite(actual[i][axis]) || MathF.Abs(
-                            actual[i][axis] - expected[i][axis].GetSingle()
-                        ) > tolerance {
-                            matches = false
-                        }
-                    }
-                }
-                if !matches || name.StartsWith("font-width-", StringComparison.Ordinal) {
-                    let boxes = JsonSerializer.Serialize(actual)
-                    if matches {
-                        output("$name Chromium=${JsonSerializer.Serialize(reference)} Goo=$boxes")
-                    } else {
-                        failures.Add(
-                            "$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=$boxes"
-                        )
-                    }
+                let matches = Matches(actual, expected, tolerance)
+                if Matches(actual, reference, tolerance) { chromiumMatches++ }
+                if matches && useGooMinimum && hasControl { policyMatches++ }
+                if !matches {
+                    failures.Add(
+                        "$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=${JsonSerializer.Serialize(actual)}"
+                    )
+                } else if useGooMinimum && hasControl {
+                    output("$name Chromium=${JsonSerializer.Serialize(reference)} Expected=${JsonSerializer.Serialize(expected)} Goo=${JsonSerializer.Serialize(actual)}")
+                } else if name.StartsWith("font-width-", StringComparison.Ordinal) {
+                    output("$name Chromium=${JsonSerializer.Serialize(reference)} Goo=${JsonSerializer.Serialize(actual)}")
                 }
                 count++
             } finally {
                 NodeLifecycle.DisposeTree(root)
             }
         }
+        output("$chromiumMatches/$count unmodified Chromium cases matched; $policyMatches strict Chromium policy controls matched")
         return count
+    }
+
+    private func Matches(actual List[[]float32], expected JsonElement, tolerance float32) bool {
+        if actual.Count != expected.GetArrayLength() { return false }
+        for i in 0 ... actual.Count {
+            for axis in 0 ... 4 {
+                let coordinate = actual[i][axis]
+                if !Single.IsFinite(coordinate) || MathF.Abs(coordinate - expected[i][axis].GetSingle()) > tolerance {
+                    return false
+                }
+            }
+        }
+        return true
     }
 
     private func Build(spec JsonElement) Blob {
@@ -146,7 +159,7 @@ internal class FlexConformanceFixtures {
             let converted object = if type == typeof(Length) {
                 cast[object](ReadLength(value))
             } else if type == typeof(Edges) {
-                if value.ValueKind == JsonValueKind.Number {
+                if value.ValueKind != JsonValueKind.Object {
                     cast[object](Edges(ReadLength(value)))
                 } else {
                     cast[object](
@@ -186,16 +199,20 @@ internal class FlexConformanceFixtures {
         0
     }
 
-    private func ReadLength(value JsonElement) Length -> if value.ValueKind == JsonValueKind.Number {
-        value.GetDouble()
-    } else {
-        Percent(Double.Parse(value.GetString()!!.TrimEnd('%'), CultureInfo.InvariantCulture))
+    private func ReadLength(value JsonElement) Length {
+        if value.ValueKind == JsonValueKind.Number { return value.GetDouble() }
+        let text = value.GetString() ?? throw InvalidOperationException("Expected an auto or percentage length")
+        if text == "auto" { return Length.Auto }
+        return Percent(Double.Parse(text.TrimEnd('%'), CultureInfo.InvariantCulture))
     }
 
-    private func Collect(node Node, boxes List[[]float32]) {
-        boxes.Add([]float32{node.Rect.X, node.Rect.Y, node.Rect.W, node.Rect.H})
-        for child in node.Children {
-            Collect(child, boxes)
+    private func CollectRaw(node Node, boxes List[[]float32], x float32, y float32) {
+        let raw = node.LogicalLayout.Raw
+        let left = node.LogicalLayout.Valid ? x + raw.X : 0.0F
+        let top = node.LogicalLayout.Valid ? y + raw.Y : 0.0F
+        boxes.Add([]float32{left, top, raw.W, raw.H})
+        for index in 0 ... node.Children.Count {
+            CollectRaw(node.Children[index], boxes, left, top)
         }
     }
 }
