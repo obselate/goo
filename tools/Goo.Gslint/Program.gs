@@ -270,13 +270,10 @@ class Program {
                     )
                 } else if conditional.ElseClause == nil &&
                     index +
-                    1 < block
-                    .Statements
-                    .Length &&
+                    1 < block.Statements.Length &&
                     block.Statements[index + 1] is ReturnStatementSyntax trailing &&
                     trailing.Expression is {} trailingExpression &&
-                    !trailing
-                    .IsRefReturn {
+                    !trailing.IsRefReturn {
                     let span = TextSpan.FromBounds(conditional.Span.Start, trailing.Span.End)
                     AddConditionalReturnEdit(span, conditional.Condition, whenTrue!!, trailingExpression, source, edits)
                     index++
@@ -373,26 +370,13 @@ class Program {
     private func CollectFixEdits(node SyntaxNode, source string, edits List[SourceEdit]) {
         if node is FunctionDeclarationSyntax{Body: {} body} function &&
             !function.IsRefReturn &&
-            body
-            .OpenBraceToken
-            .Position >= 0 &&
-            body
-            .OpenBraceToken
-            .Position < source.Length &&
+            body.OpenBraceToken.Position >= 0 &&
+            body.OpenBraceToken.Position < source.Length &&
             source[body.OpenBraceToken.Position] == '{' &&
-            body
-            .Statements
-            .Length == 1 &&
+            body.Statements.Length == 1 &&
             body.Statements[0] is ReturnStatementSyntax{Expression: {} expression, IsRefReturn: false} &&
-            body
-            .CloseBraceToken
-            .Position >= body
-            .OpenBraceToken
-            .Position &&
-            body
-            .CloseBraceToken
-            .Position < source
-            .Length {
+            body.CloseBraceToken.Position >= body.OpenBraceToken.Position &&
+            body.CloseBraceToken.Position < source.Length {
             let value = source.Substring(expression.Span.Start, expression.Span.Length)
             edits.Add(
                 SourceEdit(
@@ -403,24 +387,13 @@ class Program {
             )
         }
         if node is PropertyAccessorSyntax{Body: {} accessorBody} accessor &&
-            accessorBody
-            .Statements
-            .Length == 1 &&
-            accessorBody
-            .OpenBraceToken
-            .Position >= 0 &&
-            accessorBody
-            .CloseBraceToken
-            .Position >= accessorBody
-            .OpenBraceToken
-            .Position &&
-            accessorBody
-            .CloseBraceToken
-            .Position < source.Length &&
+            accessorBody.Statements.Length == 1 &&
+            accessorBody.OpenBraceToken.Position >= 0 &&
+            accessorBody.CloseBraceToken.Position >= accessorBody.OpenBraceToken.Position &&
+            accessorBody.CloseBraceToken.Position < source.Length &&
             source[accessorBody.OpenBraceToken.Position] == '{' &&
             source[accessorBody.CloseBraceToken.Position] == '}' &&
-            source
-            .AsSpan(
+            source.AsSpan(
             accessorBody.OpenBraceToken.Position,
             accessorBody.CloseBraceToken.Position - accessorBody.OpenBraceToken.Position + 1
         )
@@ -885,13 +858,9 @@ class Program {
     private func AddExpressionBodyFinding(node SyntaxNode, source string, strict bool, findings List[Finding]) {
         if !(node is FunctionDeclarationSyntax{Body: {} body} function) ||
             function.IsRefReturn ||
-            body
-            .OpenBraceToken
-            .Position >= source.Length ||
+            body.OpenBraceToken.Position >= source.Length ||
             source[body.OpenBraceToken.Position] != '{' ||
-            body
-            .Statements
-            .Length != 1 ||
+            body.Statements.Length != 1 ||
             body.Statements[0] is not(ReturnStatementSyntax and {Expression: not nil, IsRefReturn: false}) {
             return
         }
@@ -911,25 +880,17 @@ class Program {
 
     private func AddAccessorFinding(node SyntaxNode, source string, findings List[Finding]) {
         if !(node is PropertyAccessorSyntax{Body: {} body} accessor) ||
-            body
-            .Statements
-            .Length != 1 ||
+            body.Statements.Length != 1 ||
             !HasSingleExpression(accessor, body) ||
-            body
-            .OpenBraceToken
-            .Position < 0 ||
-            body
-            .CloseBraceToken
-            .Position < body
-            .OpenBraceToken
-            .Position ||
-            body
-            .CloseBraceToken
-            .Position >= source.Length ||
+            body.OpenBraceToken.Position < 0 ||
+            body.CloseBraceToken.Position < body.OpenBraceToken.Position ||
+            body.CloseBraceToken.Position >= source.Length ||
             source[body.OpenBraceToken.Position] != '{' ||
             source[body.CloseBraceToken.Position] != '}' ||
-            source
-            .AsSpan(body.OpenBraceToken.Position, body.CloseBraceToken.Position - body.OpenBraceToken.Position + 1)
+            source.AsSpan(
+            body.OpenBraceToken.Position,
+            body.CloseBraceToken.Position - body.OpenBraceToken.Position + 1
+        )
             .IndexOfAny('\r', '\n') >= 0 {
             return
         }
