@@ -34,12 +34,12 @@ internal sealed class FileSystemFontResolver {
         }
       } else if monoAliases {
         if (stem.Contains("mono") && !stem.Contains("propo") && !stem.StartsWith("monotype"))
-          || stem.StartsWith("consolas") || stem.StartsWith("couriernew")
+          || stem.StartsWith("consola") || stem.StartsWith("couriernew")
           || stem.StartsWith("menlo") || stem.StartsWith("monaco")
           || stem.StartsWith("lucidaconsole") || stem.StartsWith("sourcecodepro") {
             familyScore = 50
           }
-      } else if stem.Contains(requested) {
+      } else if stem.Contains(requested) || (requested == "consolas" && stem.StartsWith("consola")) {
         familyScore = 100
       }
       if familyScore == 0 { continue }
@@ -47,6 +47,7 @@ internal sealed class FileSystemFontResolver {
       let slanted = stem.Contains("italic") || stem.Contains("oblique")
         || stem == "ariali" || stem == "arialbi" || stem == "segoeuii"
         || stem == "segoeuili" || stem == "segoeuisli" || stem == "segoeuiz"
+        || stem == "consolai" || stem == "consolaz"
       let stylePenalty = if italic == slanted { 0 } else { 1000 }
       let targetWeight = Math.Clamp(weight, 100, 900)
       let score = familyScore * 1000 - Math.Abs(targetWeight - faceWeight)
@@ -119,7 +120,8 @@ internal sealed class FileSystemFontResolver {
       return 600
     }
     if stem.Contains("bold") || stem == "arialbd" || stem == "arialbi"
-      || stem == "segoeuib" || stem == "segoeuibl" || stem == "segoeuiz" {
+      || stem == "segoeuib" || stem == "segoeuibl" || stem == "segoeuiz"
+      || stem == "consolab" || stem == "consolaz" {
         return 700
       }
     if stem.Contains("medium") { return 500 }

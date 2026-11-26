@@ -4,6 +4,7 @@ import Goo
 import Goo.RichText
 import Goo.Svg
 import System
+import System.IO
 import Xunit
 
 class ContentContractTests {
@@ -234,6 +235,138 @@ class ContentContractTests {
         Assert.Throws[ArgumentException](() -> {
             ShaderEffect(program, false, Double.Epsilon, 0.0)
         })
+    }
+
+    @Fact
+    func RichTextGeometryMatchesRenderedRunsAndSpanLetterSpacing() {
+        let codeFamily = "RichGeometryMonoTest"
+        using let font = FontSource.FromPath(codeFamily, 400, false,
+            Path.Combine(AppContext.BaseDirectory, "Layout", "VendSans-VariableFont_wght.ttf"))
+        font.Register()
+        let handle = ElementHandle()
+        let spanStyle = Style{FontFamily: codeFamily, FontSize: 22, LetterSpacing: 3}
+        let window = Window{
+            Size: LayoutSize(800, 300),
+            Root: ContentContractTests.BuildCell(() -> Container{
+                AlignItems: AlignItems.FlexStart,
+                Children: []Blob{
+                    Text(
+                        TextSpan("file (", nil),
+                        TextSpan("BuildDisclosure", spanStyle),
+                        TextSpan("): the", nil)
+                    ){
+                        .Handle: handle,
+                        .FontFamily: "sans-serif",
+                        .FontSize: 14,
+                    },
+                },
+            }),
+        }
+        try {
+            window.UpdateTree()
+            let node = handle.AttachedNode() ?? throw InvalidOperationException("Text is not attached")
+            let layout = TextLayouts.For(node, BoxGeometry.ContentWidth(node), true)
+            let rich = layout.Rich ?? throw InvalidOperationException("Expected rich layout")
+            let richLine = rich.Lines[0]
+            Assert.Equal(3, richLine.Runs.Count)
+            let prefixRun = richLine.Runs[0]
+            let spanRun = richLine.Runs[1]
+            let suffixRun = richLine.Runs[2]
+            let prefixRenderedWidth = prefixRun.Shape!!.Runs[0].VisualEnd - prefixRun.Shape!!.Runs[0].VisualStart
+            let spanRenderedWidth = spanRun.Shape!!.Runs[0].VisualEnd - spanRun.Shape!!.Runs[0].VisualStart
+            let expectedSpanWidth = window.MeasureText("BuildDisclosure", spanStyle)
+            Assert.InRange(Math.Abs(float64(spanRenderedWidth) - expectedSpanWidth), 0.0, 1.5)
+
+            let rects = [4]ElementRect
+            Assert.True(handle.TryCopyTextRangeRects(TextRange(6, 15), TextCoordinateSpace.Element,
+                Span[ElementRect](rects), out var spanCount))
+            Assert.Equal(1, spanCount)
+            Assert.InRange(Math.Abs(rects[0].X - float64(prefixRenderedWidth)), 0.0, 0.5)
+            Assert.InRange(Math.Abs(rects[0].Width - float64(spanRenderedWidth)), 0.0, 0.5)
+            Assert.InRange(Math.Abs(rects[0].Height - float64(richLine.Height)), 0.0, 0.5)
+
+            let spanVisualEnd = spanRun.X + spanRun.Shape!!.Runs[0].VisualEnd
+            Assert.True(handle.TryCopyTextRangeRects(TextRange(21, 6), TextCoordinateSpace.Element,
+                Span[ElementRect](rects), out var suffixCount))
+            Assert.Equal(1, suffixCount)
+            Assert.InRange(Math.Abs(rects[0].X - float64(spanVisualEnd)), 0.0, 0.5)
+            Assert.True(rects[0].X > float64(prefixRenderedWidth) + 120.0)
+
+            Assert.True(handle.TryCopyTextRangeRects(TextRange(0, 27), TextCoordinateSpace.Element,
+                Span[ElementRect](rects), out var fullCount))
+            Assert.Equal(1, fullCount)
+            Assert.InRange(Math.Abs(rects[0].Width - float64(richLine.Width)), 0.0, 0.5)
+
+            Assert.True(handle.TryGetTextCaretRect(TextPosition(6, TextAffinity.Downstream),
+                TextCoordinateSpace.Element, out var spanStartCaret))
+            Assert.InRange(Math.Abs(spanStartCaret.X - float64(prefixRenderedWidth)), 0.0, 0.5)
+            Assert.InRange(Math.Abs(spanStartCaret.Height - float64(richLine.Height)), 0.0, 0.5)
+
+            Assert.True(handle.TryGetTextCaretRect(TextPosition(21, TextAffinity.Downstream),
+                TextCoordinateSpace.Element, out var suffixCaret))
+            Assert.InRange(Math.Abs(suffixCaret.X - float64(spanVisualEnd)), 0.0, 0.5)
+
+            Assert.True(handle.TryGetTextPositionAt(
+                Point{X: suffixCaret.X + 4.0, Y: suffixCaret.Y + 4.0},
+                TextCoordinateSpace.Element, out var hitAfterSpan))
+            Assert.True(hitAfterSpan.Offset >= 21)
+        } finally { window.Close() }
+    }
+
+    @Fact
+    func RichTextWrappedLinesAndNoWrapMinWidthMatchRichLayout() {
+        let bigStyle = Style{FontSize: 28, LetterSpacing: 2}
+        let handle = ElementHandle()
+        let noWrapHandle = ElementHandle()
+        let window = Window{
+            Size: LayoutSize(220, 300),
+            Root: ContentContractTests.BuildCell(() -> Container{
+                Width: 220,
+                AlignItems: AlignItems.FlexStart,
+                Children: []Blob{
+                    Text(
+                        TextSpan("wrapped ", nil),
+                        TextSpan("BIGCODE ", bigStyle),
+                        TextSpan("here", nil)
+                    ){
+                        .Handle: handle,
+                        .Width: 200,
+                        .FontFamily: "sans-serif",
+                        .FontSize: 12,
+                    },
+                    Text(
+                        TextSpan("a ", nil),
+                        TextSpan("WIDE", bigStyle)
+                    ){
+                        .Handle: noWrapHandle,
+                        .FontFamily: "sans-serif",
+                        .FontSize: 12,
+                        .TextWrap: TextWrap.NoWrap,
+                    },
+                },
+            }),
+        }
+        try {
+            window.UpdateTree()
+            let node = handle.AttachedNode() ?? throw InvalidOperationException("Wrapped text is not attached")
+            let layout = TextLayouts.For(node, BoxGeometry.ContentWidth(node), true)
+            let rich = layout.Rich ?? throw InvalidOperationException("Expected rich layout")
+            Assert.True(rich.Lines.Count >= 2)
+            let rects = [4]ElementRect
+            Assert.True(handle.TryCopyTextRangeRects(TextRange(0, node.Content.Length),
+                TextCoordinateSpace.Element, Span[ElementRect](rects), out var count))
+            Assert.Equal(rich.Lines.Count, count)
+            var expectedY = 0.0
+            for i in 0 ... rich.Lines.Count {
+                Assert.InRange(Math.Abs(rects[i].Y - expectedY), 0.0, 0.5)
+                Assert.InRange(Math.Abs(rects[i].Height - float64(rich.Lines[i].Height)), 0.0, 0.5)
+                expectedY = expectedY + float64(rich.Lines[i].Height)
+            }
+            let noWrapNode = noWrapHandle.AttachedNode() ?? throw InvalidOperationException("NoWrap text is not attached")
+            let noWrapLayout = TextLayouts.For(noWrapNode, -1.0F)
+            let noWrapRich = noWrapLayout.Rich ?? throw InvalidOperationException("Expected rich NoWrap layout")
+            Assert.InRange(Math.Abs(noWrapLayout.MinWidth - noWrapRich.Lines[0].Width), 0.0F, 0.1F)
+        } finally { window.Close() }
     }
 
     private class BuildCell(build() -> Blob) : Cell {

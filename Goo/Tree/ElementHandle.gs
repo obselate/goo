@@ -1103,6 +1103,36 @@ internal class TextGeometryQueries {
       if layout.Lines.Count == 0 || geometry.Lines.Count != layout.Lines.Count { return false }
       let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
       let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
+      if let rich = layout.Rich {
+        if rich.Lines.Count == layout.Lines.Count {
+          var index = rich.Lines.Count - 1
+          var lineY = contentY
+          for i in 0 ... rich.Lines.Count {
+            let candidateHeight = rich.Lines[i].Height
+            if float32(local.Y) < lineY + candidateHeight {
+              index = i
+              break
+            }
+            lineY = lineY + candidateHeight
+          }
+          let line = layout.Lines[index]
+          let richLine = rich.Lines[index]
+          let geometryLine = geometry.Lines[index]
+          guard let lineShape = line.Shape else { return false }
+          let x = float32(local.X) - contentX - TextLayouts.lineOffset(n, richLine.Width,
+            lineShape.RightToLeft, BoxGeometry.ContentWidth(n))
+          let hit = hitTestRichLine(richLine, lineShape, x)
+          let display = geometryLine.DisplayStart + hit.Index
+          if geometryLine.VisibleEnd < geometryLine.DisplayEnd
+            && hit.Index >= geometryLine.VisibleEnd - geometryLine.DisplayStart {
+              position = TextPosition{ Offset: geometryLine.VisibleEnd, Affinity: TextAffinity.Upstream }
+              return true
+            }
+          let retainedDisplay = display > geometryLine.VisibleEnd ? geometryLine.VisibleEnd : display
+          position = TextPosition{ Offset: retainedDisplay, Affinity: TextAffinity(hit.Affinity) }
+          return true
+        }
+      }
       let lineHeight = TextLayouts.resolvedLineHeight(n)
       if lineHeight <= 0.0F { return false }
       var index = int32((float32(local.Y) - contentY) / lineHeight)
@@ -1158,6 +1188,20 @@ internal class TextGeometryQueries {
       if localIndex < 0 || localIndex > line.Content.Length { return false }
       let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
       let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
+      if let rich = layout.Rich {
+        if rich.Lines.Count == layout.Lines.Count {
+          var lineY = contentY
+          for k in 0 ... lineIndex {
+            lineY = lineY + rich.Lines[k].Height
+          }
+          let richLine = rich.Lines[lineIndex]
+          let lineX = contentX + TextLayouts.lineOffset(n, richLine.Width, shape.RightToLeft,
+            BoxGeometry.ContentWidth(n))
+          let caretX = richCaretX(richLine, shape, display, localIndex, position.Affinity)
+          rect = Rect{ X: lineX + caretX, Y: lineY, W: 1.5F, H: richLine.Height }
+          return true
+        }
+      }
       let height = TextLayouts.resolvedLineHeight(n)
       rect = Rect{ X: contentX + TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n))
         +shape.CaretX(localIndex, int32(position.Affinity)),
@@ -1190,8 +1234,70 @@ internal class TextGeometryQueries {
         if end < start { return false }
         let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
         let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
-        let height = TextLayouts.resolvedLineHeight(n)
         let values = stackalloc[64]float32
+        if let rich = layout.Rich {
+          if rich.Lines.Count == layout.Lines.Count {
+            let contentWidth = BoxGeometry.ContentWidth(n)
+            var lineY = contentY
+            let segments = List[float32]()
+            for i in 0 ... layout.Lines.Count {
+              let line = layout.Lines[i]
+              let richLine = rich.Lines[i]
+              let lineHeight = richLine.Height
+              let geometryLine = geometry.Lines[i]
+              if end <= geometryLine.DisplayStart || start >= geometryLine.VisibleEnd {
+                lineY = lineY + lineHeight
+                continue
+              }
+              guard let baseShape = line.Shape else {
+                lineY = lineY + lineHeight
+                continue
+              }
+              var lineStart = start > geometryLine.DisplayStart ? start : geometryLine.DisplayStart
+              var lineEnd = end < geometryLine.VisibleEnd ? end : geometryLine.VisibleEnd
+              if lineStart < geometryLine.DisplayStart { lineStart = geometryLine.DisplayStart }
+              if lineEnd > geometryLine.DisplayStart + line.Content.Length {
+                lineEnd = geometryLine.DisplayStart + line.Content.Length
+              }
+              if lineEnd <= lineStart {
+                lineY = lineY + lineHeight
+                continue
+              }
+              segments.Clear()
+              for run in richLine.Runs {
+                guard let runShape = run.Shape else { continue }
+                let runEndDisplay = run.DisplayStart + run.DisplayLength
+                if lineEnd <= run.DisplayStart || lineStart >= runEndDisplay { continue }
+                let localStart = (lineStart > run.DisplayStart ? lineStart : run.DisplayStart) - geometryLine.DisplayStart
+                let localEnd = (lineEnd < runEndDisplay ? lineEnd : runEndDisplay) - geometryLine.DisplayStart
+                if localEnd <= localStart { continue }
+                let rectCount = runShape.SelectionRectCount(localStart, localEnd)
+                var rectOffset int32 = 0
+                while rectOffset < rectCount {
+                  let copied = runShape.CopySelectionRects(localStart, localEnd, rectOffset, values)
+                  var value int32 = 0
+                  while value + 1 < copied {
+                    segments.Add(run.X + values[value])
+                    segments.Add(run.X + values[value + 1])
+                    value = value + 2
+                  }
+                  if copied == 0 { break }
+                  rectOffset = rectOffset + copied / 2
+                }
+              }
+              let lineX = contentX + TextLayouts.lineOffset(n, richLine.Width, baseShape.RightToLeft, contentWidth)
+              let appended = appendMergedRichRects(n, segments, lineX, lineY, lineHeight, space, destination, required)
+              if appended < 0 {
+                required = 0
+                return false
+              }
+              required = required + appended
+              lineY = lineY + lineHeight
+            }
+            return true
+          }
+        }
+        let height = TextLayouts.resolvedLineHeight(n)
         for i in 0 ... layout.Lines.Count {
           let line = layout.Lines[i]
           let geometryLine = geometry.Lines[i]
@@ -1365,6 +1471,110 @@ internal class TextGeometryQueries {
         }
         return value / 2
       }
+
+    private func appendMergedRichRects(n Node, segments List[float32],
+      baseX float32, baseY float32, height float32, space TextCoordinateSpace,
+      destination Span[ElementRect], offset int32) int32 {
+        let count = segments.Count / 2
+        if count == 0 { return 0 }
+        var i int32 = 1
+        while i < count {
+          let x0 = segments[i * 2]
+          let x1 = segments[i * 2 + 1]
+          var j = i
+          while j > 0 && segments[(j - 1) * 2] > x0 {
+            segments[j * 2] = segments[(j - 1) * 2]
+            segments[j * 2 + 1] = segments[(j - 1) * 2 + 1]
+            j--
+          }
+          segments[j * 2] = x0
+          segments[j * 2 + 1] = x1
+          i++
+        }
+        var curX0 = segments[0]
+        var curX1 = segments[1]
+        var written int32 = 0
+        i = 1
+        while i < count {
+          let nextX0 = segments[i * 2]
+          let nextX1 = segments[i * 2 + 1]
+          if nextX0 <= curX1 + 0.01F {
+            if nextX1 > curX1 { curX1 = nextX1 }
+          } else {
+            let raw = Rect{ X: baseX + curX0, Y: baseY, W: curX1 - curX0, H: height }
+            if !appendRect(n, raw, space, destination, offset + written) { return -1 }
+            written++
+            curX0 = nextX0
+            curX1 = nextX1
+          }
+          i++
+        }
+        let finalRaw = Rect{ X: baseX + curX0, Y: baseY, W: curX1 - curX0, H: height }
+        if !appendRect(n, finalRaw, space, destination, offset + written) { return -1 }
+        return written + 1
+      }
+
+    private func richCaretX(richLine TextRichLine, fallbackShape ShapedText,
+      display int32, localIndex int32, affinity TextAffinity) float32 {
+        var matched TextPaintRun?
+        var fallback TextPaintRun?
+        for run in richLine.Runs {
+          if run.Shape == nil { continue }
+          let runEnd = run.DisplayStart + run.DisplayLength
+          if display < run.DisplayStart || display > runEnd { continue }
+          if fallback == nil { fallback = run }
+          let exact = if affinity == TextAffinity.Upstream {
+            display > run.DisplayStart && display <= runEnd
+          } else {
+            display >= run.DisplayStart && display < runEnd
+          }
+          if exact {
+            matched = run
+            break
+          }
+        }
+        if let run = matched ?? fallback, let shape = run.Shape {
+          return run.X + shape.CaretX(localIndex, int32(affinity))
+        }
+        return fallbackShape.CaretX(localIndex, int32(affinity))
+      }
+
+    private func hitTestRichLine(richLine TextRichLine, fallbackShape ShapedText, x float32) TextHit {
+      var bestRun TextPaintRun?
+      var bestDistance = Single.PositiveInfinity
+      for run in richLine.Runs {
+        guard let shape = run.Shape else { continue }
+        if shape.Runs.Count == 0 { continue }
+        var hasSpan = false
+        var left = 0.0F
+        var right = 0.0F
+        for srun in shape.Runs {
+          let r0 = run.X + MathF.Min(srun.VisualStart, srun.VisualEnd)
+          let r1 = run.X + MathF.Max(srun.VisualStart, srun.VisualEnd)
+          if !hasSpan {
+            left = r0
+            right = r1
+            hasSpan = true
+          } else {
+            if r0 < left { left = r0 }
+            if r1 > right { right = r1 }
+          }
+        }
+        if !hasSpan { continue }
+        if x >= left && x <= right {
+          return shape.HitTest(x - run.X)
+        }
+        let distance = x < left ? left - x : x - right
+        if distance < bestDistance {
+          bestDistance = distance
+          bestRun = run
+        }
+      }
+      if let run = bestRun, let shape = run.Shape {
+        return shape.HitTest(x - run.X)
+      }
+      return fallbackShape.HitTest(x)
+    }
 
     private func staticLineForDisplay(layout TextLayout, geometry TextLayoutGeometry, display int32,
       affinity TextAffinity) int32{

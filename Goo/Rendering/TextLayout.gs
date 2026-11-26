@@ -360,6 +360,14 @@ internal class TextLayouts {
     }
 
     private func warmGeometry(layout TextLayout) {
+      if let rich = layout.Rich {
+        for line in rich.Lines {
+          for run in line.Runs {
+            run.Shape?.PrepareGeometry()
+          }
+        }
+        return
+      }
       for line in layout.Lines {
         line.Shape?.PrepareGeometry()
       }
@@ -378,11 +386,12 @@ internal class TextLayouts {
         }
         if n.TextWrap == TextWrap.NoWrap {
           let line = shapeNoWrap(n, paragraph, maxWidth)
-          result.MinWidth = MathF.Max(result.MinWidth, line.Content == text ? line.Width : maxWidth)
           result.WidthLimit = MathF.Min(result.WidthLimit, line.WidthLimit)
           let displayEnd = start + text.Length
           let visibleEnd = line.Content == text ? displayEnd : start + line.Content.Length - 1
           appendLine(result, geometry, n, line, start, displayEnd, visibleEnd)
+          let actualWidth = line.Content == text ? lineWidth(result, result.Lines.Count - 1) : maxWidth
+          result.MinWidth = MathF.Max(result.MinWidth, actualWidth)
           return false
         }
         if maxWidth < 0.0F {

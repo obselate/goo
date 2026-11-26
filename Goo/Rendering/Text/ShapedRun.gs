@@ -42,6 +42,8 @@ internal sealed class ShapedRun : IDisposable {
     }
 
   internal func Slice(start int32, end int32) ShapedRun? {
+    let localStart = Math.Clamp(start - LogicalStart, 0, Text.Length)
+    let localEnd = Math.Clamp(end - LogicalStart, localStart, Text.Length)
     let glyphs = List[uint32]()
     let points = List[TextPoint]()
     let clusters = List[uint32]()
@@ -60,7 +62,7 @@ internal sealed class ShapedRun : IDisposable {
         while i < next {
           glyphs.Add(Glyphs[i])
           points.Add(Points[i])
-          clusters.Add(Clusters[i])
+          clusters.Add(uint32(int32(Clusters[i]) - localStart))
           i++
         }
       }
@@ -70,9 +72,9 @@ internal sealed class ShapedRun : IDisposable {
     let lease = if let current = typefaceLease { current.Duplicate() } else { nil }
     let left = GlyphEdge(firstGlyph)
     let right = GlyphEdge(lastGlyph)
-    return ShapedRun(Text, Family, glyphs.ToArray(), points.ToArray(), clusters.ToArray(),
-      LogicalStart, RightToLeft, RightToLeft ? right : left, RightToLeft ? left : right,
-      lease == nil, lease)
+    return ShapedRun(Text.Substring(localStart, localEnd - localStart), Family, glyphs.ToArray(),
+      points.ToArray(), clusters.ToArray(), LogicalStart + localStart, RightToLeft,
+      RightToLeft ? right : left, RightToLeft ? left : right, lease == nil, lease)
   }
 
   internal func GlyphEdge(glyph int32) float32 ->
