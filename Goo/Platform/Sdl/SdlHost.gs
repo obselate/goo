@@ -20,6 +20,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var window SDLWindowPtr = SDLWindowPtr.Null
   private var windowId uint32
   private var windowHandle nint
+  private var windowDecorated bool = true
   private var windowsSmallIcon nint
   private var windowsLargeIcon nint
   private var disposed bool
@@ -81,6 +82,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         SdlRuntime.Register(windowId, Dispatch)
         BindNativeFocus()
         if popupParent == nil && layerWindow == nil && lockWindow == nil {
+          if OperatingSystem.IsWindows() {
+            WindowsBackdrop.SetTransparent(WindowsHandle(), transparent)
+          }
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
           SetState(state)
@@ -390,14 +394,32 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if value == WindowState.Normal || value == WindowState.Minimized ||
     value == WindowState.Maximized{
       Require(SDL.SetWindowFullscreen(window, false), "SDL_SetWindowFullscreen")
+      if OperatingSystem.IsWindows() {
+        WindowsBackdrop.SetFullscreen(WindowsHandle(), false, windowDecorated)
+      }
     }
     switch value {
       case WindowState.Normal { Require(SDL.RestoreWindow(window), "SDL_RestoreWindow") }
       case WindowState.Minimized { Require(SDL.MinimizeWindow(window), "SDL_MinimizeWindow") }
       case WindowState.Maximized { Require(SDL.MaximizeWindow(window), "SDL_MaximizeWindow") }
-      case WindowState.Fullscreen { Require(SDL.SetWindowFullscreen(window, true), "SDL_SetWindowFullscreen") }
+      case WindowState.Fullscreen { Require(EnterNativeFullscreen(), "SDL_SetWindowFullscreen") }
       case _ { throw ArgumentOutOfRangeException("value") }
     }
+  }
+
+  private func EnterNativeFullscreen() bool {
+    if OperatingSystem.IsWindows() {
+      let hwnd = WindowsHandle()
+      let wasFullscreen = WindowsBackdrop.IsFullscreen(hwnd)
+      WindowsBackdrop.SetFullscreen(hwnd, true, windowDecorated)
+      if !SDL.SetWindowFullscreen(window, true) {
+        if !wasFullscreen { WindowsBackdrop.SetFullscreen(hwnd, false, windowDecorated) }
+        return false
+      }
+      WindowsBackdrop.EnsureFullscreenBounds(hwnd)
+      return true
+    }
+    return SDL.SetWindowFullscreen(window, true)
   }
 
   public func RequestActivation() WindowOperationResult {
@@ -442,6 +464,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     ThrowIfDisposed()
     if layerWindow != nil { throw NotSupportedException("Layer-shell windows do not support window decorations") }
     if lockWindow != nil { throw NotSupportedException("Session lock windows do not support window decorations") }
+    windowDecorated = decorated
     if !decorated {
       EnableHitTest()
     }
@@ -456,8 +479,12 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       DisableHitTest()
     }
     if OperatingSystem.IsWindows() {
-      WindowsBackdrop.SetCaption(BackdropPointer(BackdropProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0)), decorated)
-      Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
+      let hwnd = WindowsHandle()
+      let fullscreen = WindowsBackdrop.IsFullscreen(hwnd)
+      WindowsBackdrop.SetCaption(hwnd, decorated)
+      if !fullscreen {
+        Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
+      }
     }
     let outside = !decorated && resizable
     var waylandBorder = false
@@ -576,6 +603,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         SDL_SetWindowHitTestRaw(windowHandle, nint(0), nint(0))
       }
       if !window.IsNull {
+        let windowsHwnd = if OperatingSystem.IsWindows() { WindowsHandle() } else { nint(0) }
         if OperatingSystem.IsMacOS() {
           SDL.SyncWindow(window)
           if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
@@ -587,6 +615,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           SDL.HideWindow(window)
         }
         SDL.DestroyWindow(window)
+        if windowsHwnd != nint(0) { WindowsBackdrop.ClearWindow(windowsHwnd) }
         window = SDLWindowPtr.Null
         windowHandle = nint(0)
       }
@@ -930,6 +959,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let point = *SdlHostPoint(pointAddress)
     return EvaluateHitTest(hitTest, point -> X, point -> Y)
   }
+
+  private func WindowsHandle() nint ->
+    if windowHandle == nint(0) { nint(0) } else { BackdropPointer(BackdropProperties(windowHandle), "SDL.window.win32.hwnd", nint(0)) }
 
   private func ThrowIfDisposed() {
     SdlRuntime.RequireMainThread("SdlHost.")

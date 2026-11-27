@@ -105,7 +105,7 @@ internal unsafe partial class SdlHost {
     if !SDL.SetWindowPosition(window, position, position) && !IsWayland() {
       return WindowOperationResult.Failed
     }
-    return if SDL.SetWindowFullscreen(window, true) {
+    return if EnterNativeFullscreen() {
       WindowOperationResult.Accepted
     } else { WindowOperationResult.Failed }
   }

@@ -288,6 +288,7 @@ internal unsafe partial class SdlHost {
       eventType == SDLEventType.WindowLeaveFullscreen {
       let state = NativePlacementState(SDL.GetWindowFlags(window))
       if state != WindowState.Minimized { placementRestoredState = state }
+      if OperatingSystem.IsWindows() { SyncWindowsWindowState(eventType, state) }
       if eventType == SDLEventType.WindowRestored ||
         eventType == SDLEventType.WindowEnterFullscreen ||
         eventType == SDLEventType.WindowLeaveFullscreen {
@@ -321,6 +322,24 @@ internal unsafe partial class SdlHost {
       }
       RefreshDisplayPacing(true)
       Exposed?.Invoke()
+    }
+  }
+
+  private func SyncWindowsWindowState(eventType SDLEventType, state WindowState) {
+    let hwnd = WindowsHandle()
+    if eventType == SDLEventType.WindowEnterFullscreen {
+      WindowsBackdrop.SetFullscreen(hwnd, true, windowDecorated)
+      WindowsBackdrop.EnsureFullscreenBounds(hwnd)
+    } else if eventType == SDLEventType.WindowLeaveFullscreen {
+      WindowsBackdrop.SetFullscreen(hwnd, false, windowDecorated)
+      WindowsBackdrop.SetMaximizedCorner(hwnd, state == WindowState.Maximized, windowDecorated)
+    } else if eventType == SDLEventType.WindowMaximized || eventType == SDLEventType.WindowRestored {
+      if state != WindowState.Fullscreen && WindowsBackdrop.IsFullscreen(hwnd) {
+        WindowsBackdrop.SetFullscreen(hwnd, false, windowDecorated)
+      }
+      if state != WindowState.Fullscreen {
+        WindowsBackdrop.SetMaximizedCorner(hwnd, state == WindowState.Maximized, windowDecorated)
+      }
     }
   }
 
