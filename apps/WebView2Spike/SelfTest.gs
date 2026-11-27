@@ -175,6 +175,7 @@ class SelfTest {
         let region = host.RegionRect.Offset(client.Left, client.Top)
         let bounds = host.Controller!!.Bounds
         let border = int32(Math.Round(SpikeTheme.BorderWidth * host.Scale))
+        let margin = int32(Math.Round(SpikeTheme.WindowPadding * host.Scale))
         let image = Path.Combine(directory, step + ".bmp")
         Directory.CreateDirectory(directory)
         let done = TaskCompletionSource[ScreenSample](TaskCreationOptions.RunContinuationsAsynchronously)
@@ -185,7 +186,7 @@ class SelfTest {
                         client,
                         region,
                         border,
-                        int32(Math.Round(SpikeTheme.WindowPadding * host.Scale)),
+                        margin,
                         Rgb(expected),
                         Rgb(SpikeTheme.Panel),
                         Rgb(SpikeTheme.Border),
