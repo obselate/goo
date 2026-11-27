@@ -474,7 +474,7 @@ internal unsafe partial class VulkanWindowTarget {
       composition = presenter
       if Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1" {
         Console.Error.WriteLine(if presenter.CpuCopy {
-          "Goo Windows presentation: DirectComposition, topmost=FALSE, CPU copy"
+          "Goo Windows presentation: DirectComposition, topmost=FALSE, CPU copy (" + presenter.CpuCopyReason + ")"
         } else { "Goo Windows presentation: DirectComposition, topmost=FALSE, D3D11 shared texture and fence" })
       }
     }

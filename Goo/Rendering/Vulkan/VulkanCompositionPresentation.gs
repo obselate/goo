@@ -28,6 +28,7 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
   private var accountedObjects int32
 
   internal prop CpuCopy bool { get -> stagingBuffer != 0uL }
+  internal var CpuCopyReason string = "adapter mismatch"
 
   private init(active VulkanSharedLease, root WindowsCompositionDevice, extent VkExtent2D,
     sync bool, objectAccounting VulkanObjectAccounting?) {
@@ -38,9 +39,15 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
     accounting = objectAccounting
     try {
       CreateSwapchain()
-      if root.AdapterMatched && CanInterop(active, extent) {
-        try { CreateSharedTexture() }
-        catch (error Exception) when (!IsDeviceLoss(error)) { ReleaseImageAndInterop() }
+      if root.AdapterMatched {
+        CpuCopyReason = "Vulkan interop unsupported"
+        if CanInterop(active, extent) {
+          try { CreateSharedTexture() }
+          catch (error Exception) when (!IsDeviceLoss(error)) {
+            CpuCopyReason = error.GetType().Name + " HResult=0x" + error.HResult.ToString("x8") + ": " + error.Message
+            ReleaseImageAndInterop()
+          }
+        }
       }
       if Image == 0uL {
         CreateImage(nint(0))
