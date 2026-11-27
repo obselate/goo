@@ -1,0 +1,83 @@
+name: WebView2 spike
+
+on:
+  push:
+    branches:
+      - spike/webview2-visual-hosting
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+jobs:
+  publish:
+    name: Publish WebView2 spike for win-x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup-goo-dotnet
+      - name: Fetch pinned Windows SDL runtime
+        run: .github/scripts/fetch-sdl-win-x64.sh artifacts/native/win-x64/SDL3.dll
+      - name: Publish spike with the bundled software renderer
+        run: |
+          dotnet publish apps/WebView2Spike/WebView2Spike.gsproj -c Release -r win-x64 --self-contained true \
+            -p:GooEffectiveRuntimeIdentifier=win-x64 -p:GooUseSoftwareRenderer=true \
+            -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" -o artifacts/WebView2Spike
+          test -f artifacts/WebView2Spike/WebView2Spike.exe
+          test -f artifacts/WebView2Spike/WebView2Loader.dll
+          test -f artifacts/WebView2Spike/vulkan_lvp.dll
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: webview2-spike-win-x64
+          path: artifacts/WebView2Spike
+          if-no-files-found: error
+
+  selftest:
+    name: Run WebView2 spike self-tests
+    needs: publish
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: webview2-spike-win-x64
+          path: publish
+      - name: Set display resolution for the 1100 x 700 resize step
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+      - name: Log WebView2 runtime version
+        shell: pwsh
+        run: Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' pv
+      - name: Run self-tests
+        shell: pwsh
+        env:
+          GOO_VK_DIAGNOSTICS: "1"
+        run: |
+          $exe = (Resolve-Path publish/WebView2Spike.exe).Path
+          $codes = foreach ($run in @(@{ Name = 'opaque'; Options = @('--opaque') }, @{ Name = 'transparent'; Options = @() })) {
+            $out = Join-Path $PWD "results/$($run.Name)"
+            New-Item -ItemType Directory -Force $out | Out-Null
+            $process = Start-Process -FilePath $exe -ArgumentList (@('--selftest', "`"$out`"") + $run.Options) -PassThru `
+              -RedirectStandardOutput "$out/stdout.log" -RedirectStandardError "$out/stderr.log"
+            $null = $process.Handle
+            if ($process.WaitForExit(300000)) { $code = $process.ExitCode } else { $process.Kill($true); $code = 'TIMEOUT' }
+            Get-Content "$out/stdout.log", "$out/stderr.log" | Write-Host
+            "$($run.Name)=$code"
+          }
+          $codes | Tee-Object results/exit-codes.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: webview2-spike-results
+          path: results
+          if-no-files-found: warn
