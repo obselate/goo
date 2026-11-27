@@ -24,12 +24,12 @@ func Main(args[]string) {
         Root: SpikeView(host),
     }.Open()
     if output < 0 {
-        window.After(0.0, () -> host.Run(window))
+        window.Post(() -> host.Run(window))
         Application.Run(window)
         return
     }
     let test = SelfTest(window, host, args[output + 1], opaque ? "opaque" : "transparent-acrylic")
-    window.After(0.0, () -> test.Run())
+    window.Post(() -> test.Run())
     Application.Run(window)
     test.Write()
     Environment.ExitCode = test.ExitCode
