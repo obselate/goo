@@ -90,6 +90,15 @@ shared class Native {
     func GetDpiForWindow(window nint) uint32;
 
     @DllImport("user32.dll")
+    func GetWindowRect(window nint, out rect PixelRect) int32;
+
+    @DllImport("user32.dll")
+    func SetForegroundWindow(window nint) int32;
+
+    @DllImport("user32.dll")
+    func GetForegroundWindow() nint;
+
+    @DllImport("user32.dll")
     func SetWindowPos(window nint, after nint, x int32, y int32, width int32, height int32, flags uint32) int32;
 
     @DllImport("user32.dll")

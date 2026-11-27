@@ -10,6 +10,7 @@ class SpikeTheme {
         let Border Color = Color.Rgb(255, 128, 0)
         let RegionFill Color = Color.Rgb(0, 0, 0)
         let Magenta Color = Color.Rgb(255, 0, 255)
+        let Reference Color = Color.Rgb(255, 255, 0)
         let Cyan Color = Color.Rgb(0, 255, 255)
 
         const WindowPadding float64 = 24.0

@@ -10,7 +10,9 @@ data struct PixelCount(Sampled int32, Matched int32) {
     }
 }
 
-data struct ScreenSample(Inner PixelCount, Panel PixelCount, Border PixelCount) { }
+data struct ColorMean(R float64, G float64, B float64) { }
+
+data struct ScreenSample(Inner PixelCount, Panel PixelCount, Border PixelCount, Margin ColorMean) { }
 
 shared class ScreenCapture {
     private const Tolerance int32 = 48
@@ -20,6 +22,7 @@ shared class ScreenCapture {
         area PixelRect,
         region PixelRect,
         border int32,
+        margin int32,
         inner uint32,
         panel uint32,
         frame uint32,
@@ -46,7 +49,29 @@ shared class ScreenCapture {
             Inner: Count(pixels, area.Width, local.Inset(4), inner),
             Panel: Count(pixels, area.Width, PixelRect(outside - 48, local.Top, outside - 8, local.Bottom), panel),
             Border: ring,
+            Margin: Mean(pixels, area.Width, area.Height, margin),
         }
+    }
+
+    private func Mean(pixels[]uint8, width int32, height int32, margin int32) ColorMean {
+        var count int64
+        var red int64
+        var green int64
+        var blue int64
+        for y in 2 ... height - 2 {
+            for x in 2 ... width - 2 {
+                if x >= margin - 1 && x < width - margin + 1 && y >= margin - 1 && y < height - margin + 1 {
+                    continue
+                }
+                let offset = (y * width + x) * 4
+                red += int64(pixels[offset + 2])
+                green += int64(pixels[offset + 1])
+                blue += int64(pixels[offset])
+                count++
+            }
+        }
+        let divisor = float64(Math.Max(count, 1L))
+        return ColorMean{R: float64(red) / divisor, G: float64(green) / divisor, B: float64(blue) / divisor}
     }
 
     private func Add(a PixelCount, b PixelCount) PixelCount -> PixelCount{

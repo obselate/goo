@@ -18,9 +18,12 @@ class SelfTest {
     private let host WebViewHost
     private let directory string
     private let mode string
+    private let acrylic bool
     private let records List[Dictionary[string, object?]] = List[Dictionary[string, object?]]()
     private let failures List[string] = List[string]()
     private var frameTicks int64
+    private var reference Window?
+    private var referenceTicks int64
     private var initialRegion PixelRect
     var ExitCode int32 = 1
 
@@ -29,6 +32,7 @@ class SelfTest {
         this.host = host
         this.directory = Path.GetFullPath(directory)
         this.mode = mode
+        acrylic = mode == "transparent-acrylic"
         window.PresentationAccepted += receipt -> {
             frameTicks = receipt.AcceptedTicks
         }
@@ -58,6 +62,22 @@ class SelfTest {
             start["renderingDevice"] = window.RenderingDevice.Name
             start["transparent"] = window.IsTransparent
             start["backdropAvailable"] = window.BackdropAvailable
+            if acrylic {
+                Check(start, "window_transparent", window.IsTransparent)
+                Check(start, "backdrop_available", window.BackdropAvailable)
+                let opened = Window{
+                    Title: "WebView2 spike backdrop reference",
+                    Size: LayoutSize(900, 600),
+                    Background: SpikeTheme.Reference,
+                    Root: ReferenceView(),
+                }.Open()
+                opened.PresentationAccepted += receipt -> {
+                    referenceTicks = receipt.AcceptedTicks
+                }
+                reference = opened
+                await WaitUntil(() -> referenceTicks != 0L, "the reference window frame")
+                PlaceReference()
+            }
             step = "navigation"
             await WaitUntil(() -> host.Navigation != nil, "NavigationCompleted")
             Check(Record(step), "navigation_succeeded", host.Navigation == true)
@@ -87,9 +107,10 @@ class SelfTest {
                 ) != 0,
                 "SetWindowPos(1100x700)"
             )
+            PlaceReference()
             await WaitUntil(
-                () -> host.SyncTicks >= since && frameTicks >= host.SyncTicks,
-                "a Goo frame and web view bounds after the resize"
+                () -> host.SyncTicks >= since && frameTicks >= host.SyncTicks && (!acrylic || referenceTicks >= since),
+                "Goo frames and web view bounds after the resize"
             )
             await Task.Delay(500)
             let resized = await Measure(step, SpikeTheme.Cyan)
@@ -115,8 +136,30 @@ class SelfTest {
             let summary = Record("summary")
             summary["result"] = ExitCode == 0 ? "PASS" : "FAIL"
             summary["failedChecks"] = failures.ToArray()
+            reference?.RequestClose()
             window.RequestClose()
         }
+    }
+
+    // HWND_TOP places the reference at the top of the non-topmost band, directly below the topmost spike window.
+    private func PlaceReference() {
+        guard let opened = reference else {
+            return
+        }
+        Native.Require(Native.GetWindowRect(host.Hwnd, out var rect) != 0, "GetWindowRect")
+        Native.Require(
+            Native.SetWindowPos(
+                opened.NativeHandle.Handle,
+                nint(0),
+                rect.Left,
+                rect.Top,
+                rect.Width,
+                rect.Height,
+                Native.NoActivate
+            ) != 0,
+            "SetWindowPos(reference)"
+        )
+        Native.SetForegroundWindow(host.Hwnd)
     }
 
     func Write() {
@@ -142,6 +185,7 @@ class SelfTest {
                         client,
                         region,
                         border,
+                        int32(Math.Round(SpikeTheme.WindowPadding * host.Scale)),
                         Rgb(expected),
                         Rgb(SpikeTheme.Panel),
                         Rgb(SpikeTheme.Border),
@@ -167,10 +211,20 @@ class SelfTest {
         record["borderSampled"] = sample.Border.Sampled
         record["borderMatched"] = sample.Border.Matched
         record["image"] = Path.GetFileName(image)
+        record["marginMeanRgb"] = []float64{sample.Margin.R, sample.Margin.G, sample.Margin.B}
+        record["foreground"] = Native.GetForegroundWindow() == host.Hwnd
         Check(record, "webview_visible_in_region", sample.Inner.Ratio >= Threshold)
         Check(record, "goo_panel_visible_outside_region", sample.Panel.Ratio >= Threshold)
         Check(record, "orange_border_visible", sample.Border.Ratio >= BorderThreshold)
         Check(record, "controller_bounds_match_region", bounds.Width == region.Width && bounds.Height == region.Height)
+        if acrylic {
+            let margin = sample.Margin
+            Check(
+                record,
+                "acrylic_margin_shows_backdrop",
+                Math.Min(margin.R, margin.G) >= 96.0 && Math.Min(margin.R, margin.G) - margin.B >= 32.0
+            )
+        }
         return record
     }
 
