@@ -33,38 +33,11 @@ unsafe class WebViewHost {
 
     async func Start(window Window) Task {
         Hwnd = window.NativeHandle.Handle
+        var compositionIdentifier = Guid("c37ea93a-e7aa-450d-b16f-9746cb0407f3")
         Native.Check(
-            Native.D3D11CreateDevice(
-                nint(0),
-                1,
-                nint(0),
-                0x20u,
-                nint(0),
-                0u,
-                7u,
-                out var device,
-                out var level,
-                out var context
-            ),
-            "D3D11CreateDevice"
+            Native.DCompositionCreateDevice2(nint(0), ref compositionIdentifier, out composition),
+            "DCompositionCreateDevice2"
         )
-        var dxgi nint
-        try {
-            var dxgiIdentifier = Guid("54ec77fa-1377-44e6-8c32-88fd5f44c84c")
-            let query = cast[unmanaged[Stdcall](nint, *Guid, *nint) -> int32](Native.Method(device, 0))
-            Native.Check(query(device, &dxgiIdentifier, &dxgi), "QueryInterface(IDXGIDevice)")
-            var compositionIdentifier = Guid("c37ea93a-e7aa-450d-b16f-9746cb0407f3")
-            Native.Check(
-                Native.DCompositionCreateDevice(dxgi, ref compositionIdentifier, out composition),
-                "DCompositionCreateDevice"
-            )
-        } finally {
-            if dxgi != nint(0) {
-                Marshal.Release(dxgi)
-            }
-            Marshal.Release(context)
-            Marshal.Release(device)
-        }
         var target nint
         let createTarget = cast[unmanaged[Stdcall](nint, nint, int32, *nint) -> int32](Native.Method(composition, 6))
         Native.Check(createTarget(composition, Hwnd, 1, &target), "CreateTargetForHwnd(topmost)")

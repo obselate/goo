@@ -151,20 +151,6 @@ shared class Native {
     @DllImport("comctl32.dll")
     func DefSubclassProc(window nint, message uint32, wparam nuint, lparam nint) nint;
 
-    @DllImport("d3d11.dll")
-    func D3D11CreateDevice(
-        adapter nint,
-        driverType int32,
-        software nint,
-        flags uint32,
-        levels nint,
-        levelCount uint32,
-        sdkVersion uint32,
-        out device nint,
-        out level int32,
-        out context nint
-    ) int32;
-
     @DllImport("dcomp.dll")
-    func DCompositionCreateDevice(device nint, ref identifier Guid, out composition nint) int32;
+    func DCompositionCreateDevice2(device nint, ref identifier Guid, out composition nint) int32;
 }
