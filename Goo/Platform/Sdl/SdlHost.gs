@@ -80,9 +80,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if driver == "wayland" { waylandWindowProperties = NativeProperties(windowHandle) }
         SdlRuntime.Register(windowId, Dispatch)
         BindNativeFocus()
-        if OperatingSystem.IsWindows() && Transparent {
-          WindowsBackdrop.SuppressTransparentErase(WindowsPresentationHandle)
-        }
         if popupParent == nil && layerWindow == nil && lockWindow == nil {
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
