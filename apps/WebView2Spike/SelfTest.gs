@@ -1,0 +1,206 @@
+package WebView2Spike
+
+import Goo
+import Microsoft.Web.WebView2.Core
+import System
+import System.Collections.Generic
+import System.Diagnostics
+import System.Globalization
+import System.IO
+import System.Runtime.InteropServices
+import System.Text.Json
+import System.Threading.Tasks
+
+class SelfTest {
+    private const Threshold float64 = 0.95
+    private const BorderThreshold float64 = 0.9
+    private let window Window
+    private let host WebViewHost
+    private let directory string
+    private let mode string
+    private let records List[Dictionary[string, object?]] = List[Dictionary[string, object?]]()
+    private let failures List[string] = List[string]()
+    private var frameTicks int64
+    private var initialRegion PixelRect
+    var ExitCode int32 = 1
+
+    init(window Window, host WebViewHost, directory string, mode string) {
+        this.window = window
+        this.host = host
+        this.directory = Path.GetFullPath(directory)
+        this.mode = mode
+        window.PresentationAccepted += receipt -> {
+            frameTicks = receipt.AcceptedTicks
+        }
+    }
+
+    async func Run() void {
+        var step = "first-frame"
+        try {
+            await WaitUntil(() -> frameTicks != 0L, step)
+            step = "webview-start"
+            await host.Start(window).WaitAsync(TimeSpan.FromSeconds(60.0))
+            Native.Require(
+                Native.SetWindowPos(
+                    host.Hwnd,
+                    Native.TopmostWindow,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Native.NoMove | Native.NoSize | Native.NoActivate
+                ) != 0,
+                "SetWindowPos(topmost)"
+            )
+            let start = Record(step)
+            start["webView2Runtime"] = CoreWebView2Environment.GetAvailableBrowserVersionString(nil)
+            start["windowsVersion"] = Environment.OSVersion.Version.ToString()
+            start["renderingDevice"] = window.RenderingDevice.Name
+            start["transparent"] = window.IsTransparent
+            start["backdropAvailable"] = window.BackdropAvailable
+            step = "navigation"
+            await WaitUntil(() -> host.Navigation != nil, "NavigationCompleted")
+            Check(Record(step), "navigation_succeeded", host.Navigation == true)
+            step = "initial"
+            await Task.Delay(500)
+            initialRegion = host.RegionRect
+            await Measure(step, SpikeTheme.Magenta)
+            step = "click"
+            host.ClickCenter()
+            await WaitUntil(() -> host.Message != nil, "the clicked web message")
+            await Task.Delay(500)
+            let clicked = await Measure(step, SpikeTheme.Cyan)
+            clicked["webMessage"] = host.Message
+            Check(clicked, "web_message_received", host.Message == "clicked:#00FFFF")
+            step = "resize"
+            let since = Stopwatch.GetTimestamp()
+            let dpi = int32(Native.GetDpiForWindow(host.Hwnd))
+            Native.Require(
+                Native.SetWindowPos(
+                    host.Hwnd,
+                    nint(0),
+                    0,
+                    0,
+                    1100 * dpi / 96,
+                    700 * dpi / 96,
+                    Native.NoMove | Native.NoZOrder | Native.NoActivate
+                ) != 0,
+                "SetWindowPos(1100x700)"
+            )
+            await WaitUntil(
+                () -> host.SyncTicks >= since && frameTicks >= host.SyncTicks,
+                "a Goo frame and web view bounds after the resize"
+            )
+            await Task.Delay(500)
+            let resized = await Measure(step, SpikeTheme.Cyan)
+            resized["dpi"] = dpi
+            Check(
+                resized,
+                "webview_follows_resize",
+                host.RegionRect.Left != initialRegion.Left
+                && "PASS".Equals(resized["webview_visible_in_region"]) && "PASS".Equals(
+                    resized["controller_bounds_match_region"]
+                )
+            )
+            ExitCode = failures.Count == 0 ? 0 : 1
+        } catch (error Exception) {
+            let record = Record("exception")
+            record["failedStep"] = step
+            record["type"] = error.GetType().FullName
+            record["message"] = error.Message
+            record["hresult"] = "0x" + error.HResult.ToString("X8")
+            record["detail"] = error.ToString()
+            failures.Add(step + ":exception")
+        } finally {
+            let summary = Record("summary")
+            summary["result"] = ExitCode == 0 ? "PASS" : "FAIL"
+            summary["failedChecks"] = failures.ToArray()
+            window.RequestClose()
+        }
+    }
+
+    func Write() {
+        Directory.CreateDirectory(directory)
+        File.WriteAllLines(
+            Path.Combine(directory, "selftest.jsonl"),
+            records.ConvertAll(record -> JsonSerializer.Serialize(record))
+        )
+    }
+
+    private async func Measure(step string, expected Color) Task[Dictionary[string, object?]] {
+        let client = Native.ClientRect(host.Hwnd)
+        let region = host.RegionRect.Offset(client.Left, client.Top)
+        let bounds = host.Controller!!.Bounds
+        let border = int32(Math.Round(SpikeTheme.BorderWidth * host.Scale))
+        let image = Path.Combine(directory, step + ".bmp")
+        Directory.CreateDirectory(directory)
+        let done = TaskCompletionSource[ScreenSample](TaskCreationOptions.RunContinuationsAsynchronously)
+        go {
+            try {
+                done.SetResult(
+                    ScreenCapture.Sample(
+                        client,
+                        region,
+                        border,
+                        Rgb(expected),
+                        Rgb(SpikeTheme.Panel),
+                        Rgb(SpikeTheme.Border),
+                        image
+                    )
+                )
+            } catch (error Exception) {
+                done.SetException(error)
+            }
+        }
+        let sample = await done.Task
+        let record = Record(step)
+        record["clientRectScreen"] = client.Coordinates()
+        record["regionRectScreen"] = region.Coordinates()
+        record["controllerBounds"] = []int32{bounds.X, bounds.Y, bounds.Width, bounds.Height}
+        record["scale"] = host.Scale
+        record["borderPixels"] = border
+        record["expectedRegionColor"] = Rgb(expected).ToString("X6")
+        record["regionSampled"] = sample.Inner.Sampled
+        record["regionMatched"] = sample.Inner.Matched
+        record["panelSampled"] = sample.Panel.Sampled
+        record["panelMatched"] = sample.Panel.Matched
+        record["borderSampled"] = sample.Border.Sampled
+        record["borderMatched"] = sample.Border.Matched
+        record["image"] = Path.GetFileName(image)
+        Check(record, "webview_visible_in_region", sample.Inner.Ratio >= Threshold)
+        Check(record, "goo_panel_visible_outside_region", sample.Panel.Ratio >= Threshold)
+        Check(record, "orange_border_visible", sample.Border.Ratio >= BorderThreshold)
+        Check(record, "controller_bounds_match_region", bounds.Width == region.Width && bounds.Height == region.Height)
+        return record
+    }
+
+    private func Check(record Dictionary[string, object?], name string, passed bool) {
+        record[name] = passed ? "PASS" : "FAIL"
+        if !passed {
+            failures.Add(record["step"]!!.ToString() + ":" + name)
+        }
+    }
+
+    private func Record(step string) Dictionary[string, object?] {
+        let record = Dictionary[string, object?]()
+        record["step"] = step
+        record["mode"] = mode
+        record["utc"] = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
+        record["hwnd"] = "0x" + host.Hwnd.ToString("X")
+        records.Add(record)
+        return record
+    }
+
+    private async func WaitUntil(condition() -> bool, what string) Task {
+        let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 30L
+        while !condition() {
+            if Stopwatch.GetTimestamp() > deadline {
+                throw TimeoutException("Timed out waiting for " + what)
+            }
+            await Task.Delay(50)
+        }
+    }
+
+    private func Rgb(color Color) uint32 -> (uint32(Math.Round(color.R * 255.0F)) << 16)
+    | (uint32(Math.Round(color.G * 255.0F)) << 8) | uint32(Math.Round(color.B * 255.0F))
+}
