@@ -71,11 +71,6 @@ internal unsafe partial class SdlHost {
 
   public prop PreferRequestedFramebufferExtent bool{ get -> false }
   public prop AllowInheritedCompositeAlpha bool{ get -> OperatingSystem.IsMacOS() || OperatingSystem.IsWindows() }
-  internal prop WindowsPresentationHandle nint {
-    get -> if OperatingSystem.IsWindows() {
-      nint(SDL.GetPointerProperty(SDL.GetWindowProperties(window), "SDL.window.win32.hwnd", nil))
-    } else { nint(0) }
-  }
   public func LoadVulkanLibrary() bool {
     ThrowIfDisposed()
     if vulkanOwned {

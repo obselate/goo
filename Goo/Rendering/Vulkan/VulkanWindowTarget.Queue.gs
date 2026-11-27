@@ -89,9 +89,8 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       mailbox.PrepareSubmit(slot.CommandBuffer, slot.SubmitWaitSemaphore,
-        if initialImageUploadFrame || current.Composition != nil { 0uL } else { current.RenderSemaphore(activeImageIndex) })
+        if initialImageUploadFrame { 0uL } else { current.RenderSemaphore(activeImageIndex) })
       imageResources?.AppendExternalWaits(mailbox, slot.CommandBuffer)
-      if !initialImageUploadFrame { current.Composition?.PrepareSubmit(mailbox) }
       if !mailbox.BeginSubmit() {
         throw InvalidOperationException("Vulkan queue mailbox rejected graphics submission")
       }
@@ -493,8 +492,6 @@ internal unsafe partial class VulkanWindowTarget {
       }
       mailbox.PreparePresent(current.Handle, activeImageIndex,
         current.RenderSemaphore(activeImageIndex), pendingPresentFence, current.PresentFenceEnabled)
-      mailbox.PresentComposition = current.Composition
-      mailbox.PresentCompositionValue = mailbox.SubmitSignalValue
       native?.PrepareLockPresent()
     } catch (error Exception) {
       frameFailed = true

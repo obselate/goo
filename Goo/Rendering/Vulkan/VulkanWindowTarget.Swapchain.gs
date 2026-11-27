@@ -424,7 +424,7 @@ internal unsafe partial class VulkanWindowTarget {
         try {
           if let probe = SecondaryStartupForTest { probe() }
           return CreateGeneration(width, height, requestedVsync, transparent,
-            allowInherited, preferExtent, generationId, stale?.Handle ?? 0uL, stale?.Composition)
+            allowInherited, preferExtent, generationId, stale?.Handle ?? 0uL)
         } finally {
           try { stale?.Dispose() } finally { host.Wake() }
         }
@@ -433,7 +433,7 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     let created = CreateGeneration(width, height, vsync, host.Transparent, host.AllowInheritedCompositeAlpha,
-      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL, generation?.Composition)
+      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL)
     next = created.Generation
     if created.SurfaceLost {
       surfaceLost = true
@@ -444,8 +444,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func CreateGeneration(width int32, height int32, requestedVsync bool,
     transparent bool, allowInherited bool, preferExtent bool,
-    generationId uint64, oldSwapchain VkSwapchainKHR,
-    previousComposition VulkanCompositionPresentation?) VulkanSwapchainCreationResult {
+    generationId uint64, oldSwapchain VkSwapchainKHR) VulkanSwapchainCreationResult {
     guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else {
       return VulkanSwapchainCreationResult{SurfaceLost: true}
     }
@@ -463,37 +462,15 @@ internal unsafe partial class VulkanWindowTarget {
       VkExtent2D{width: uint32(width), height: uint32(height)}, preferExtent)
     if extent.width == 0u || extent.height == 0u { return VulkanSwapchainCreationResult{} }
     let swapStart = DiagnosticTimestamp()
-    var composition VulkanCompositionPresentation?
-    if transparent && (!alphaUnavailable || opaquePopup) {
-      if let active = runtime, let native = sdl {
-        composition = VulkanCompositionPresentation.TryCreate(active, native.WindowsPresentationHandle,
-          extent, requestedVsync, previousComposition, windowObjectAccounting)
-      }
-    }
-    if OperatingSystem.IsWindows() && transparent
-      && Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1" {
-      Console.Error.WriteLine(if composition != nil {
-        "Goo Windows presentation: DirectComposition, topmost=FALSE, D3D11 shared texture and fence"
-      } else { "Goo Windows presentation: Vulkan swapchain fallback, interop unavailable" })
-    }
-    let format = if composition != nil { VkSurfaceFormatKHR{
-      format: VkConstants.VK_FORMAT_B8G8R8A8_UNORM,
-      colorSpace: VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } } else { selection.Format }
-    var next VulkanSwapchainGeneration
-    try {
-      next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
-        format, selection.PresentMode, extent,
-        compositeAlpha, oldSwapchain, generationId,
-        swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-        windowObjectAccounting, diagnostics, composition,
-        opaqueClear: composition == nil && (opaquePopup || (transparent && alphaUnavailable)),
-        transparent: composition != nil || (transparent && !alphaUnavailable),
-        minimumImageCount: sdl?.WaylandLayer == WindowLayer.Background
-          && selection.PresentMode == VkConstants.VK_PRESENT_MODE_FIFO_KHR)
-    } catch {
-      composition?.Dispose()
-      rethrow
-    }
+    let next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
+      selection.Format, selection.PresentMode, extent,
+      compositeAlpha, oldSwapchain, generationId,
+      swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
+      windowObjectAccounting, diagnostics,
+      opaqueClear: opaquePopup || (transparent && alphaUnavailable),
+      transparent: transparent && !alphaUnavailable,
+      minimumImageCount: sdl?.WaylandLayer == WindowLayer.Background
+        && selection.PresentMode == VkConstants.VK_PRESENT_MODE_FIFO_KHR)
     if !startupFirstSwapchainRecorded {
       startupFirstSwapchainRecorded = true
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainCreate,
