@@ -14,22 +14,6 @@ internal struct BackdropWindowsMargins {
 }
 
 @StructLayout(LayoutKind.Sequential)
-internal struct BackdropWindowsBlurBehind {
-  internal var Flags uint32
-  internal var Enable int32
-  internal var Region nint
-  internal var TransitionOnMaximized int32
-}
-
-@StructLayout(LayoutKind.Sequential)
-internal struct BackdropWindowsRect {
-  internal var Left int32
-  internal var Top int32
-  internal var Right int32
-  internal var Bottom int32
-}
-
-@StructLayout(LayoutKind.Sequential)
 internal struct BackdropWindowsContrast {
   internal var Size uint32
   internal var Flags uint32
@@ -48,9 +32,6 @@ internal class WindowsBackdrop : NativeBackdrop {
   internal init(window nint) {
     this.window = window
     if window == nint(0) { return }
-    var blur = BackdropWindowsBlurBehind{Flags: 1u, Enable: 0}
-    DwmEnableBlurBehindWindow(window, ref blur)
-    SuppressTransparentErase(window)
     var margins = BackdropWindowsMargins{Left: -1, Right: -1, Top: -1, Bottom: -1}
     frameExtended = DwmExtendFrameIntoClientArea(window, ref margins) >= 0
   }
@@ -152,56 +133,7 @@ internal class WindowsBackdrop : NativeBackdrop {
 
     private var captionCallback SdlTitlebarSubclass?
     private var captionAddress nint
-    private var eraseCallback SdlTitlebarSubclass?
-    private var eraseAddress nint
 
-    internal func SuppressTransparentErase(window nint) {
-      if window == nint(0) { return }
-      if eraseAddress == nint(0) {
-        eraseCallback = EraseMessage
-        eraseAddress = Marshal.GetFunctionPointerForDelegate(eraseCallback!!)
-      }
-      SetWindowSubclass(window, eraseAddress, nuint(2), nuint(0))
-      ClearRedirectionSurface(window)
-    }
-
-    private func ClearRedirectionSurface(window nint) {
-      if GetClientRect(window, out var rect) == 0 { return }
-      let dc = GetDC(window)
-      if dc == nint(0) { return }
-      try {
-        let brush = GetStockObject(4)
-        if brush != nint(0) { FillRect(dc, ref rect, brush) }
-      } finally { ReleaseDC(window, dc) }
-    }
-
-    private func EraseMessage(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
-      if message == 0x0014u {
-        let dc = nint(wparam)
-        if dc != nint(0) && GetClientRect(window, out var rect) != 0 {
-          let brush = GetStockObject(4)
-          if brush != nint(0) { FillRect(dc, ref rect, brush) }
-        }
-        return nint(1)
-      }
-      if message == 0x000Fu {
-        ClearRedirectionSurface(window)
-      } else if message == 0x0005u {
-        let result = DefSubclassProc(window, message, wparam, lparam)
-        ClearRedirectionSurface(window)
-        return result
-      } else if message == 0x0082u {
-        RemoveWindowSubclass(window, eraseAddress, nuint(2))
-      }
-      return DefSubclassProc(window, message, wparam, lparam)
-    }
-
-    @DllImport("gdi32.dll") private func GetStockObject(index int32) nint;
-    @DllImport("user32.dll") private func GetDC(window nint) nint;
-    @DllImport("user32.dll") private func ReleaseDC(window nint, dc nint) int32;
-    @DllImport("user32.dll") private func GetClientRect(window nint, out rect BackdropWindowsRect) int32;
-    @DllImport("user32.dll") private func FillRect(dc nint, ref rect BackdropWindowsRect, brush nint) int32;
-    @DllImport("dwmapi.dll") private func DwmEnableBlurBehindWindow(window nint, ref blurBehind BackdropWindowsBlurBehind) int32;
     @DllImport("dwmapi.dll") private func DwmSetWindowAttribute(window nint, attribute uint32, ref value int32, size uint32) int32;
     @DllImport("dwmapi.dll") private func DwmExtendFrameIntoClientArea(window nint, ref margins BackdropWindowsMargins) int32;
     @DllImport("comctl32.dll") private func SetWindowSubclass(window nint, callback nint, id nuint, data nuint) int32;
