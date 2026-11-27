@@ -446,10 +446,11 @@ internal unsafe partial class VulkanWindowTarget {
     transparent bool, allowInherited bool, preferExtent bool,
     generationId uint64, oldSwapchain VkSwapchainKHR,
     previousComposition VulkanCompositionPresentation?) VulkanSwapchainCreationResult {
-    guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else {
+    let sdl = host as SdlHost?
+    let hwnd = sdl?.WindowsPresentationHandle ?? nint(0)
+    guard let selection = QuerySelection(requestedVsync, transparent, allowInherited, hwnd != nint(0)) else {
       return VulkanSwapchainCreationResult{SurfaceLost: true}
     }
-    let sdl = host as SdlHost?
     let alphaUnavailable = selection.CompositeAlpha == VkCompositeAlphaFlagBitsKHR(0)
     let opaquePopup = sdl?.IsPopup == true && (!transparent || alphaUnavailable)
     let compositeAlpha = if alphaUnavailable {
@@ -464,25 +465,21 @@ internal unsafe partial class VulkanWindowTarget {
     if extent.width == 0u || extent.height == 0u { return VulkanSwapchainCreationResult{} }
     let swapStart = DiagnosticTimestamp()
     var composition VulkanCompositionPresentation?
-    if transparent && (!alphaUnavailable || opaquePopup) {
-      if let active = runtime, let native = sdl {
-        composition = VulkanCompositionPresentation.TryCreate(active, native.WindowsPresentationHandle,
-          extent, requestedVsync, previousComposition, windowObjectAccounting)
+    if hwnd != nint(0) {
+      guard let active = runtime else { throw InvalidOperationException("Vulkan shared runtime is unavailable") }
+      let presenter = VulkanCompositionPresentation.Create(active, hwnd, extent, requestedVsync,
+        previousComposition, windowObjectAccounting)
+      composition = presenter
+      if Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1" {
+        Console.Error.WriteLine(if presenter.CpuCopy {
+          "Goo Windows presentation: DirectComposition, topmost=FALSE, CPU copy"
+        } else { "Goo Windows presentation: DirectComposition, topmost=FALSE, D3D11 shared texture and fence" })
       }
     }
-    if OperatingSystem.IsWindows() && transparent
-      && Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1" {
-      Console.Error.WriteLine(if composition != nil {
-        "Goo Windows presentation: DirectComposition, topmost=FALSE, D3D11 shared texture and fence"
-      } else { "Goo Windows presentation: Vulkan swapchain fallback, interop unavailable" })
-    }
-    let format = if composition != nil { VkSurfaceFormatKHR{
-      format: VkConstants.VK_FORMAT_B8G8R8A8_UNORM,
-      colorSpace: VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } } else { selection.Format }
     var next VulkanSwapchainGeneration
     try {
       next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
-        format, selection.PresentMode, extent,
+        selection.Format, selection.PresentMode, extent,
         compositeAlpha, oldSwapchain, generationId,
         swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
         windowObjectAccounting, diagnostics, composition,
@@ -526,7 +523,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func QuerySelection(requestedVsync bool, transparent bool,
-    allowInherited bool) VulkanWindowTargetSelection? {
+    allowInherited bool, composition bool) VulkanWindowTargetSelection? {
     var support VkBool32 = VkConstants.VK_FALSE
     let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
     let supportResult = surfaceSupport(physicalDevice, queueFamilyIndex, surface, &support)
@@ -538,6 +535,15 @@ internal unsafe partial class VulkanWindowTarget {
     if (capabilities.supportedUsageFlags & uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) == 0u {
       throw InvalidOperationException("Vulkan surface does not support color attachment swapchain images")
     }
+    if composition {
+      return VulkanWindowTargetSelection{
+        Capabilities: capabilities,
+        Format: VkSurfaceFormatKHR{format: VkConstants.VK_FORMAT_B8G8R8A8_UNORM,
+          colorSpace: VkConstants.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+        PresentMode: if requestedVsync { VkConstants.VK_PRESENT_MODE_FIFO_KHR } else { VkConstants.VK_PRESENT_MODE_IMMEDIATE_KHR },
+        CompositeAlpha: SelectCompositeAlpha(capabilities.supportedCompositeAlpha, false)}
+    }
+
     var formatCount uint32 = 0u
     let getFormats = instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR
     let formatCountResult = getFormats(physicalDevice, surface, &formatCount, nil)

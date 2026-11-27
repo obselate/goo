@@ -29,8 +29,17 @@ internal unsafe partial class SdlHost {
     let position = PopupWindow.PopupPosition(anchor, width, height, placement, scale)
     let flags = (BuildWindowFlags(transparent: true) & ~SDLWindowFlags.Resizable)
       | (kind == PopupKind.Menu ? SDLWindowFlags.PopupMenu : SDLWindowFlags.Tooltip)
-    window = SDL.CreatePopupWindow(parent.window, int32(position.X), int32(position.Y), width, height, uint64(flags))
-    if window.IsNull { ThrowSdl("SDL_CreatePopupWindow") }
+    if OperatingSystem.IsWindows() {
+      let properties = SDL.CreateProperties()
+      if properties == 0u { ThrowSdl("SDL_CreateProperties") }
+      try {
+        CreateCompositionWindow(properties, "", int32(position.X), int32(position.Y),
+          Math.Max(1, width), Math.Max(1, height), flags, parent)
+      } finally { SDL.DestroyProperties(properties) }
+    } else {
+      window = SDL.CreatePopupWindow(parent.window, int32(position.X), int32(position.Y), width, height, uint64(flags))
+      if window.IsNull { ThrowSdl("SDL_CreatePopupWindow") }
+    }
     if IsWayland() && !ConfigurePopupGrab(anchor, placement, scale) {
       throw PopupActivationException(SDL.GetErrorS())
     }

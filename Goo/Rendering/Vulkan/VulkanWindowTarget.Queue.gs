@@ -494,7 +494,6 @@ internal unsafe partial class VulkanWindowTarget {
       mailbox.PreparePresent(current.Handle, activeImageIndex,
         current.RenderSemaphore(activeImageIndex), pendingPresentFence, current.PresentFenceEnabled)
       mailbox.PresentComposition = current.Composition
-      mailbox.PresentCompositionValue = mailbox.SubmitSignalValue
       native?.PrepareLockPresent()
     } catch (error Exception) {
       frameFailed = true

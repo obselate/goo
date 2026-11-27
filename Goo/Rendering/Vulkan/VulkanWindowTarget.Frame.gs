@@ -45,7 +45,7 @@ internal unsafe partial class VulkanWindowTarget {
         throw InvalidOperationException("Vulkan swapchain image layout is invalid")
       }
       if let composition = current.Composition {
-        composition.RecordOwnership(slot.CommandBuffer, queueFamilyIndex, true,
+        composition.RecordBegin(slot.CommandBuffer, queueFamilyIndex,
           oldLayout == VkConstants.VK_IMAGE_LAYOUT_UNDEFINED)
       } else {
       VulkanTransitions.RecordImage(
@@ -98,7 +98,10 @@ internal unsafe partial class VulkanWindowTarget {
       endRendering(slot.CommandBuffer)
       EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Main)
       if let composition = current.Composition {
-        composition.RecordOwnership(slot.CommandBuffer, queueFamilyIndex, false)
+        if composition.CpuCopy {
+          composition.RecordReadback(slot.CommandBuffer, EnsureReadbackDispatch())
+          RecordDiagnosticBarrier()
+        } else { composition.RecordOwnership(slot.CommandBuffer, queueFamilyIndex, false) }
       } else {
       VulkanTransitions.RecordImage(
         slot.CommandBuffer,

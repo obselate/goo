@@ -39,47 +39,61 @@ internal unsafe sealed class WindowsCompositionDevice {
   internal var Device nint
   internal var Context nint
   internal var Factory nint
+  internal prop AdapterMatched bool { get; private set }
   private var composition nint
   private var target nint
   private var visual nint
   private var references int32 = 1
 
-  internal init(hwnd nint, luid uint64) {
+  internal init(hwnd nint, luid uint64?) {
     Initialize(hwnd, luid)
   }
 
-  private func Initialize(hwnd nint, luid uint64) {
+  private func Initialize(hwnd nint, luid uint64?) {
     var adapter nint
-    var immediate nint
-    var device nint
     var dxgi nint
     try {
-      var identifier = Guid("50c83a1c-e072-4c48-87b0-3630fa36a6d0")
-      Check(CreateDXGIFactory1(nint(&identifier), out var factory), "CreateDXGIFactory1")
-      Factory = factory
-      let enumerate = cast[unmanaged[Stdcall](nint, uint32, *nint) -> int32](Method(Factory, 12))
-      let description = stackalloc[312]uint8
-      for index in 0 ... 64 {
-        var candidate nint
-        let result = enumerate(Factory, uint32(index), &candidate)
-        if result == -2005270526 { break }
-        Check(result, "EnumAdapters1")
-        let describe = cast[unmanaged[Stdcall](nint, *uint8) -> int32](Method(candidate, 10))
-        fixed bytes *uint8 = description {
-          if describe(candidate, bytes) >= 0 && uint64(Marshal.ReadInt64(nint(bytes), 296)) == luid {
-            adapter = candidate
-            break
+      if let identifier = luid {
+        var factoryId = Guid("50c83a1c-e072-4c48-87b0-3630fa36a6d0")
+        Check(CreateDXGIFactory1(nint(&factoryId), out var factory), "CreateDXGIFactory1")
+        Factory = factory
+        let enumerate = cast[unmanaged[Stdcall](nint, uint32, *nint) -> int32](Method(Factory, 12))
+        let description = stackalloc[312]uint8
+        for index in 0 ... 64 {
+          var candidate nint
+          let result = enumerate(Factory, uint32(index), &candidate)
+          if result == -2005270526 { break }
+          Check(result, "EnumAdapters1")
+          let describe = cast[unmanaged[Stdcall](nint, *uint8) -> int32](Method(candidate, 10))
+          fixed bytes *uint8 = description {
+            if describe(candidate, bytes) >= 0 && uint64(Marshal.ReadInt64(nint(bytes), 296)) == identifier {
+              adapter = candidate
+              break
+            }
           }
+          Release(candidate)
         }
-        Release(candidate)
       }
-      if adapter == nint(0) { throw InvalidOperationException("No DXGI adapter matches the Vulkan device LUID") }
-      Check(D3D11CreateDevice(adapter, 0, nint(0), 0x20u, nint(0), 0u, 7u,
-        out device, out var selectedLevel, out immediate), "D3D11CreateDevice")
-      Device = Query(device, "8ffde202-a0e7-45df-9e01-e837801b5ea0")
-      Context = Query(immediate, "917600da-f58c-4c33-98d8-3e15b390fa24")
-      dxgi = Query(device, "54ec77fa-1377-44e6-8c32-88fd5f44c84c")
-      identifier = Guid("c37ea93a-e7aa-450d-b16f-9746cb0407f3")
+      AdapterMatched = adapter != nint(0)
+      var created = D3D11CreateDevice(adapter, if AdapterMatched { 0 } else { 1 }, nint(0), 0x20u, nint(0), 0u, 7u,
+        out Device, out var selectedLevel, out Context)
+      if created < 0 && !AdapterMatched {
+        created = D3D11CreateDevice(nint(0), 5, nint(0), 0x20u, nint(0), 0u, 7u,
+          out Device, out selectedLevel, out Context)
+      }
+      Check(created, "D3D11CreateDevice")
+      dxgi = Query(Device, "54ec77fa-1377-44e6-8c32-88fd5f44c84c")
+      if !AdapterMatched {
+        let getAdapter = cast[unmanaged[Stdcall](nint, *nint) -> int32](Method(dxgi, 7))
+        Check(getAdapter(dxgi, &adapter), "GetAdapter")
+        var factoryId = Guid("50c83a1c-e072-4c48-87b0-3630fa36a6d0")
+        let getParent = cast[unmanaged[Stdcall](nint, *Guid, *nint) -> int32](Method(adapter, 6))
+        var factory nint
+        Check(getParent(adapter, &factoryId, &factory), "GetParent")
+        Release(Factory)
+        Factory = factory
+      }
+      var identifier = Guid("c37ea93a-e7aa-450d-b16f-9746cb0407f3")
       Check(DCompositionCreateDevice(dxgi, nint(&identifier), out var compositionDevice), "DCompositionCreateDevice")
       composition = compositionDevice
       let createTarget = cast[unmanaged[Stdcall](nint, nint, int32, *nint) -> int32](Method(composition, 6))
@@ -93,8 +107,6 @@ internal unsafe sealed class WindowsCompositionDevice {
       rethrow
     } finally {
       Release(dxgi)
-      Release(immediate)
-      Release(device)
       Release(adapter)
     }
   }
@@ -104,11 +116,14 @@ internal unsafe sealed class WindowsCompositionDevice {
     return this
   }
 
-  internal func Attach(swapchain nint) {
-    let setContent = cast[unmanaged[Stdcall](nint, nint) -> int32](Method(visual, 15))
-    Check(setContent(visual, swapchain), "SetContent")
+  internal func Commit(swapchain nint) int32 {
+    if swapchain != nint(0) {
+      let setContent = cast[unmanaged[Stdcall](nint, nint) -> int32](Method(visual, 15))
+      let result = setContent(visual, swapchain)
+      if result < 0 { return result }
+    }
     let commit = cast[unmanaged[Stdcall](nint) -> int32](Method(composition, 3))
-    Check(commit(composition), "DirectComposition Commit")
+    return commit(composition)
   }
 
   internal func ReleaseReference() {
@@ -126,7 +141,7 @@ internal unsafe sealed class WindowsCompositionDevice {
     -> Marshal.ReadIntPtr(Marshal.ReadIntPtr(instance), index * nint.Size)
 
     internal func Check(result int32, operation string) {
-      if result < 0 { throw ExternalException(operation + " failed: 0x" + result.ToString("x8"), result) }
+      if result < 0 { throw COMException(operation + " failed: 0x" + result.ToString("x8"), result) }
     }
 
     internal func Query(instance nint, name string) nint {

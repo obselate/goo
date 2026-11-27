@@ -51,7 +51,6 @@ internal unsafe sealed class VulkanQueueMailbox {
   internal var PresentFence VkFence
   internal var PresentFenceEnabled bool
   internal var PresentComposition VulkanCompositionPresentation?
-  internal var PresentCompositionValue uint64
   internal var TraceId string?
   internal var TraceContext FrameTraceContext
 
@@ -289,7 +288,7 @@ internal unsafe sealed class VulkanQueueMailbox {
       return
     }
     if let composition = PresentComposition {
-      presentResult = composition.Present(PresentCompositionValue)
+      presentResult = composition.Present(SubmitSignalValue, SubmitSerial)
       Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.PresentComplete)
       return
     }

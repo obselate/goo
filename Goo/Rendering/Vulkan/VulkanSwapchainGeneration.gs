@@ -211,8 +211,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       this.swapchainMaintenanceEnabled = enablePresentFence
       objectAccounting = nativeObjectAccounting
       imageUsage = uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-      | (capabilities.supportedUsageFlags
-        &uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT))
+      | (if composition != nil { uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT) }
+        else { capabilities.supportedUsageFlags & uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT) })
       this.requestedImageCount = requestedImageCount
       Composition = composition
       OpaqueClear = opaqueClear

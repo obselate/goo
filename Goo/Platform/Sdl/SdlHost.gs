@@ -80,9 +80,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if driver == "wayland" { waylandWindowProperties = NativeProperties(windowHandle) }
         SdlRuntime.Register(windowId, Dispatch)
         BindNativeFocus()
-        if OperatingSystem.IsWindows() && Transparent {
-          WindowsBackdrop.SuppressTransparentErase(WindowsPresentationHandle)
-        }
         if popupParent == nil && layerWindow == nil && lockWindow == nil {
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
@@ -148,7 +145,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public prop Transparent bool{
     get {
       ThrowIfDisposed()
-      return (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Transparent)) != 0uL
+      return compositionWindow != nint(0) || (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Transparent)) != 0uL
     }
   }
   public prop VSync bool{ get -> vsync }
@@ -589,9 +586,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if OperatingSystem.IsWindows() && popupParent != nil && popupKind == PopupKind.Menu {
           SDL.HideWindow(window)
         }
+        if compositionWindow != nint(0) { WindowsBackdrop.RemoveCaptionSubclass(compositionWindow) }
         SDL.DestroyWindow(window)
         window = SDLWindowPtr.Null
         windowHandle = nint(0)
+      }
+      if compositionWindow != nint(0) {
+        DestroyCompositionWindow(compositionWindow)
+        compositionWindow = nint(0)
       }
       if windowsSmallIcon != nint(0) { DestroyWindowIcon(windowsSmallIcon) }
       if windowsLargeIcon != nint(0) { DestroyWindowIcon(windowsLargeIcon) }
@@ -675,11 +677,16 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", int64(bounds.Height)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.x", int64(bounds.X)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.y", int64(bounds.Y)), "SDL_SetNumberProperty")
-        Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
-        if waylandVulkanFrame {
-          Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.VulkanFrame.1", true), "SDL_SetBooleanProperty")
+        if OperatingSystem.IsWindows() && transparent {
+          CreateCompositionWindow(properties, title, int32(bounds.X), int32(bounds.Y),
+            Math.Max(1, int32(bounds.Width)), Math.Max(1, int32(bounds.Height)), flags)
+        } else {
+          Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
+          if waylandVulkanFrame {
+            Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.VulkanFrame.1", true), "SDL_SetBooleanProperty")
+          }
+          window = SDL.CreateWindowWithProperties(properties)
         }
-        window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
       if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
       if decorated && !IsWayland() {
