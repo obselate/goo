@@ -131,16 +131,7 @@ class SelfTest {
             let badge = host.BadgeRect
             let corner = int32(Math.Round(SpikeTheme.BadgeRadius * host.Scale))
             let border = int32(Math.Round(SpikeTheme.BorderWidth * host.Scale))
-            let image = Path.Combine(directory, "overlay.bmp")
-            let captured = TaskCompletionSource[[]uint8](TaskCreationOptions.RunContinuationsAsynchronously)
-            go {
-                try {
-                    captured.SetResult(ScreenCapture.Capture(client, image))
-                } catch (error Exception) {
-                    captured.SetException(error)
-                }
-            }
-            let pixels = await captured.Task
+            let pixels = await Capture(client, "overlay.bmp")
             let overWebView = ScreenCapture.Count(
                 pixels,
                 client.Width,
@@ -153,12 +144,13 @@ class SelfTest {
                 PixelRect(badge.Left + corner, badge.Top + corner / 2, region.Left - border - corner, badge.Top + corner),
                 Over(SpikeTheme.Panel)
             )
-            let outside = ScreenCapture.Count(
-                pixels,
-                client.Width,
-                PixelRect(badge.Right + corner, region.Top + corner, region.Right - corner, region.Bottom - corner),
-                Rgb(SpikeTheme.Cyan)
+            let outsideRect = PixelRect(
+                badge.Right + corner,
+                region.Top + corner,
+                region.Right - corner,
+                region.Bottom - corner
             )
+            let outside = ScreenCapture.Count(pixels, client.Width, outsideRect, Rgb(SpikeTheme.Cyan))
             let record = Record(step)
             record["overlayDriver"] = host.OverlayDriver
             record["badgeRectClient"] = badge.Coordinates()
@@ -166,26 +158,39 @@ class SelfTest {
             record["overWebViewSampledMatched"] = []int32{overWebView.Sampled, overWebView.Matched}
             record["overGooSampledMatched"] = []int32{overGoo.Sampled, overGoo.Matched}
             record["outsideSampledMatched"] = []int32{outside.Sampled, outside.Matched}
-            record["image"] = Path.GetFileName(image)
+            record["image"] = "overlay.bmp"
             Check(record, "overlay_over_webview", overWebView.Ratio >= Threshold)
             Check(record, "overlay_over_goo", overGoo.Ratio >= Threshold)
             Check(record, "webview_outside_overlay", outside.Ratio >= Threshold)
             let message = host.Message
             let x = (region.Left + badge.Right) / 2
             let y = (badge.Top + badge.Bottom) / 2
-            let point = nint((y << 16) | (x & 0xFFFF))
             record["clickPointClient"] = []int32{x, y}
-            Native.Require(Native.PostMessageW(host.Hwnd, Native.MouseMoveMessage, nuint(0), point) != 0, "WM_MOUSEMOVE")
-            Native.Require(
-                Native.PostMessageW(host.Hwnd, Native.LeftButtonDownMessage, nuint(1), point) != 0,
-                "WM_LBUTTONDOWN"
-            )
-            Native.Require(Native.PostMessageW(host.Hwnd, Native.LeftButtonUpMessage, nuint(0), point) != 0, "WM_LBUTTONUP")
+            PostClick(x, y)
             await WaitUntil(() -> host.BadgePresses > 0, "the badge press in Goo")
             await Task.Delay(500)
             record["badgePresses"] = host.BadgePresses
             record["webMessage"] = host.Message
             Check(record, "overlay_click_reaches_goo", host.Message == message)
+            let webX = region.Right - region.Width / 4
+            let webY = (region.Top + region.Bottom) / 2
+            record["webViewClickPointClient"] = []int32{webX, webY}
+            PostClick(webX, webY)
+            await WaitUntil(() -> host.Message != message, "the web message after the click through Goo")
+            await Task.Delay(500)
+            let throughGoo = ScreenCapture.Count(
+                await Capture(client, "overlay-webview-click.bmp"),
+                client.Width,
+                outsideRect,
+                Rgb(SpikeTheme.Magenta)
+            )
+            record["webViewClickMessage"] = host.Message
+            record["webViewClickSampledMatched"] = []int32{throughGoo.Sampled, throughGoo.Matched}
+            Check(
+                record,
+                "webview_click_through_goo",
+                host.Message == "clicked:#FF00FF" && throughGoo.Ratio >= Threshold
+            )
             ExitCode = failures.Count == 0 ? 0 : 1
         } catch (error Exception) {
             let record = Record("exception")
@@ -317,6 +322,29 @@ class SelfTest {
             }
             await Task.Delay(50)
         }
+    }
+
+    private func Capture(area PixelRect, name string) Task[[]uint8] {
+        let path = Path.Combine(directory, name)
+        let captured = TaskCompletionSource[[]uint8](TaskCreationOptions.RunContinuationsAsynchronously)
+        go {
+            try {
+                captured.SetResult(ScreenCapture.Capture(area, path))
+            } catch (error Exception) {
+                captured.SetException(error)
+            }
+        }
+        return captured.Task
+    }
+
+    private func PostClick(x int32, y int32) {
+        let point = nint((y << 16) | (x & 0xFFFF))
+        Native.Require(Native.PostMessageW(host.Hwnd, Native.MouseMoveMessage, nuint(0), point) != 0, "WM_MOUSEMOVE")
+        Native.Require(
+            Native.PostMessageW(host.Hwnd, Native.LeftButtonDownMessage, nuint(1), point) != 0,
+            "WM_LBUTTONDOWN"
+        )
+        Native.Require(Native.PostMessageW(host.Hwnd, Native.LeftButtonUpMessage, nuint(0), point) != 0, "WM_LBUTTONUP")
     }
 
     private func Rgb(color Color) uint32 -> (uint32(Math.Round(color.R * 255.0F)) << 16)
