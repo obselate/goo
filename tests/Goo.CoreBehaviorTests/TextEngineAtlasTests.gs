@@ -24,15 +24,18 @@ internal class MockHybridTextProvider : VulkanTextProvider {
     internal var BitmapRgbaByGlyph Dictionary[uint32, []uint8] = Dictionary[uint32, []uint8]()
     internal var BitmapSizeByGlyph Dictionary[uint32, int32] = Dictionary[uint32, int32]()
     internal var RequireGrowthFirstCallGlyphs HashSet[uint32] = HashSet[uint32]()
+    internal var EmptyInkGlyphs HashSet[uint32] = HashSet[uint32]()
+    internal var HintingEnabled bool
     private let growthTriggered HashSet[uint32] = HashSet[uint32]()
 
     internal var EncodeDrawCallCount int32
     internal var EncodePaintCallCount int32
     internal var LastBitmapPpem int32
+    internal var LastHintPpem int32 = -1
 
     public prop AbiVersion uint32{ get -> VulkanTextProviderAbi.Version }
     public prop Metrics VulkanHarfBuzzMetrics{ get -> MetricsValue }
-    public prop OutlineHintingAvailable bool{ get -> false }
+    public prop OutlineHintingAvailable bool{ get -> HintingEnabled }
 
     public func ShapeInto(text string, options VulkanTextShapingOptions,
         workspace VulkanTextShapingWorkspace) VulkanTextProviderResult -> VulkanTextProviderResult{
@@ -58,6 +61,17 @@ internal class MockHybridTextProvider : VulkanTextProvider {
     public func EncodeGlyphInto(glyphId uint32,
         workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult {
         EncodeDrawCallCount = EncodeDrawCallCount + 1
+        LastHintPpem = ppem
+        if EmptyInkGlyphs.Contains(glyphId) {
+            workspace.Reset()
+            workspace.SetEncoding(0, VulkanTextGlyphExtents{}, 1000, 0u)
+            return VulkanTextProviderResult{
+                AbiVersion: VulkanTextProviderAbi.Version,
+                Status: VulkanTextProviderAbi.Success,
+                Count: 0,
+                Required: 0,
+            }
+        }
         if UnboundedCapacityGlyphs.Contains(glyphId) {
             return VulkanTextProviderResult{
                 AbiVersion: VulkanTextProviderAbi.Version,
@@ -640,5 +654,141 @@ class TextEngineAtlasTests {
         scene.TouchColorAtlasImage(imageId)
         colorAtlas.MarkUsed(7uL)
         Assert.Equal(1, colorAtlas.ActivePageCount)
+    }
+
+    @Fact
+    func PerProviderGlyphCacheHintPpemQuantizationAndO1AtlasSlotValidation() {
+        using let atlasSet = VulkanTextAtlasSet(8192uL, allowGrowth: true)
+        let scene = VulkanTextScene(atlasSet)
+        let providerA = MockHybridTextProvider()
+        providerA.HintingEnabled = true
+        providerA.DrawBytesByGlyph[7u] = 4096
+        providerA.DrawBytesByGlyph[8u] = 8192
+        let providerB = MockHybridTextProvider()
+        providerB.HintingEnabled = true
+        providerB.DrawBytesByGlyph[7u] = 2048
+
+        using let shapeA7 = BuildSingleRunShape(providerA, []uint32{ 7u })
+        using let shapeB7 = BuildSingleRunShape(providerB, []uint32{ 7u })
+        using let shapeA8 = BuildSingleRunShape(providerA, []uint32{ 8u })
+
+        // 14.3px quantizes HintPpem to integer device 14px; providerA caches independently of providerB despite same family string.
+        let frame1 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame1.BeginChunk(1uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame1, shapeA7, 14.3F, 0.0F, 14.3F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame1.EndChunk()
+        Assert.Equal(14, providerA.LastHintPpem)
+        Assert.Equal(1, providerA.EncodeDrawCallCount)
+        Assert.Equal(1, scene.CachedGlyphCountForProof)
+
+        let frame2 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame2.BeginChunk(2uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame2, shapeB7, 14.3F, 0.0F, 14.3F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame2.EndChunk()
+        Assert.Equal(14, providerB.LastHintPpem)
+        Assert.Equal(1, providerB.EncodeDrawCallCount)
+        Assert.Equal(2, scene.CachedGlyphCountForProof)
+
+        // Repeat on providerA hits per-provider integer cache without re-encoding.
+        let frame3 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame3.BeginChunk(3uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame3, shapeA7, 14.3F, 0.0F, 14.3F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame3.EndChunk()
+        Assert.Equal(1, providerA.EncodeDrawCallCount)
+
+        // HintPpem enables up to 32px and disables (0) above 32px.
+        let frame32 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame32.BeginChunk(4uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame32, shapeA7, 32.0F, 0.0F, 32.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame32.EndChunk()
+        Assert.Equal(32, providerA.LastHintPpem)
+
+        let frame33 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame33.BeginChunk(5uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 120.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame33, shapeA7, 33.0F, 0.0F, 33.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame33.EndChunk()
+        Assert.Equal(0, providerA.LastHintPpem)
+
+        // Allocate glyph 8 onto page 1 (slot 1), leaving page 0 inactive, then evict page 0 and verify O(1) slot invalidation + re-pack.
+        let framePage1 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        framePage1.BeginChunk(6uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            framePage1, shapeA8, 33.0F, 0.0F, 33.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        framePage1.EndChunk()
+        Assert.True(atlasSet.AtlasCount >= 2)
+        scene.Evict(0)
+
+        let encodeCountBeforeEvictReemit = providerA.EncodeDrawCallCount
+        let frameAfterEvict = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frameAfterEvict.BeginChunk(7uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frameAfterEvict, shapeA7, 14.3F, 0.0F, 14.3F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frameAfterEvict.EndChunk()
+        Assert.True(providerA.EncodeDrawCallCount > encodeCountBeforeEvictReemit)
+        let reemittedRun = frameAfterEvict.CachedTextSegments[0].Segment!!.Runs[0]
+        Assert.True(reemittedRun.AtlasSlotHint >= 0)
+        Assert.Equal(reemittedRun.AtlasSlotHint, scene.ResolveAtlasSlot(reemittedRun.AtlasId, reemittedRun.AtlasSlotHint))
+    }
+
+    @Fact
+    func WhitespaceEmptyInkSkippedAndOneResourceRefPerRunAtlas() {
+        using let atlasSet = VulkanTextAtlasSet(8192uL, allowGrowth: true)
+        let scene = VulkanTextScene(atlasSet)
+        let provider = MockHybridTextProvider()
+        provider.EmptyInkGlyphs.Add(11u)
+        provider.DrawBytesByGlyph[10u] = 128
+        provider.DrawBytesByGlyph[12u] = 128
+        provider.DrawBytesByGlyph[13u] = 8192
+
+        using let shape = BuildSingleRunShape(provider, []uint32{ 10u, 11u, 12u, 13u })
+        let segmentCache = VulkanTextNodeSegmentCache()
+        let frame = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame.BeginChunk(1uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 240.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame, shape, 24.0F, 0.0F, 24.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil, segmentCache
+        ))
+        frame.EndChunk()
+
+        Assert.Equal(1, frame.CachedTextSegmentCount)
+        let seg = frame.CachedTextSegments[0].Segment!!
+        Assert.Equal(3, seg.RecordCount)
+        Assert.Equal(3, seg.GlyphCount)
+        Assert.Equal(2, seg.RunCount)
+        Assert.Equal(2, frame.ResourceRefCount)
+        Assert.Equal(seg.Runs[0].AtlasId, frame.ResourceRefs[0])
+        Assert.Equal(seg.Runs[1].AtlasId, frame.ResourceRefs[1])
+        Assert.Equal(0uL, scene.FallbackGlyphSkipCount)
+        Assert.Equal(4, provider.EncodeDrawCallCount)
+
+        // Re-emitting cached segment uses EmptyInk cache entry without re-encoding whitespace.
+        let frame2 = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame2.BeginChunk(2uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 240.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame2, shape, 24.0F, 0.0F, 24.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil, segmentCache
+        ))
+        frame2.EndChunk()
+        Assert.Equal(4, provider.EncodeDrawCallCount)
+        Assert.Equal(2, frame2.ResourceRefCount)
     }
 }

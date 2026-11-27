@@ -85,26 +85,14 @@ internal partial class VulkanSceneCompiler {
         if reference.ClipChainId != 0
           || reference.ClipChainId != segment.ClipChainId
           || !ValidSegmentReference(value, segment)
-          || segment.GlyphCount > Int32.MaxValue - segment.RunCount{
+          || segment.RunCount > Int32.MaxValue - expectedResources {
             return false
           }
-        let segmentResourceCount = segment.GlyphCount + segment.RunCount
+        let segmentResourceCount = segment.RunCount
         if expectedResources > chunk.ResourceCount
           || segmentResourceCount > chunk.ResourceCount - expectedResources{
             return false
           }
-        var glyphIndex int32 = 0
-        while glyphIndex < segment.GlyphCount {
-          if !segment.GlyphResources[glyphIndex].IsValid
-            || segment.GlyphResources[glyphIndex].Kind != SceneResourceKind.GlyphRun
-            || !SameResource(
-              frame.ResourceRefs[chunk.FirstResource + expectedResources],
-              segment.GlyphResources[glyphIndex]) {
-                return false
-              }
-          expectedResources = expectedResources + 1
-          glyphIndex = glyphIndex + 1
-        }
         var runIndex int32 = 0
         while runIndex < segment.RunCount {
           let run = segment.Runs[runIndex]
@@ -221,7 +209,11 @@ internal partial class VulkanSceneCompiler {
         Height: clipViewportHeight,
       }
       if context.ParentRectClipDepth == 0 {
-        return context.ParentTransformIndex == -1 && context.ParentRectClipIndex == -1
+        if context.ParentRectClipIndex != -1 {
+          return false
+        }
+        let parentTransform = ResolveCompilerFrameTransform(context.ParentTransformIndex)
+        return RetainedTextUnitTranslation(parentTransform)
           && ExactBounds(context.ActiveClipBounds, viewport)
       }
       if context.ParentRectClipDepth != 1 || context.ParentRectClipIndex < 0
@@ -288,6 +280,13 @@ internal partial class VulkanSceneCompiler {
         return false
       }
       let parentTransform = ResolveCompilerFrameTransform(parentTransformIndex)
+      let isTextNode = node.Kind == NodeKind.Text
+      let contentLeft = isTextNode ? BoxGeometry.ContentLeft(node) : 0.0F
+      let contentTop = isTextNode ? BoxGeometry.ContentTop(node) : 0.0F
+      let contentWidth = isTextNode ? BoxGeometry.ContentWidth(node) : 0.0F
+      let lineHeight = isTextNode ? TextLayouts.resolvedLineHeight(node) : 0.0F
+      let richSignature = isTextNode ? PassiveTextPresentations.Signature(node) : 0uL
+      let currentLayout = isTextNode ? node.TextLayout : nil
       if !Object.ReferenceEquals(owner.RetainedTextContent,
         RetainedTextContent(node))
         || owner.RetainedTextPaintVersion != node.ScenePaintVersion
@@ -304,6 +303,23 @@ internal partial class VulkanSceneCompiler {
           InvalidateRetainedText(owner)
           return false
         }
+      if isTextNode {
+        guard let retainedLayout = owner.RetainedTextLayout else {
+          InvalidateRetainedText(owner)
+          return false
+        }
+        if !Object.ReferenceEquals(retainedLayout, currentLayout)
+          || !ExactFloat(owner.RetainedTextContentX, contentLeft)
+          || !ExactFloat(owner.RetainedTextContentY, contentTop)
+          || !ExactFloat(owner.RetainedTextContentWidth, contentWidth)
+          || !ExactFloat(owner.RetainedTextLineHeight, lineHeight)
+          || owner.RetainedTextAlign != node.TextAlign
+          || owner.RetainedTextRichSignature != richSignature
+          || !TextLayouts.matches(retainedLayout, node, contentWidth, nil, richSignature) {
+            InvalidateRetainedText(owner)
+            return false
+          }
+      }
       guard let snapshot = Snapshot(owner) else {
         InvalidateRetainedText(owner)
         return false
@@ -347,36 +363,27 @@ internal partial class VulkanSceneCompiler {
           return false
         }
         if !ValidSegmentReference(value, segment)
-          || segment.GlyphCount > Int32.MaxValue - segment.RunCount{
+          || segment.RunCount > Int32.MaxValue - expectedResources {
             return false
           }
-        let segmentResourceCount = segment.GlyphCount + segment.RunCount
+        let segmentResourceCount = segment.RunCount
         if expectedResources > snapshot.ResourceCount
           || segmentResourceCount > snapshot.ResourceCount - expectedResources{
             return false
           }
-        var glyphIndex int32 = 0
-        while glyphIndex < segment.GlyphCount {
-          let resource = segment.GlyphResources[glyphIndex]
-          if !resource.IsValid || resource.Kind != SceneResourceKind.GlyphRun {
-            return false
-          }
-          expectedResources = expectedResources + 1
-          glyphIndex = glyphIndex + 1
-        }
         var glyphBase int32 = 0
         var runIndex int32 = 0
         while runIndex < segment.RunCount {
           let run = segment.Runs[runIndex]
           if run.InstanceCount > segment.GlyphCount - glyphBase
-            || !scene.TryMarkAtlasActive(run.AtlasId) {
+            || !scene.TryMarkAtlasActive(run.AtlasId, run.AtlasSlotHint) {
               return false
             }
           expectedResources = expectedResources + 1
           let runEnd = glyphBase + run.InstanceCount
           if run.ByteRangeEnd == 0uL
             || !scene.IsAtlasRangeResident(
-              run.AtlasId, run.ByteRangeEnd) {
+              run.AtlasId, run.ByteRangeEnd, run.AtlasSlotHint) {
                 return false
               }
           glyphBase = runEnd
@@ -402,6 +409,7 @@ internal partial class VulkanSceneCompiler {
         throw InvalidOperationException("Vulkan retained text scene is unavailable")
       }
       let parentTransform = ResolveCompilerFrameTransform(parentTransformIndex)
+      let isTextNode = node.Kind == NodeKind.Text
       owner.RetainedTextContent = RetainedTextContent(node)
       owner.RetainedTextPaintVersion = node.ScenePaintVersion
       owner.RetainedTextFontRegistryGeneration = RetainedTextFontGeneration(node)
@@ -414,6 +422,13 @@ internal partial class VulkanSceneCompiler {
       owner.RetainedTextParentTranslateY = parentTransform.TY
       owner.RetainedTextClipDepth = parentClipDepth
       owner.RetainedTextClipBounds = activeClipBounds
+      owner.RetainedTextLayout = isTextNode ? node.TextLayout : nil
+      owner.RetainedTextContentX = isTextNode ? BoxGeometry.ContentLeft(node) : 0.0F
+      owner.RetainedTextContentY = isTextNode ? BoxGeometry.ContentTop(node) : 0.0F
+      owner.RetainedTextContentWidth = isTextNode ? BoxGeometry.ContentWidth(node) : 0.0F
+      owner.RetainedTextLineHeight = isTextNode ? TextLayouts.resolvedLineHeight(node) : 0.0F
+      owner.RetainedTextAlign = isTextNode ? node.TextAlign : TextAlign.Start
+      owner.RetainedTextRichSignature = isTextNode ? PassiveTextPresentations.Signature(node) : 0uL
       owner.RetainedTextValid = true
     }
 

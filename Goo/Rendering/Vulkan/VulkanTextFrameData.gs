@@ -38,6 +38,36 @@ internal data struct VulkanTextFrameStats {
   var TotalPrepared uint64
 }
 
+internal class VulkanTextResidentRangeMatcher {
+  shared {
+    internal func MatchesCandidate(
+      historyIds []uint64,
+      historyVersions []uint64,
+      historyFirstInstances []int32,
+      historyRecordCounts []int32,
+      historyClipChains []int32,
+      historySegmentCount int32,
+      candidateId uint64,
+      candidateVersion uint64,
+      candFirst int32,
+      candidateRecordCount int32,
+      candidateClipChain int32,
+      ref historyIndex int32) bool {
+        while historyIndex < historySegmentCount && historyFirstInstances[historyIndex] < candFirst {
+          historyIndex = historyIndex + 1
+        }
+        if historyIndex >= historySegmentCount {
+          return false
+        }
+        return historyFirstInstances[historyIndex] == candFirst
+          && historyIds[historyIndex] == candidateId
+          && historyVersions[historyIndex] == candidateVersion
+          && historyRecordCounts[historyIndex] == candidateRecordCount
+          && historyClipChains[historyIndex] == candidateClipChain
+      }
+  }
+}
+
 internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
   internal var Buffers VulkanFrameBuffers
   internal var Lifecycle VulkanFrameSlotLifecycle
@@ -47,12 +77,14 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
   internal var CandidateVersions []uint64
   internal var CandidateFirstInstances []int32
   internal var CandidateRecordCounts []int32
+  internal var CandidateClipChains []int32
   internal var CandidateSegmentCount int32
   internal var CandidateTopologyKey uint64
   internal var HistoryIds []uint64
   internal var HistoryVersions []uint64
   internal var HistoryFirstInstances []int32
   internal var HistoryRecordCounts []int32
+  internal var HistoryClipChains []int32
   internal var HistorySegmentCount int32
   internal var HistoryTopologyKey uint64
   internal var HistoryBufferGeneration uint64
@@ -74,10 +106,12 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
       CandidateVersions = [0]uint64
       CandidateFirstInstances = [0]int32
       CandidateRecordCounts = [0]int32
+      CandidateClipChains = [0]int32
       HistoryIds = [0]uint64
       HistoryVersions = [0]uint64
       HistoryFirstInstances = [0]int32
       HistoryRecordCounts = [0]int32
+      HistoryClipChains = [0]int32
       PreparedRanges = [0]VkBufferCopy
     }
 
@@ -111,36 +145,57 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
     let candidateVersions = [next]uint64
     let candidateFirstInstances = [next]int32
     let candidateRecordCounts = [next]int32
+    let candidateClipChains = [next]int32
     var index int32 = 0
     while index < CandidateIds.Length {
       candidateIds[index] = CandidateIds[index]
       candidateVersions[index] = CandidateVersions[index]
       candidateFirstInstances[index] = CandidateFirstInstances[index]
       candidateRecordCounts[index] = CandidateRecordCounts[index]
+      candidateClipChains[index] = CandidateClipChains[index]
       index = index + 1
     }
     CandidateIds = candidateIds
     CandidateVersions = candidateVersions
     CandidateFirstInstances = candidateFirstInstances
     CandidateRecordCounts = candidateRecordCounts
+    CandidateClipChains = candidateClipChains
 
     let historyIds = [next]uint64
     let historyVersions = [next]uint64
     let historyFirstInstances = [next]int32
     let historyRecordCounts = [next]int32
+    let historyClipChains = [next]int32
     index = 0
     while index < HistoryIds.Length {
       historyIds[index] = HistoryIds[index]
       historyVersions[index] = HistoryVersions[index]
       historyFirstInstances[index] = HistoryFirstInstances[index]
       historyRecordCounts[index] = HistoryRecordCounts[index]
+      historyClipChains[index] = HistoryClipChains[index]
       index = index + 1
     }
     HistoryIds = historyIds
     HistoryVersions = historyVersions
     HistoryFirstInstances = historyFirstInstances
     HistoryRecordCounts = historyRecordCounts
+    HistoryClipChains = historyClipChains
   }
+
+  internal func SegmentMatchesHistory(candidateIndex int32, ref historyIndex int32) bool ->
+  VulkanTextResidentRangeMatcher.MatchesCandidate(
+    HistoryIds,
+    HistoryVersions,
+    HistoryFirstInstances,
+    HistoryRecordCounts,
+    HistoryClipChains,
+    HistorySegmentCount,
+    CandidateIds[candidateIndex],
+    CandidateVersions[candidateIndex],
+    CandidateFirstInstances[candidateIndex],
+    CandidateRecordCounts[candidateIndex],
+    CandidateClipChains[candidateIndex],
+    ref historyIndex)
 
   internal func EnsureRangeCapacity(rangeCount int32) {
     PreparedRanges = GrowArray(PreparedRanges, PreparedRanges.Length, rangeCount, 8)
@@ -382,6 +437,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           slot.CandidateVersions[candidateIndex] = segment.Version
           slot.CandidateFirstInstances[candidateIndex] = recordCount
           slot.CandidateRecordCounts[candidateIndex] = segment.RecordCount
+          slot.CandidateClipChains[candidateIndex] = drawRef.ClipChainId
           slot.CandidateSegmentCount = nextSegmentCount
           slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey, segment.Id)
           slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey,
@@ -415,13 +471,13 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       }
       slot.EnsureCapacity(backingBytes, completedSubmissionSerial)
       slot.EnsureRangeCapacity(slot.CandidateSegmentCount)
-      let fullUpload = !slot.HistoryValid
-        || slot.HistoryBufferGeneration != slot.Buffers.Generation
-        || !TopologyMatches(slot)
+      let canReuseResident = slot.HistoryValid
+        && slot.HistoryBufferGeneration == slot.Buffers.Generation
       slot.PreparedRangeCount = 0
       var dirtySegmentCount int32 = 0
       var dirtyRecordCount int32 = 0
       var textIndex int32 = 0
+      var historyIndex int32 = 0
       var rangeStart int32 = -1
       drawIndex = 0
       while drawIndex < frame.DrawRefCount {
@@ -431,9 +487,8 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           guard let segment = reference.Segment else {
             throw InvalidOperationException("cached text segment validation failed")
           }
-          let dirty = fullUpload
-            || slot.CandidateVersions[textIndex] != slot.HistoryVersions[textIndex]
-            || !SegmentClipMatches(slot, slot.CandidateFirstInstances[textIndex], drawRef.ClipChainId)
+          let dirty = !canReuseResident
+            || !slot.SegmentMatchesHistory(textIndex, ref historyIndex)
           if dirty {
             dirtySegmentCount = AddInt32(dirtySegmentCount, 1,
               "dirty text segment count")
@@ -456,6 +511,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       if rangeStart >= 0 {
         AppendRange(slot, rangeStart, recordCount - rangeStart)
       }
+      let fullUpload = dirtyRecordCount == recordCount && (recordCount > 0 || !canReuseResident)
       let writtenBytes = uint64(dirtyRecordCount) * RecordBytes
       let skippedBytes = logicalBytes - writtenBytes
       let retainedReuse = uint64(recordCount - dirtyRecordCount)
@@ -658,6 +714,9 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       return
     }
     let slot = slots[slotIndex]
+    if slot.PreparedRangeCount > 0 {
+      slot.InvalidateHistory()
+    }
     slot.Lifecycle.Abort()
     slot.PreparedByteCount = 0uL
     slot.PreparedRecordCount = 0
@@ -757,28 +816,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       return segment
     }
 
-  private func TopologyMatches(slot VulkanTextFrameSlot) bool {
-    if !slot.HistoryValid
-      || slot.HistorySegmentCount != slot.CandidateSegmentCount{
-        return false
-      }
-    var index int32 = 0
-    while index < slot.CandidateSegmentCount {
-      if slot.HistoryIds[index] != slot.CandidateIds[index]
-        || slot.HistoryFirstInstances[index] != slot.CandidateFirstInstances[index]
-        || slot.HistoryRecordCounts[index] != slot.CandidateRecordCounts[index]{
-          return false
-        }
-      index = index + 1
-    }
-    return true
-  }
-
-  private func SegmentClipMatches(slot VulkanTextFrameSlot, first int32, clipChainId int32) bool {
-    let records = *HbGpuTextInstanceRecord(slot.Buffers.Mapped)
-    return records[first].glyphInput_z == uint32(clipChainId)
-  }
-
   private func CopySegmentRecords(slot VulkanTextFrameSlot,
     segment VulkanRetainedTextSegment, destinationFirst int32, recordCount int32, clipChainId int32) {
       if destinationFirst < 0 || recordCount <= 0
@@ -831,6 +868,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       slot.HistoryVersions[index] = slot.CandidateVersions[index]
       slot.HistoryFirstInstances[index] = slot.CandidateFirstInstances[index]
       slot.HistoryRecordCounts[index] = slot.CandidateRecordCounts[index]
+      slot.HistoryClipChains[index] = slot.CandidateClipChains[index]
       index = index + 1
     }
     slot.HistorySegmentCount = slot.CandidateSegmentCount

@@ -184,6 +184,13 @@ internal class VulkanSceneTextState {
   internal var RetainedTextParentTranslateY float32
   internal var RetainedTextClipDepth int32
   internal var RetainedTextClipBounds ConservativeBounds
+  internal var RetainedTextLayout TextLayout?
+  internal var RetainedTextContentX float32
+  internal var RetainedTextContentY float32
+  internal var RetainedTextContentWidth float32
+  internal var RetainedTextLineHeight float32
+  internal var RetainedTextAlign TextAlign
+  internal var RetainedTextRichSignature uint64
   internal var RetainedTextSnapshot VulkanRetainedTextSnapshot?
   internal var CachedTextPaintLayout TextLayout?
   internal var CachedTextPaintBounds ConservativeBounds
@@ -287,6 +294,37 @@ internal class VulkanSceneOwnerId {
   internal prop RetainedTextClipBounds ConservativeBounds{
     get -> textState?.RetainedTextClipBounds ?? default(ConservativeBounds)
     set -> EnsureTextState().RetainedTextClipBounds = value
+  }
+  internal prop RetainedTextLayout TextLayout?{
+    get -> textState?.RetainedTextLayout
+    set {
+      if textState == nil && value == nil { return }
+      EnsureTextState().RetainedTextLayout = value
+    }
+  }
+  internal prop RetainedTextContentX float32{
+    get -> textState?.RetainedTextContentX ?? 0.0F
+    set -> EnsureTextState().RetainedTextContentX = value
+  }
+  internal prop RetainedTextContentY float32{
+    get -> textState?.RetainedTextContentY ?? 0.0F
+    set -> EnsureTextState().RetainedTextContentY = value
+  }
+  internal prop RetainedTextContentWidth float32{
+    get -> textState?.RetainedTextContentWidth ?? 0.0F
+    set -> EnsureTextState().RetainedTextContentWidth = value
+  }
+  internal prop RetainedTextLineHeight float32{
+    get -> textState?.RetainedTextLineHeight ?? 0.0F
+    set -> EnsureTextState().RetainedTextLineHeight = value
+  }
+  internal prop RetainedTextAlign TextAlign{
+    get -> textState?.RetainedTextAlign ?? TextAlign.Start
+    set -> EnsureTextState().RetainedTextAlign = value
+  }
+  internal prop RetainedTextRichSignature uint64{
+    get -> textState?.RetainedTextRichSignature ?? 0uL
+    set -> EnsureTextState().RetainedTextRichSignature = value
   }
   internal prop RetainedTextSnapshot VulkanRetainedTextSnapshot?{
     get -> textState?.RetainedTextSnapshot
@@ -407,6 +445,7 @@ internal class VulkanSceneOwnerId {
     if let state = textState {
       state.RetainedTextValid = false
       state.RetainedTextContent = nil
+      state.RetainedTextLayout = nil
     }
   }
 

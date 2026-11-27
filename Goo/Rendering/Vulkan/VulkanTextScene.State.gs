@@ -4,37 +4,23 @@ import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
-internal struct VulkanTextAtlasGlyphKey : IEquatable[VulkanTextAtlasGlyphKey] {
-  internal prop Family string{ get; init; }
-  internal prop Provider VulkanTextProvider{ get; init; }
-  internal prop GlyphId uint32{ get; init; }
-  internal prop Ppem int32{ get; init; }
-  internal prop RenderMode uint32{ get; init; }
+internal func PackVulkanTextGlyphKey(glyphId uint32, ppem int32, renderMode uint32) uint64 {
+  let clampedPpem = if ppem <= 0 { 0uL } else if ppem > 0xFFFFFF { 0xFFFFFFuL } else { uint64(uint32(ppem)) }
+  return uint64(glyphId) | (clampedPpem << 32) | (uint64(renderMode & 0xFFu) << 56)
+}
 
-  internal init(family string, provider VulkanTextProvider, glyphId uint32,
-    ppem int32 = 0, renderMode uint32 = 0u) {
-    Family = family
-    Provider = provider
-    GlyphId = glyphId
-    Ppem = ppem
-    RenderMode = renderMode
-  }
+internal struct VulkanTextAtlasGlyphEntryRef {
+  internal var ProviderIndex int32
+  internal var PackedKey uint64
+}
 
-  public func Equals(other VulkanTextAtlasGlyphKey) bool -> String.Equals(Family, other.Family, StringComparison.Ordinal)
-    && Object.ReferenceEquals(Provider, other.Provider)
-    && GlyphId == other.GlyphId
-    && Ppem == other.Ppem
-    && RenderMode == other.RenderMode
+internal sealed class VulkanTextProviderGlyphTable {
+  internal let ProviderIndex int32
+  internal let Glyphs Dictionary[uint64, VulkanTextAtlasGlyph]
 
-  public override func Equals(value object?) bool -> switch value {
-    case other is VulkanTextAtlasGlyphKey: Equals(other)
-    case _: false
-  }
-
-  public override func GetHashCode() int32 {
-    let familyHash = Family == nil ? 0 : StringComparer.Ordinal.GetHashCode(Family)
-    return HashCode.Combine(familyHash,
-      RuntimeHelpers.GetHashCode(Provider), int32(GlyphId), Ppem, int32(RenderMode))
+  internal init(providerIndex int32) {
+    ProviderIndex = providerIndex
+    Glyphs = Dictionary[uint64, VulkanTextAtlasGlyph]()
   }
 }
 
@@ -44,7 +30,7 @@ internal sealed class VulkanTextSceneAtlasState {
   internal var Atlas VulkanTextAtlas
   internal var Identity ResourceId
   internal var Bytes []uint8
-  internal var Keys []VulkanTextAtlasGlyphKey
+  internal var Keys []VulkanTextAtlasGlyphEntryRef
   internal var NextByteOffset uint32
   internal var PublishedBytePrefix uint32
   internal var QueuedBytePrefix uint32
@@ -69,7 +55,7 @@ internal sealed class VulkanTextSceneAtlasState {
     if maxKeyCapacity < keyCapacity {
       keyCapacity = maxKeyCapacity
     }
-    Keys = [keyCapacity]VulkanTextAtlasGlyphKey
+    Keys = [keyCapacity]VulkanTextAtlasGlyphEntryRef
   }
 
   internal func Reset(nativeAtlas VulkanTextAtlas, identity ResourceId) {
@@ -132,20 +118,25 @@ internal sealed class VulkanTextSceneAtlasState {
     if capacity > maxCapacity {
       capacity = maxCapacity
     }
-    let next = [capacity]VulkanTextAtlasGlyphKey
+    let next = [capacity]VulkanTextAtlasGlyphEntryRef
     Array.Copy(Keys, next, KeyCount)
     Keys = next
   }
 
-  internal func AddKey(key VulkanTextAtlasGlyphKey) {
+  internal func AddKey(providerIndex int32, packedKey uint64) {
     EnsureKeyCapacity(KeyCount + 1)
-    Keys[KeyCount] = key
+    Keys[KeyCount] = VulkanTextAtlasGlyphEntryRef{
+      ProviderIndex: providerIndex,
+      PackedKey: packedKey,
+    }
     KeyCount = KeyCount + 1
   }
 }
 
 internal sealed class VulkanTextAtlasGlyph {
   internal prop AtlasId ResourceId{ get; init; }
+  internal prop AtlasSlotIndex int32{ get; init; }
+  internal prop AtlasGeneration uint64{ get; init; }
   internal prop ByteOffset uint32{ get; init; }
   internal prop ByteLength uint32{ get; init; }
   internal prop EffectByteOffset uint32{ get; init; }
@@ -157,6 +148,7 @@ internal sealed class VulkanTextAtlasGlyph {
   internal prop ColorPlacement VulkanColorGlyphPlacement{ get; init; }
 
   internal init() {
+    AtlasSlotIndex = -1
   }
 }
 

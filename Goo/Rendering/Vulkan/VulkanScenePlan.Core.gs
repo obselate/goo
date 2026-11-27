@@ -457,11 +457,6 @@ internal partial class SceneFrame {
       ValidateCachedTextSegmentContent(segment)
       segment.SceneValidationVersion = segment.Version
     }
-    var glyphIndex int32 = 0
-    while glyphIndex < segment.GlyphCount {
-      AppendResourceReference(segment.GlyphResources[glyphIndex])
-      glyphIndex = glyphIndex + 1
-    }
     var runIndex int32 = 0
     while runIndex < segment.RunCount {
       AppendResourceReference(segment.Runs[runIndex].AtlasId)
@@ -477,15 +472,20 @@ internal partial class SceneFrame {
   }
 
   private func ValidateCachedTextSegmentContent(segment VulkanRetainedTextSegment) {
-    var glyphIndex int32 = 0
-    while glyphIndex < segment.GlyphCount {
-      let glyphResource = segment.GlyphResources[glyphIndex]
-      if !glyphResource.IsValid || glyphResource.Kind != SceneResourceKind.GlyphRun {
-        throw ArgumentException("cached text segment glyph resource is invalid")
+    if !ValidFinite(segment.ParentTransform.A)
+      || !ValidFinite(segment.ParentTransform.B)
+      || !ValidFinite(segment.ParentTransform.C)
+      || !ValidFinite(segment.ParentTransform.D)
+      || !ValidFinite(segment.ParentTransform.TX)
+      || !ValidFinite(segment.ParentTransform.TY)
+      || !ValidFinite(segment.FontSize) || segment.FontSize < 0.0F
+      || !ValidFinite(segment.LineX)
+      || !ValidFinite(segment.Baseline)
+      || !ValidFinite(segment.EffectRadiusPixels) || segment.EffectRadiusPixels < 0.0F
+      || !ValidFinite(segment.EffectOffsetX)
+      || !ValidFinite(segment.EffectOffsetY) {
+        throw ArgumentException("cached text segment parameters are invalid")
       }
-      ValidateTextInstance(segment.Records[glyphIndex], segment.ClipChainId)
-      glyphIndex = glyphIndex + 1
-    }
     var runIndex int32 = 0
     var expectedFirst int32 = 0
     while runIndex < segment.RunCount {
@@ -494,8 +494,22 @@ internal partial class SceneFrame {
         || run.InstanceCount <= 0
         || run.InstanceCount > segment.GlyphCount - expectedFirst
         || !run.AtlasId.IsValid || run.AtlasId.Kind != SceneResourceKind.Atlas
-        || run.PipelineKind > 1u {
+        || run.PipelineKind > 1u
+        || run.ByteRangeEnd == 0uL {
           throw ArgumentException("cached text segment run is invalid")
+        }
+      let sample = segment.Records[run.FirstInstance]
+      if !ValidFinite(sample.transform_m00) || !ValidFinite(sample.transform_m01)
+        || !ValidFinite(sample.transform_m10) || !ValidFinite(sample.transform_m11)
+        || !ValidFinite(sample.transform_m30) || !ValidFinite(sample.transform_m31)
+        || !ValidFinite(sample.runOrigin_x) || !ValidFinite(sample.runOrigin_y)
+        || !ValidFinite(sample.foreground_w)
+        || sample.foreground_w < 0.0F || sample.foreground_w > 1.0F
+        || sample.glyphBounds_x >= sample.glyphBounds_z
+        || sample.glyphBounds_y >= sample.glyphBounds_w
+        || sample.glyphInput_y > 3u
+        || sample.glyphInput_z != uint32(segment.ClipChainId) {
+          throw ArgumentException("cached text segment run instance is invalid")
         }
       expectedFirst = expectedFirst + run.InstanceCount
       runIndex = runIndex + 1
@@ -710,55 +724,6 @@ internal partial class SceneFrame {
       }
   }
 
-  private func ValidateTextInstance(
-    value HbGpuTextInstanceRecord,
-    clipChainId int32) {
-      if Single.IsNaN(value.transform_m00) || Single.IsInfinity(value.transform_m00)
-        || Single.IsNaN(value.transform_m01) || Single.IsInfinity(value.transform_m01)
-        || Single.IsNaN(value.transform_m02) || Single.IsInfinity(value.transform_m02)
-        || Single.IsNaN(value.transform_m03) || Single.IsInfinity(value.transform_m03)
-        || Single.IsNaN(value.transform_m10) || Single.IsInfinity(value.transform_m10)
-        || Single.IsNaN(value.transform_m11) || Single.IsInfinity(value.transform_m11)
-        || Single.IsNaN(value.transform_m12) || Single.IsInfinity(value.transform_m12)
-        || Single.IsNaN(value.transform_m13) || Single.IsInfinity(value.transform_m13)
-        || Single.IsNaN(value.transform_m20) || Single.IsInfinity(value.transform_m20)
-        || Single.IsNaN(value.transform_m21) || Single.IsInfinity(value.transform_m21)
-        || Single.IsNaN(value.transform_m22) || Single.IsInfinity(value.transform_m22)
-        || Single.IsNaN(value.transform_m23) || Single.IsInfinity(value.transform_m23)
-        || Single.IsNaN(value.transform_m30) || Single.IsInfinity(value.transform_m30)
-        || Single.IsNaN(value.transform_m31) || Single.IsInfinity(value.transform_m31)
-        || Single.IsNaN(value.transform_m32) || Single.IsInfinity(value.transform_m32)
-        || Single.IsNaN(value.transform_m33) || Single.IsInfinity(value.transform_m33) {
-          throw ArgumentException("cached text segment transform is invalid")
-        }
-      if value.glyphBounds_x >= value.glyphBounds_z
-        || value.glyphBounds_y >= value.glyphBounds_w
-        || Single.IsNaN(value.glyphBounds_x)
-        || Single.IsInfinity(value.glyphBounds_x)
-        || Single.IsNaN(value.glyphBounds_y)
-        || Single.IsInfinity(value.glyphBounds_y)
-        || Single.IsNaN(value.glyphBounds_z)
-        || Single.IsInfinity(value.glyphBounds_z)
-        || Single.IsNaN(value.glyphBounds_w)
-        || Single.IsInfinity(value.glyphBounds_w)
-        || value.glyphInput_y > 3u
-        || value.glyphInput_z != uint32(clipChainId)
-        || Single.IsNaN(value.foreground_x)
-        || Single.IsInfinity(value.foreground_x)
-        || Single.IsNaN(value.foreground_y)
-        || Single.IsInfinity(value.foreground_y)
-        || Single.IsNaN(value.foreground_z)
-        || Single.IsInfinity(value.foreground_z)
-        || Single.IsNaN(value.foreground_w)
-        || Single.IsInfinity(value.foreground_w)
-        || Single.IsNaN(value.runOrigin_x) || Single.IsInfinity(value.runOrigin_x)
-        || Single.IsNaN(value.runOrigin_y) || Single.IsInfinity(value.runOrigin_y)
-        || value.foreground_w < 0.0F || value.foreground_w > 1.0F
-        || Single.IsNaN(BitConverter.Int32BitsToSingle(int32(value.glyphInput_w)))
-        || Single.IsInfinity(BitConverter.Int32BitsToSingle(int32(value.glyphInput_w)))
-        || BitConverter.Int32BitsToSingle(int32(value.glyphInput_w)) < 0.0F {
-          throw ArgumentException("cached text segment instance is invalid")
-        }
-    }
+  private func ValidFinite(value float32) bool -> !Single.IsNaN(value) && !Single.IsInfinity(value)
 
 }

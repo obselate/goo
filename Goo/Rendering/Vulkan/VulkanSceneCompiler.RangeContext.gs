@@ -187,8 +187,8 @@ internal partial class VulkanSceneCompiler {
             }
             for runIndex in 0 ... segment.RunCount {
                 let run = segment.Runs[runIndex]
-                if !scene.TryMarkAtlasActive(run.AtlasId) || run.ByteRangeEnd == 0uL
-                || !scene.IsAtlasRangeResident(run.AtlasId, run.ByteRangeEnd) {
+                if !scene.TryMarkAtlasActive(run.AtlasId, run.AtlasSlotHint) || run.ByteRangeEnd == 0uL
+                || !scene.IsAtlasRangeResident(run.AtlasId, run.ByteRangeEnd, run.AtlasSlotHint) {
                     return false
                 }
             }

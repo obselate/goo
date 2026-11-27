@@ -184,7 +184,7 @@ internal sealed class VulkanTextHinting : IDisposable {
         if failed {
             return false
         }
-        let scale = float32(ppem) / (64.0F * units)
+        let scale = float32(ppem) / units
         designUnitsPerPixel = 1.0F / scale
         if segments.Count > 0 {
             var minimum = segments[0].Y
