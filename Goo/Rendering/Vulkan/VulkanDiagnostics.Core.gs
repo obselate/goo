@@ -719,6 +719,10 @@ internal unsafe partial class VulkanDiagnostics {
     if !EnterWriter() { return }
     try { counters.SetTextFrameStats(stats) } finally { ExitWriter() }
   }
+  internal func SetTextCacheStats(layoutStats TextCacheStats, runStats TextCacheStats) {
+    if !EnterWriter() { return }
+    try { counters.SetTextCacheStats(layoutStats, runStats) } finally { ExitWriter() }
+  }
   internal func ClearPathAtlasCurrentState() {
     if !EnterWriter() { return }
     try { counters.ClearPathAtlasCurrentState() } finally { ExitWriter() }

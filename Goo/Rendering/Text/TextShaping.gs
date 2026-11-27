@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Concurrent
 import System.Collections.Generic
 import System.Diagnostics
 import System.IO
@@ -10,6 +11,8 @@ import System.Threading.Tasks
 
 private data struct TextFontSelection(Family string, Path string?, Registration FontRegistration?) { }
 private data struct TextProviderShapeResult(Workspace VulkanTextShapingWorkspace, Count int32) { }
+
+internal data struct TextCacheStats(Bytes int64, Entries int32, Hits int64, Misses int64, Evictions int64) { }
 
 private struct TextPrimaryFaceKey : IEquatable[TextPrimaryFaceKey] {
   private let families string
@@ -44,6 +47,115 @@ private struct TextPrimaryFaceKey : IEquatable[TextPrimaryFaceKey] {
   }
 }
 
+private struct RunShapeCacheKey : IEquatable[RunShapeCacheKey] {
+  private let faceId uint64
+  private let direction uint32
+  private let script uint32
+  private let language string
+  private let text string
+
+  internal init(faceId uint64, direction uint32, script uint32, language string, text string) {
+    this.faceId = faceId
+    this.direction = direction
+    this.script = script
+    this.language = language
+    this.text = text
+  }
+
+  func Equals(other RunShapeCacheKey) bool ->
+  faceId == other.faceId && direction == other.direction && script == other.script
+    && String.Equals(language, other.language, StringComparison.Ordinal)
+    && String.Equals(text, other.text, StringComparison.Ordinal)
+
+  override func Equals(value object?) bool -> switch value {
+    case other is RunShapeCacheKey: Equals(other)
+    case _: false
+  }
+
+  override func GetHashCode() int32 {
+    let hash = HashCode()
+    hash.Add(faceId)
+    hash.Add(direction)
+    hash.Add(script)
+    hash.Add(language, StringComparer.Ordinal)
+    hash.Add(text, StringComparer.Ordinal)
+    return hash.ToHashCode()
+  }
+}
+
+private struct FallbackGlyphCacheKey : IEquatable[FallbackGlyphCacheKey] {
+  private let families string
+  private let weight int32
+  private let italic bool
+  private let generation uint64
+  private let script uint32
+  private let codepoint uint32
+
+  internal init(families string, weight int32, italic bool, generation uint64, script uint32,
+    codepoint uint32) {
+      this.families = families
+      this.weight = weight
+      this.italic = italic
+      this.generation = generation
+      this.script = script
+      this.codepoint = codepoint
+    }
+
+  func Equals(other FallbackGlyphCacheKey) bool ->
+  weight == other.weight && italic == other.italic && generation == other.generation
+    && script == other.script && codepoint == other.codepoint
+    && String.Equals(families, other.families, StringComparison.Ordinal)
+
+  override func Equals(value object?) bool -> switch value {
+    case other is FallbackGlyphCacheKey: Equals(other)
+    case _: false
+  }
+
+  override func GetHashCode() int32 {
+    let hash = HashCode()
+    hash.Add(families, StringComparer.Ordinal)
+    hash.Add(weight)
+    hash.Add(italic)
+    hash.Add(generation)
+    hash.Add(script)
+    hash.Add(codepoint)
+    return hash.ToHashCode()
+  }
+}
+
+internal sealed class CachedShapedRun {
+  internal prop Glyphs []uint32{ get; init; }
+  internal prop Clusters []uint32{ get; init; }
+  internal prop XAdvances []int32{ get; init; }
+  internal prop XOffsets []int32{ get; init; }
+  internal prop YOffsets []int32{ get; init; }
+  internal prop Flags []uint8{ get; init; }
+  internal prop ByteSize int64{ get; init; }
+
+  internal init(glyphs []uint32, clusters []uint32, xAdvances []int32, xOffsets []int32,
+    yOffsets []int32, flags []uint8, byteSize int64) {
+      Glyphs = glyphs
+      Clusters = clusters
+      XAdvances = xAdvances
+      XOffsets = xOffsets
+      YOffsets = yOffsets
+      Flags = flags
+      ByteSize = byteSize
+    }
+}
+
+private sealed class RunShapeCacheNode {
+  internal let Key RunShapeCacheKey
+  internal let Entry CachedShapedRun
+  internal var Prev RunShapeCacheNode?
+  internal var Next RunShapeCacheNode?
+
+  internal init(key RunShapeCacheKey, entry CachedShapedRun) {
+    Key = key
+    Entry = entry
+  }
+}
+
 internal partial class TextShaping {
   shared {
     private let PrimaryFaces Dictionary[TextPrimaryFaceKey, TypefaceResource] =
@@ -51,6 +163,8 @@ internal partial class TextShaping {
     private let LivePrimaryFaces Dictionary[TextPrimaryFaceKey, WeakReference[TypefaceResource]] =
     Dictionary[TextPrimaryFaceKey, WeakReference[TypefaceResource]]()
     private let PrimaryFaceOrder Queue[TextPrimaryFaceKey] = Queue[TextPrimaryFaceKey]()
+    private let FamilySplitCache Dictionary[string, []string] =
+    Dictionary[string, []string](StringComparer.Ordinal)
     private let PrimaryFacesLock object = Object()
     private var primaryFaceDisposals int32
     private var primaryFaceCacheBytes int64
@@ -59,6 +173,24 @@ internal partial class TextShaping {
     private const PrimaryFaceCacheCapacity int32 = 64
     private const PrimaryFaceCacheByteBudget int64 = 50331648L
     private const ShapingWorkspaceRetainedCapacity int32 = 4096
+
+    private const MaxRunShapeCacheBytes int64 = 6L * 1024L * 1024L
+    private const RunShapeCacheMaxChars int32 = 512
+    private let runCacheLock object = Object()
+    private let runCacheMap Dictionary[RunShapeCacheKey, RunShapeCacheNode] =
+    Dictionary[RunShapeCacheKey, RunShapeCacheNode]()
+    private var runCacheHead RunShapeCacheNode?
+    private var runCacheTail RunShapeCacheNode?
+    private var runCacheBytes int64
+    private var runCacheHits int64
+    private var runCacheMisses int64
+    private var runCacheEvictions int64
+
+    private const MaxFallbackCacheEntries int32 = 16384
+    private let fallbackGlyphCache ConcurrentDictionary[FallbackGlyphCacheKey, int32] =
+    ConcurrentDictionary[FallbackGlyphCacheKey, int32]()
+    private let fallbackCacheClearLock object = Object()
+
     @ThreadStatic
     private var shapingWorkspace VulkanTextShapingWorkspace?
     @ThreadStatic
@@ -69,6 +201,12 @@ internal partial class TextShaping {
     private var scriptRuns List[UnicodeScriptRun]?
     @ThreadStatic
     private var scriptResolutions int64
+
+    internal func RunShapeCacheStats() TextCacheStats {
+      lock (runCacheLock) {
+        return TextCacheStats(runCacheBytes, runCacheMap.Count, runCacheHits, runCacheMisses, runCacheEvictions)
+      }
+    }
 
     internal func Metrics(families string, size float32, weight int32, italic bool)
     TextFontMetrics{
@@ -189,10 +327,10 @@ internal partial class TextShaping {
       families string, size float32, weight int32, italic bool, letterSpacing float32,
       direction int32, paragraphResolution BidiResolution?, language string,
       out width float32, measureOnly bool = false) ShapedText?{
-        if FrameRecorder.Current != nil { FrameWorkCounters.ShapeCalls++ }
         width = 0.0F
         let text = measureOnly ? "" : paragraph.Substring(lineStart, lineLength)
-        let primary = ResolveCachedPrimary(families, weight, italic)
+        let registryGeneration = FontRegistry.Generation
+        let primary = ResolveCachedPrimary(families, weight, italic, registryGeneration)
         let metrics = MetricsFor(primary.Provider.Metrics, size)
         let scratchOwner = AnalysisScratch()
         let scratch = scratchOwner.Rent(lineLength)
@@ -216,7 +354,7 @@ internal partial class TextShaping {
           }
           if resolution.Info == nil {
             appendDirectionalRange(paragraph, lineStart, lineLength, lineStart, direction == 2,
-              families, weight, italic, size, letterSpacing, primary, fallbackCandidates,
+              families, weight, italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates,
               runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
               scratch, scriptRuns, language)
             width = cursor + extra
@@ -242,7 +380,7 @@ internal partial class TextShaping {
           for visualRun in visual.Item2 {
             let rtl = info.Levels[visualRun.Start].IsRtl()
             appendDirectionalRange(paragraph, visualRun.Start, visualRun.Length, lineStart, rtl,
-              families, weight, italic, size, letterSpacing, primary, fallbackCandidates,
+              families, weight, italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates,
               runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
               scratch, scriptRuns, language)
           }
@@ -264,11 +402,12 @@ internal partial class TextShaping {
       }
 
     private func appendDirectionalRange(paragraph string, rangeStart int32, rangeLength int32,
-      lineStart int32, rtl bool, families string, weight int32, italic bool, size float32,
-      letterSpacing float32, primary TypefaceLease, fallbackCandidates List[TypefaceLease],
-      runs List[ShapedRun]?, ref cursor float32, ref extra float32, ref ascent float32,
-      ref descent float32, ref hasCluster bool, ref priorCluster uint32,
-      scratch UnicodeTextAnalysisScratchScope, scriptRuns List[UnicodeScriptRun], language string) {
+      lineStart int32, rtl bool, families string, weight int32, italic bool,
+      registryGeneration uint64, size float32, letterSpacing float32, primary TypefaceLease,
+      fallbackCandidates List[TypefaceLease], runs List[ShapedRun]?, ref cursor float32,
+      ref extra float32, ref ascent float32, ref descent float32, ref hasCluster bool,
+      ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope, scriptRuns List[UnicodeScriptRun],
+      language string) {
         let rangeEnd = rangeStart + rangeLength
         let first = firstScriptRun(scriptRuns, rangeStart)
         if rtl {
@@ -282,9 +421,9 @@ internal partial class TextShaping {
             let end = if scriptEnd > rangeEnd { rangeEnd } else { scriptEnd }
             if end > start {
               appendScriptRange(paragraph, start, end - start, lineStart, rtl, families, weight,
-                italic, size, letterSpacing, primary, fallbackCandidates, runs, ref cursor,
-                ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch,
-                scriptRun.Script, language)
+                italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates, runs,
+                ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
+                scratch, scriptRun.Script, language)
             }
           }
         } else {
@@ -296,9 +435,9 @@ internal partial class TextShaping {
             let end = if scriptEnd > rangeEnd { rangeEnd } else { scriptEnd }
             if end > start {
               appendScriptRange(paragraph, start, end - start, lineStart, rtl, families, weight,
-                italic, size, letterSpacing, primary, fallbackCandidates, runs, ref cursor,
-                ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch,
-                scriptRun.Script, language)
+                italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates, runs,
+                ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
+                scratch, scriptRun.Script, language)
             }
             scriptIndex++
           }
@@ -306,73 +445,174 @@ internal partial class TextShaping {
       }
 
     private func appendScriptRange(paragraph string, textStart int32, textLength int32,
-      lineStart int32, rtl bool, families string, weight int32, italic bool, size float32,
-      letterSpacing float32, primary TypefaceLease, fallbackCandidates List[TypefaceLease],
-      runs List[ShapedRun]?, ref cursor float32, ref extra float32, ref ascent float32,
-      ref descent float32, ref hasCluster bool, ref priorCluster uint32,
-      scratch UnicodeTextAnalysisScratchScope, script uint32, language string) {
-        let text = paragraph.Substring(textStart, textLength)
+      lineStart int32, rtl bool, families string, weight int32, italic bool,
+      registryGeneration uint64, size float32, letterSpacing float32, primary TypefaceLease,
+      fallbackCandidates List[TypefaceLease], runs List[ShapedRun]?, ref cursor float32,
+      ref extra float32, ref ascent float32, ref descent float32, ref hasCluster bool,
+      ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope, script uint32,
+      language string) {
         let direction = if rtl { 5u } else { 4u }
-        let shaped = ShapeProvider(text, primary.Provider, direction, script, language)
+        if let cached = TryShapeWithCache(paragraph, textStart, textLength, primary, direction,
+          script, language) {
+          if !HasMissingCachedGlyphs(cached.Glyphs) {
+            appendCachedGlyphRange(paragraph, textStart, textLength, lineStart, rtl, size,
+              letterSpacing, primary, cached, runs, ref cursor, ref extra, ref ascent, ref descent,
+              ref hasCluster, ref priorCluster, scratch)
+            return
+          }
+          handleMissingFallback(paragraph, textStart, textLength, lineStart, rtl, families, weight,
+            italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates, direction,
+            script, language, cached.Glyphs, cached.Clusters, cached.Glyphs.Length, runs,
+            ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch)
+          return
+        }
+        let shaped = ShapeProviderSlice(paragraph, textStart, textLength, primary.Provider,
+          direction, script, language)
         let count = shaped.Count
         let workspace = shaped.Workspace
         if !HasMissingGlyphs(workspace.GlyphBuffer, count) {
-          appendGlyphRange(text, textStart, lineStart, rtl, size, letterSpacing, primary,
-            workspace.GlyphBuffer, count, runs, ref cursor, ref extra, ref ascent, ref descent,
-            ref hasCluster, ref priorCluster, scratch)
+          appendGlyphRange(paragraph, textStart, textLength, lineStart, rtl, size, letterSpacing,
+            primary, workspace.GlyphBuffer, count, runs, ref cursor, ref extra, ref ascent,
+            ref descent, ref hasCluster, ref priorCluster, scratch)
           return
         }
+        let copy = [count]VulkanTextGlyph
+        if count != 0 { Array.Copy(workspace.GlyphBuffer, copy, count) }
+        handleMissingFallbackRaw(paragraph, textStart, textLength, lineStart, rtl, families, weight,
+          italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates, direction,
+          script, language, copy, runs, ref cursor, ref extra, ref ascent, ref descent,
+          ref hasCluster, ref priorCluster, scratch)
+      }
 
+    private func handleMissingFallbackRaw(paragraph string, textStart int32, textLength int32,
+      lineStart int32, rtl bool, families string, weight int32, italic bool,
+      registryGeneration uint64, size float32, letterSpacing float32, primary TypefaceLease,
+      fallbackCandidates List[TypefaceLease], direction uint32, script uint32, language string,
+      primaryGlyphs []VulkanTextGlyph, runs List[ShapedRun]?, ref cursor float32, ref extra float32,
+      ref ascent float32, ref descent float32, ref hasCluster bool, ref priorCluster uint32,
+      scratch UnicodeTextAnalysisScratchScope) {
+        let glyphs = [primaryGlyphs.Length]uint32
+        let clusters = [primaryGlyphs.Length]uint32
+        for i in 0 ... primaryGlyphs.Length {
+          glyphs[i] = primaryGlyphs[i].GlyphId
+          clusters[i] = primaryGlyphs[i].Cluster
+        }
+        handleMissingFallback(paragraph, textStart, textLength, lineStart, rtl, families, weight,
+          italic, registryGeneration, size, letterSpacing, primary, fallbackCandidates, direction,
+          script, language, glyphs, clusters, primaryGlyphs.Length, runs, ref cursor, ref extra,
+          ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch)
+      }
+
+    private func handleMissingFallback(paragraph string, textStart int32, textLength int32,
+      lineStart int32, rtl bool, families string, weight int32, italic bool,
+      registryGeneration uint64, size float32, letterSpacing float32, primary TypefaceLease,
+      fallbackCandidates List[TypefaceLease], direction uint32, script uint32, language string,
+      primaryGlyphIds []uint32, primaryClusters []uint32, count int32, runs List[ShapedRun]?,
+      ref cursor float32, ref extra float32, ref ascent float32, ref descent float32,
+      ref hasCluster bool, ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope) {
         if fallbackCandidates.Count == 0 {
           let resolved = ResolveFallbackCandidates(families, weight, italic, primary)
           for candidate in resolved { fallbackCandidates.Add(candidate) }
         }
-        let primaryGlyphs = [count]VulkanTextGlyph
-        if count != 0 { Array.Copy(workspace.GlyphBuffer, primaryGlyphs, count) }
-        let graphemeScalars = scratch.BeginGraphemeScalars(text.Length)
+        let boundaries = SelectFallbackCandidatesForSlice(paragraph, textStart, textLength,
+          families, weight, italic, registryGeneration, direction, script, language,
+          primaryGlyphIds, primaryClusters, count, fallbackCandidates, scratch, out var selected)
+        emitSelectedFallbackGroups(paragraph, textStart, textLength, lineStart, rtl, size,
+          letterSpacing, fallbackCandidates, direction, script, language, boundaries, selected,
+          runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
+          scratch)
+      }
+
+    internal func SelectFallbackCandidatesForSlice(paragraph string, textStart int32, textLength int32,
+      families string, weight int32, italic bool, registryGeneration uint64, direction uint32,
+      script uint32, language string, primaryGlyphIds []uint32, primaryClusters []uint32,
+      count int32, fallbackCandidates List[TypefaceLease], scratch UnicodeTextAnalysisScratchScope,
+      out selected []int32) List[int32]{
+        let text = paragraph.Substring(textStart, textLength)
+        let graphemeScalars = scratch.BeginGraphemeScalars(textLength)
         let boundaries = UnicodeGraphemes.Starts(text, graphemeScalars,
-          scratch.BeginFallbackStarts(text.Length))
+          scratch.BeginFallbackStarts(textLength))
         let missing = [boundaries.Count]bool
-        for glyph in primaryGlyphs {
-          if glyph.GlyphId == 0u {
-            markMissingClusterSpan(primaryGlyphs, int32(glyph.Cluster), text.Length, boundaries,
-              missing)
+        for g in 0 ... count {
+          if primaryGlyphIds[g] == 0u {
+            markMissingClusterSpanClusters(primaryClusters, count, int32(primaryClusters[g]),
+              textLength, boundaries, missing)
           }
         }
-        let selected = [boundaries.Count]int32
+        selected = [boundaries.Count]int32
         var i int32 = 0
         while i < boundaries.Count {
           if missing[i] {
             let start = boundaries[i]
-            let end = if i + 1 < boundaries.Count { boundaries[i + 1] } else { text.Length }
-            let clusterText = text.Substring(start, end - start)
-            var candidate int32 = 1
-            while candidate < fallbackCandidates.Count {
-              let candidateShaped = ShapeProvider(clusterText,
-                fallbackCandidates[candidate].Provider, direction, script, language)
-              let candidateCount = candidateShaped.Count
-              let candidateWorkspace = candidateShaped.Workspace
-              if HasUsableGlyphs(candidateWorkspace.GlyphBuffer, candidateCount) {
-                selected[i] = candidate
-                break
-              }
-              candidate++
-            }
+            let end = if i + 1 < boundaries.Count { boundaries[i + 1] } else { textLength }
+            selected[i] = ResolveFallbackClusterCandidate(paragraph, textStart + start, end - start,
+              families, weight, italic, registryGeneration, direction, script, language, fallbackCandidates)
           }
           i++
         }
+        return boundaries
+      }
 
+    private func ResolveFallbackClusterCandidate(paragraph string, absStart int32, clusterLen int32,
+      families string, weight int32, italic bool, registryGeneration uint64, direction uint32,
+      script uint32, language string, fallbackCandidates List[TypefaceLease]) int32{
+        let status = Rune.DecodeFromUtf16(paragraph.AsSpan(absStart, clusterLen), out var rune, out var consumed)
+        if status == System.Buffers.OperationStatus.Done && consumed == clusterLen {
+          let cp = uint32(rune.Value)
+          let fKey = FallbackGlyphCacheKey(families, weight, italic, registryGeneration, script, cp)
+          if fallbackGlyphCache.TryGetValue(fKey, out var cachedCandidate) {
+            if cachedCandidate >= 0 && cachedCandidate < fallbackCandidates.Count {
+              return cachedCandidate
+            }
+          }
+          var foundCandidate int32 = 0
+          var c int32 = 1
+          while c < fallbackCandidates.Count {
+            if fallbackCandidates[c].Provider.TryGetNominalGlyph(cp, out var glyphId) && glyphId != 0u {
+              foundCandidate = c
+              break
+            }
+            c++
+          }
+          if fallbackGlyphCache.Count >= MaxFallbackCacheEntries {
+            lock (fallbackCacheClearLock) {
+              if fallbackGlyphCache.Count >= MaxFallbackCacheEntries {
+                fallbackGlyphCache.Clear()
+              }
+            }
+          }
+          fallbackGlyphCache.TryAdd(fKey, foundCandidate)
+          return foundCandidate
+        }
+        var candidate int32 = 1
+        while candidate < fallbackCandidates.Count {
+          let candidateShaped = ShapeProviderSlice(paragraph, absStart, clusterLen,
+            fallbackCandidates[candidate].Provider, direction, script, language)
+          if HasUsableGlyphs(candidateShaped.Workspace.GlyphBuffer, candidateShaped.Count) {
+            return candidate
+          }
+          candidate++
+        }
+        return 0
+      }
+
+    private func emitSelectedFallbackGroups(paragraph string, textStart int32, textLength int32,
+      lineStart int32, rtl bool, size float32, letterSpacing float32,
+      fallbackCandidates List[TypefaceLease], direction uint32, script uint32, language string,
+      boundaries List[int32], selected []int32, runs List[ShapedRun]?, ref cursor float32,
+      ref extra float32, ref ascent float32, ref descent float32, ref hasCluster bool,
+      ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope) {
         if rtl {
           var endIndex = boundaries.Count
           while endIndex > 0 {
             let selection = selected[endIndex - 1]
             var startIndex = endIndex - 1
             while startIndex > 0 && selected[startIndex - 1] == selection { startIndex-- }
-            appendFallbackGroup(text, textStart, lineStart, rtl, boundaries[startIndex],
-              if endIndex < boundaries.Count { boundaries[endIndex] } else { text.Length },
-              size, letterSpacing, fallbackCandidates[selection], direction, script, language, runs,
-              ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
-              scratch)
+            let groupStart = boundaries[startIndex]
+            let groupEnd = if endIndex < boundaries.Count { boundaries[endIndex] } else { textLength }
+            appendFallbackGroup(paragraph, textStart, lineStart, rtl, groupStart, groupEnd,
+              size, letterSpacing, fallbackCandidates[selection], direction, script, language,
+              runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch)
             endIndex = startIndex
           }
         } else {
@@ -381,48 +621,81 @@ internal partial class TextShaping {
             let selection = selected[startIndex]
             var endIndex = startIndex + 1
             while endIndex < boundaries.Count && selected[endIndex] == selection { endIndex++ }
-            appendFallbackGroup(text, textStart, lineStart, rtl, boundaries[startIndex],
-              if endIndex < boundaries.Count { boundaries[endIndex] } else { text.Length },
-              size, letterSpacing, fallbackCandidates[selection], direction, script, language, runs,
-              ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
-              scratch)
+            let groupStart = boundaries[startIndex]
+            let groupEnd = if endIndex < boundaries.Count { boundaries[endIndex] } else { textLength }
+            appendFallbackGroup(paragraph, textStart, lineStart, rtl, groupStart, groupEnd,
+              size, letterSpacing, fallbackCandidates[selection], direction, script, language,
+              runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch)
             startIndex = endIndex
           }
         }
       }
 
-    private func appendFallbackGroup(text string, rangeStart int32, lineStart int32, rtl bool,
+    private func appendFallbackGroup(paragraph string, rangeStart int32, lineStart int32, rtl bool,
       groupStart int32, groupEnd int32, size float32, letterSpacing float32,
       selected TypefaceLease, direction uint32, script uint32, language string, runs List[ShapedRun]?,
       ref cursor float32, ref extra float32, ref ascent float32, ref descent float32,
       ref hasCluster bool, ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope) {
-        let groupText = text.Substring(groupStart, groupEnd - groupStart)
-        let shaped = ShapeProvider(groupText, selected.Provider, direction, script, language)
-        let count = shaped.Count
-        let workspace = shaped.Workspace
-        appendGlyphRange(groupText, rangeStart + groupStart, lineStart, rtl, size, letterSpacing,
-          selected, workspace.GlyphBuffer, count, runs, ref cursor, ref extra, ref ascent,
+        let len = groupEnd - groupStart
+        let absStart = rangeStart + groupStart
+        if let cached = TryShapeWithCache(paragraph, absStart, len, selected, direction, script, language) {
+          appendCachedGlyphRange(paragraph, absStart, len, lineStart, rtl, size, letterSpacing,
+            selected, cached, runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster,
+            ref priorCluster, scratch)
+          return
+        }
+        let shaped = ShapeProviderSlice(paragraph, absStart, len, selected.Provider, direction, script, language)
+        appendGlyphRange(paragraph, absStart, len, lineStart, rtl, size, letterSpacing, selected,
+          shaped.Workspace.GlyphBuffer, shaped.Count, runs, ref cursor, ref extra, ref ascent,
           ref descent, ref hasCluster, ref priorCluster, scratch)
       }
 
-    private func appendGlyphRange(text string, rangeStart int32, lineStart int32, rtl bool,
-      size float32, letterSpacing float32, selected TypefaceLease, source []VulkanTextGlyph,
-      count int32, runs List[ShapedRun]?, ref cursor float32, ref extra float32,
-      ref ascent float32, ref descent float32, ref hasCluster bool, ref priorCluster uint32,
-      scratch UnicodeTextAnalysisScratchScope) {
+    private func appendGlyphRange(paragraph string, rangeStart int32, rangeLength int32,
+      lineStart int32, rtl bool, size float32, letterSpacing float32, selected TypefaceLease,
+      source []VulkanTextGlyph, count int32, runs List[ShapedRun]?, ref cursor float32,
+      ref extra float32, ref ascent float32, ref descent float32, ref hasCluster bool,
+      ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope) {
         let factor = size / 65536.0F
-        if runs == nil && letterSpacing == 0.0F {
-          var width = 0.0F
+        if letterSpacing == 0.0F {
+          var rawWidth = 0.0F
           for i in 0 ... count {
-            width = width + MathF.Abs(float32(source[i].XAdvance) * factor)
+            rawWidth = rawWidth + MathF.Abs(float32(source[i].XAdvance) * factor)
           }
-          cursor = cursor + width
+          if let runs = runs {
+            if count != 0 {
+              let text = paragraph.Substring(rangeStart, rangeLength)
+              let glyphs = [count]uint32
+              let points = [count]TextPoint
+              let clusters = [count]uint32
+              let base = cursor + extra
+              var consumed = 0.0F
+              for i in 0 ... count {
+                let glyph = source[i]
+                glyphs[i] = glyph.GlyphId
+                clusters[i] = glyph.Cluster
+                let xOffset = float32(glyph.XOffset) * factor
+                let yOffset = float32(glyph.YOffset) * factor
+                points[i] = TextPoint(base + consumed + xOffset, yOffset)
+                consumed = consumed + MathF.Abs(float32(glyph.XAdvance) * factor)
+              }
+              let usedMetrics = MetricsFor(selected.Provider.Metrics, size)
+              ascent = MathF.Min(ascent, usedMetrics.Ascent)
+              descent = MathF.Max(descent, usedMetrics.Descent)
+              let runStart = if rtl { base + rawWidth } else { base }
+              let runEnd = if rtl { base } else { base + rawWidth }
+              let lease = selected.Duplicate()
+              runs.Add(ShapedRun(text, selected.Family, glyphs, points, clusters,
+                rangeStart - lineStart, rtl, runStart, runEnd, false, lease))
+            }
+          }
+          cursor = cursor + rawWidth
           if count != 0 {
             hasCluster = true
             priorCluster = source[count - 1].Cluster
           }
           return
         }
+        let text = paragraph.Substring(rangeStart, rangeLength)
         let graphemeScalars = scratch.BeginGraphemeScalars(text.Length)
         let boundaries = UnicodeGraphemes.Starts(text, graphemeScalars,
           scratch.BeginGlyphStarts(text.Length))
@@ -453,6 +726,9 @@ internal partial class TextShaping {
           let clusters = [count]uint32
           let base = cursor + extra
           var consumed = 0.0F
+          if hasCluster && count != 0 && boundaryContains(boundaries, int32(source[0].Cluster)) {
+            consumed = consumed + letterSpacing
+          }
           localPrior = 0u
           hasLocalPrior = false
           i = 0
@@ -491,21 +767,225 @@ internal partial class TextShaping {
         }
       }
 
-    private func ShapeProvider(text string, provider VulkanTextProvider, direction uint32,
-      script uint32, language string)
+    private func appendCachedGlyphRange(paragraph string, rangeStart int32, rangeLength int32,
+      lineStart int32, rtl bool, size float32, letterSpacing float32, selected TypefaceLease,
+      cached CachedShapedRun, runs List[ShapedRun]?, ref cursor float32,
+      ref extra float32, ref ascent float32, ref descent float32, ref hasCluster bool,
+      ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope) {
+        let count = cached.Glyphs.Length
+        let factor = size / 65536.0F
+        if letterSpacing == 0.0F {
+          var rawWidth = 0.0F
+          for i in 0 ... count {
+            rawWidth = rawWidth + MathF.Abs(float32(cached.XAdvances[i]) * factor)
+          }
+          if let runs = runs {
+            if count != 0 {
+              let text = paragraph.Substring(rangeStart, rangeLength)
+              let glyphs = [count]uint32
+              let points = [count]TextPoint
+              let clusters = [count]uint32
+              let base = cursor + extra
+              var consumed = 0.0F
+              for i in 0 ... count {
+                glyphs[i] = cached.Glyphs[i]
+                clusters[i] = cached.Clusters[i]
+                let xOffset = float32(cached.XOffsets[i]) * factor
+                let yOffset = float32(cached.YOffsets[i]) * factor
+                points[i] = TextPoint(base + consumed + xOffset, yOffset)
+                consumed = consumed + MathF.Abs(float32(cached.XAdvances[i]) * factor)
+              }
+              let usedMetrics = MetricsFor(selected.Provider.Metrics, size)
+              ascent = MathF.Min(ascent, usedMetrics.Ascent)
+              descent = MathF.Max(descent, usedMetrics.Descent)
+              let runStart = if rtl { base + rawWidth } else { base }
+              let runEnd = if rtl { base } else { base + rawWidth }
+              let lease = selected.Duplicate()
+              runs.Add(ShapedRun(text, selected.Family, glyphs, points, clusters,
+                rangeStart - lineStart, rtl, runStart, runEnd, false, lease))
+            }
+          }
+          cursor = cursor + rawWidth
+          if count != 0 {
+            hasCluster = true
+            priorCluster = cached.Clusters[count - 1]
+          }
+          return
+        }
+        let text = paragraph.Substring(rangeStart, rangeLength)
+        let graphemeScalars = scratch.BeginGraphemeScalars(text.Length)
+        let boundaries = UnicodeGraphemes.Starts(text, graphemeScalars,
+          scratch.BeginGlyphStarts(text.Length))
+        var rawWidth = 0.0F
+        var spacingCount int32 = 0
+        var localPrior uint32 = 0u
+        var hasLocalPrior = false
+        for i in 0 ... count {
+          let cluster = cached.Clusters[i]
+          let clusterChanged = !hasLocalPrior || cluster != localPrior
+          if clusterChanged && hasLocalPrior && boundaryContains(boundaries, int32(cluster)) {
+            spacingCount++
+          }
+          rawWidth = rawWidth + MathF.Abs(float32(cached.XAdvances[i]) * factor)
+          localPrior = cluster
+          hasLocalPrior = true
+        }
+        if hasCluster && count != 0 && boundaryContains(boundaries, int32(cached.Clusters[0])) {
+          spacingCount++
+        }
+        let runSpacing = float32(spacingCount) * letterSpacing
+        let runWidth = rawWidth + runSpacing
+        if let runs = runs {
+          let glyphs = [count]uint32
+          let points = [count]TextPoint
+          let clusters = [count]uint32
+          let base = cursor + extra
+          var consumed = 0.0F
+          if hasCluster && count != 0 && boundaryContains(boundaries, int32(cached.Clusters[0])) {
+            consumed = consumed + letterSpacing
+          }
+          localPrior = 0u
+          hasLocalPrior = false
+          for i in 0 ... count {
+            let cluster = cached.Clusters[i]
+            glyphs[i] = cached.Glyphs[i]
+            clusters[i] = cluster
+            let clusterChanged = !hasLocalPrior || cluster != localPrior
+            if clusterChanged && hasLocalPrior && boundaryContains(boundaries, int32(cluster)) {
+              consumed = consumed + letterSpacing
+            }
+            let xOffset = float32(cached.XOffsets[i]) * factor
+            let yOffset = float32(cached.YOffsets[i]) * factor
+            points[i] = TextPoint(base + consumed + xOffset, yOffset)
+            consumed = consumed + MathF.Abs(float32(cached.XAdvances[i]) * factor)
+            localPrior = cluster
+            hasLocalPrior = true
+          }
+          if count != 0 {
+            let usedMetrics = MetricsFor(selected.Provider.Metrics, size)
+            ascent = MathF.Min(ascent, usedMetrics.Ascent)
+            descent = MathF.Max(descent, usedMetrics.Descent)
+            let runStart = if rtl { base + runWidth } else { base }
+            let runEnd = if rtl { base } else { base + runWidth }
+            let lease = selected.Duplicate()
+            runs.Add(ShapedRun(text, selected.Family, glyphs, points, clusters,
+              rangeStart - lineStart, rtl, runStart, runEnd, false, lease))
+          }
+        }
+        cursor = cursor + rawWidth
+        extra = extra + runSpacing
+        if count != 0 {
+          hasCluster = true
+          priorCluster = cached.Clusters[count - 1]
+        }
+      }
+
+    internal func TryShapeWithCache(paragraph string, itemOffset int32, itemLength int32,
+      lease TypefaceLease, direction uint32, script uint32, language string) CachedShapedRun? {
+        if itemLength <= 0 || itemLength > RunShapeCacheMaxChars
+          || !IsIsolatedForRunCache(paragraph, itemOffset, itemLength) {
+          return nil
+        }
+        let sliceText = if itemOffset == 0 && itemLength == paragraph.Length { paragraph }
+        else { paragraph.Substring(itemOffset, itemLength) }
+        let key = RunShapeCacheKey(lease.FaceId, direction, script, language ?? "", sliceText)
+        lock (runCacheLock) {
+          if runCacheMap.TryGetValue(key, out var existing) {
+            MoveRunCacheNodeToHead(existing)
+            runCacheHits++
+            return existing.Entry
+          }
+          runCacheMisses++
+        }
+        let shaped = ShapeProviderSlice(paragraph, itemOffset, itemLength, lease.Provider,
+          direction, script, language)
+        let count = shaped.Count
+        let buffer = shaped.Workspace.GlyphBuffer
+        let glyphs = [count]uint32
+        let clusters = [count]uint32
+        let xAdvances = [count]int32
+        let xOffsets = [count]int32
+        let yOffsets = [count]int32
+        let flags = [count]uint8
+        for i in 0 ... count {
+          let g = buffer[i]
+          glyphs[i] = g.GlyphId
+          clusters[i] = g.Cluster
+          xAdvances[i] = g.XAdvance
+          xOffsets[i] = g.XOffset
+          yOffsets[i] = g.YOffset
+          flags[i] = uint8(g.Flags)
+        }
+        let byteSize = 192L + int64(sliceText.Length) * 2L + int64(count) * 21L
+        let entry = CachedShapedRun(glyphs, clusters, xAdvances, xOffsets, yOffsets, flags, byteSize)
+        if byteSize > MaxRunShapeCacheBytes / 2L {
+          return entry
+        }
+        lock (runCacheLock) {
+          if runCacheMap.TryGetValue(key, out var raceExisting) {
+            MoveRunCacheNodeToHead(raceExisting)
+            return raceExisting.Entry
+          }
+          while runCacheBytes + byteSize > MaxRunShapeCacheBytes && runCacheTail != nil {
+            let retired = runCacheTail!!
+            RemoveRunCacheNode(retired)
+            runCacheMap.Remove(retired.Key)
+            runCacheBytes = runCacheBytes - retired.Entry.ByteSize
+            runCacheEvictions++
+          }
+          let created = RunShapeCacheNode(key, entry)
+          AddRunCacheNodeToHead(created)
+          runCacheMap.Add(key, created)
+          runCacheBytes = runCacheBytes + byteSize
+          return entry
+        }
+      }
+
+    private func IsIsolatedForRunCache(paragraph string, offset int32, length int32) bool ->
+    (offset == 0 || isRunIsolationWhitespace(paragraph[offset - 1]))
+      && (offset + length == paragraph.Length || isRunIsolationWhitespace(paragraph[offset + length]))
+
+    private func isRunIsolationWhitespace(ch char) bool -> ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+
+    private func AddRunCacheNodeToHead(node RunShapeCacheNode) {
+      node.Prev = nil
+      node.Next = runCacheHead
+      if let head = runCacheHead { head.Prev = node }
+      runCacheHead = node
+      if runCacheTail == nil { runCacheTail = node }
+    }
+
+    private func RemoveRunCacheNode(node RunShapeCacheNode) {
+      let prev = node.Prev
+      let next = node.Next
+      if let p = prev { p.Next = next } else { runCacheHead = next }
+      if let n = next { n.Prev = prev } else { runCacheTail = prev }
+      node.Prev = nil
+      node.Next = nil
+    }
+
+    private func MoveRunCacheNodeToHead(node RunShapeCacheNode) {
+      if Object.ReferenceEquals(runCacheHead, node) { return }
+      RemoveRunCacheNode(node)
+      AddRunCacheNodeToHead(node)
+    }
+
+    internal func ShapeProviderSlice(paragraph string, itemOffset int32, itemLength int32,
+      provider VulkanTextProvider, direction uint32, script uint32, language string)
     TextProviderShapeResult{
+      if FrameRecorder.Current != nil { FrameWorkCounters.ShapeCalls++ }
       let options = VulkanTextShapingOptions{
         Direction: direction, Script: script, Language: language == "" ? nil : language, ClusterLevel: 0u, Flags: 0u,
         Features: nil,
       }
       var workspace = ShapingWorkspace(0)
-      var providerResult = provider.ShapeInto(text, options, workspace)
+      var providerResult = provider.ShapeInto(paragraph, itemOffset, itemLength, options, workspace)
       if providerResult.AbiVersion != VulkanTextProviderAbi.Version {
         throw InvalidOperationException("Vulkan text provider ABI version is invalid")
       }
       if providerResult.Status == VulkanTextProviderAbi.CapacityExceeded {
         workspace = ShapingWorkspace(providerResult.Required)
-        providerResult = provider.ShapeInto(text, options, workspace)
+        providerResult = provider.ShapeInto(paragraph, itemOffset, itemLength, options, workspace)
       }
       if providerResult.AbiVersion != VulkanTextProviderAbi.Version {
         throw InvalidOperationException("Vulkan text provider ABI version is invalid")
@@ -517,6 +997,13 @@ internal partial class TextShaping {
         throw InvalidOperationException("Vulkan text shaping output is invalid")
       }
       return TextProviderShapeResult(workspace, providerResult.Count)
+    }
+
+    private func HasMissingCachedGlyphs(glyphs []uint32) bool {
+      for g in glyphs {
+        if g == 0u { return true }
+      }
+      return false
     }
 
     private func HasMissingGlyphs(source []VulkanTextGlyph, count int32) bool {
@@ -538,15 +1025,13 @@ internal partial class TextShaping {
       return true
     }
 
-    private func markMissingClusterSpan(source []VulkanTextGlyph, clusterStart int32,
+    private func markMissingClusterSpanClusters(clusters []uint32, count int32, clusterStart int32,
       textLength int32, boundaries List[int32], missing []bool) {
         if clusterStart < 0 || clusterStart >= textLength { return }
         var clusterEnd = textLength
-        var glyphIndex int32 = 0
-        while glyphIndex < source.Length {
-          let candidate = int32(source[glyphIndex].Cluster)
+        for glyphIndex in 0 ... count {
+          let candidate = int32(clusters[glyphIndex])
           if candidate > clusterStart && candidate < clusterEnd { clusterEnd = candidate }
-          glyphIndex++
         }
         var i int32 = 0
         while i < boundaries.Count {
@@ -560,7 +1045,7 @@ internal partial class TextShaping {
     private func boundaryContains(boundaries List[int32], value int32) bool ->
     boundaries.BinarySearch(value) >= 0
 
-    private func MetricsFor(metrics VulkanHarfBuzzMetrics, size float32) TextFontMetrics {
+    internal func MetricsFor(metrics VulkanHarfBuzzMetrics, size float32) TextFontMetrics {
       if metrics.UnitsPerEm == 0u { throw InvalidOperationException("HarfBuzz font UPEM is zero") }
       let scale = size / float32(metrics.UnitsPerEm)
       return TextFontMetrics(-float32(metrics.Ascender) * scale,
@@ -599,7 +1084,7 @@ internal partial class TextShaping {
 
     // The script runs of the whole paragraph. Wrapping shapes many ranges of one paragraph, so each thread keeps
     // the runs of the paragraph it shaped last. Strings are immutable, so the same instance has the same runs.
-    private func ScriptRunsFor(paragraph string, owner UnicodeTextAnalysisScratch) List[UnicodeScriptRun] {
+    internal func ScriptRunsFor(paragraph string, owner UnicodeTextAnalysisScratch) List[UnicodeScriptRun] {
       if let runs = scriptRuns {
         if Object.ReferenceEquals(scriptText, paragraph) { return runs }
       }
@@ -616,7 +1101,7 @@ internal partial class TextShaping {
     }
 
     // The index of the first run that ends after `offset`.
-    private func firstScriptRun(runs List[UnicodeScriptRun], offset int32) int32 {
+    internal func firstScriptRun(runs List[UnicodeScriptRun], offset int32) int32 {
       var low int32 = 0
       var high = runs.Count
       while low < high {
@@ -627,7 +1112,7 @@ internal partial class TextShaping {
       return low
     }
 
-    private func AnalysisScratch() UnicodeTextAnalysisScratch {
+    internal func AnalysisScratch() UnicodeTextAnalysisScratch {
       if let current = textAnalysisScratch {
         return current
       }
@@ -656,7 +1141,16 @@ internal partial class TextShaping {
 
     private func RequiresBidi(text string, direction int32) bool {
       if direction == 2 { return text.Length != 0 }
+      var hasCandidate = false
+      for ch in text {
+        if ch >= '\u0590' {
+          hasCandidate = true
+          break
+        }
+      }
+      if !hasCandidate { return false }
       for rune in text.EnumerateRunes() {
+        if rune.Value < 0x0590 { continue }
         let value = Unicode.Bidi.CharData.BidiClass(rune)
         if value == Unicode.Bidi.BidiClass.AL || value == Unicode.Bidi.BidiClass.AN
           || value == Unicode.Bidi.BidiClass.FSI || value == Unicode.Bidi.BidiClass.LRE
@@ -670,9 +1164,10 @@ internal partial class TextShaping {
       return false
     }
 
-    private func ResolveCachedPrimary(families string, weight int32, italic bool) TypefaceLease {
-      let registryGeneration = FontRegistry.Generation
-      let key = TextPrimaryFaceKey(families, weight, italic, registryGeneration)
+    internal func ResolveCachedPrimary(families string, weight int32, italic bool,
+      registryGeneration uint64 = 0uL) TypefaceLease {
+      let effectiveGen = registryGeneration == 0uL ? FontRegistry.Generation : registryGeneration
+      let key = TextPrimaryFaceKey(families, weight, italic, effectiveGen)
       lock (PrimaryFacesLock) {
         if PrimaryFaces.TryGetValue(key, out var cached) { return cached.Lease() }
         if LivePrimaryFaces.TryGetValue(key, out var weak) && weak.TryGetTarget(out var live) {
@@ -785,7 +1280,7 @@ internal partial class TextShaping {
       }
     }
 
-    private func ResolveFallbackCandidates(families string, weight int32, italic bool,
+    internal func ResolveFallbackCandidates(families string, weight int32, italic bool,
       primary TypefaceLease) List[TypefaceLease]{
         let result = List[TypefaceLease]()
         result.Add(primary.Duplicate())
@@ -862,7 +1357,13 @@ internal partial class TextShaping {
 
     private func SplitFamilies(families string) []string {
       if families == nil || families.Trim().Length == 0 { return [1]string{"sans-serif"} }
-      return families.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+      lock (PrimaryFacesLock) {
+        if FamilySplitCache.TryGetValue(families, out var cached) { return cached }
+        let split = families.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+        if FamilySplitCache.Count >= 512 { FamilySplitCache.Clear() }
+        FamilySplitCache.Add(families, split)
+        return split
+      }
     }
 
     private func normalizeFamily(value string) string -> value.Trim().ToLowerInvariant()

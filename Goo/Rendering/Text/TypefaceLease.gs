@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Threading
 
 internal sealed class TypefaceLease : IDisposable {
   private var resource TypefaceResource?
@@ -9,30 +10,38 @@ internal sealed class TypefaceLease : IDisposable {
     this.resource = resource
   }
 
+  internal prop Resource TypefaceResource{
+    get {
+      guard let value = Volatile.Read(in resource) else { throw ObjectDisposedException("TypefaceLease") }
+      return value
+    }
+  }
+
+  internal prop FaceId uint64{
+    get {
+      guard let value = Volatile.Read(in resource) else { throw ObjectDisposedException("TypefaceLease") }
+      return value.Id
+    }
+  }
+
   internal prop Provider VulkanTextProvider{
     get {
-      lock (this) {
-        guard let value = resource else { throw ObjectDisposedException("TypefaceLease") }
-        return value.Provider
-      }
+      guard let value = Volatile.Read(in resource) else { throw ObjectDisposedException("TypefaceLease") }
+      return value.Provider
     }
   }
 
   internal prop Family string{
     get {
-      lock (this) {
-        guard let value = resource else { throw ObjectDisposedException("TypefaceLease") }
-        return value.Family
-      }
+      guard let value = Volatile.Read(in resource) else { throw ObjectDisposedException("TypefaceLease") }
+      return value.Family
     }
   }
 
   internal prop IsRegistered bool{
     get {
-      lock (this) {
-        guard let value = resource else { throw ObjectDisposedException("TypefaceLease") }
-        return value.IsRegistered
-      }
+      guard let value = Volatile.Read(in resource) else { throw ObjectDisposedException("TypefaceLease") }
+      return value.IsRegistered
     }
   }
 
@@ -47,7 +56,7 @@ internal sealed class TypefaceLease : IDisposable {
     var current TypefaceResource?
     lock (this) {
       current = resource
-      resource = nil
+      Volatile.Write(ref resource, nil)
     }
     if let value = current { value.Release() }
   }

@@ -130,23 +130,20 @@ internal class UnicodeScripts {
     internal func Resolve(text string, scratch UnicodeTextAnalysisScratchScope)
     List[UnicodeScriptRun]{
       if text == nil { throw ArgumentNullException("text") }
-      let runs = scratch.BeginScriptRuns(text.Length)
-      if text.Length == 0 { return runs }
-      var ascii = true
-      var script = UnicodeScriptsData.CommonTag
-      for character in text {
-        if character > '\u007F' {
-          ascii = false
-          break
+      if text.Length == 0 { return scratch.BeginScriptRuns(0) }
+      if Ascii.IsValid(text.AsSpan()) {
+        var script = UnicodeScriptsData.CommonTag
+        for character in text {
+          if character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z' {
+            script = 0x4C61746Eu
+            break
+          }
         }
-        if character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z' {
-          script = 0x4C61746Eu
-        }
-      }
-      if ascii {
+        let runs = scratch.BeginScriptRuns(1)
         runs.Add(UnicodeScriptRun(0, text.Length, script))
         return runs
       }
+      let runs = scratch.BeginScriptRuns(text.Length)
       let graphemeScalars = scratch.BeginGraphemeScalars(text.Length)
       let starts = scratch.BeginScriptStarts(text.Length)
       UnicodeGraphemes.Starts(text, graphemeScalars, starts)

@@ -41,6 +41,19 @@ internal class MockHybridTextProvider : VulkanTextProvider {
             Required: 0,
         }
 
+    public func ShapeInto(text string, itemOffset int32, itemLength int32,
+        options VulkanTextShapingOptions, workspace VulkanTextShapingWorkspace) VulkanTextProviderResult -> VulkanTextProviderResult{
+            AbiVersion: VulkanTextProviderAbi.Version,
+            Status: VulkanTextProviderAbi.Success,
+            Count: 0,
+            Required: 0,
+        }
+
+    public func TryGetNominalGlyph(codepoint uint32, out glyphId uint32) bool {
+        glyphId = 0u
+        return false
+    }
+
     public func EncodeGlyphInto(glyphId uint32,
         workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult {
         EncodeDrawCallCount = EncodeDrawCallCount + 1

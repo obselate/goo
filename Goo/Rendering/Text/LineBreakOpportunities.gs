@@ -3,6 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Text
+import System.Threading
 
 internal sealed class LineBreakMap {
   internal prop Offsets []int32{ get; set; }
@@ -77,6 +78,29 @@ internal data struct TextLineBreakScalar(Start int32, End int32, Value int32,
 
 internal class LineBreakOpportunities {
   shared {
+    private const RetainedScratchCapacity int32 = 8192
+    private let AsciiOriginalClasses []TextLineBreakClass = [128]TextLineBreakClass
+    private let AsciiResolvedClasses []TextLineBreakClass = [128]TextLineBreakClass
+    private let AsciiContexts []uint8 = [128]uint8
+    private let asciiInitLock object = Object()
+    private var asciiInitialized int32
+    @ThreadStatic
+    private var scratchScalars List[TextLineBreakScalar]?
+
+    private func EnsureAsciiTables() {
+      if Volatile.Read(in asciiInitialized) != 0 { return }
+      lock (asciiInitLock) {
+        if asciiInitialized != 0 { return }
+        for code in 0 ... 128 {
+          let original = UnicodeLineBreakData.Classify(code)
+          AsciiOriginalClasses[code] = original
+          AsciiResolvedClasses[code] = ResolveClass(original, code)
+          AsciiContexts[code] = UnicodeLineBreakContext.Classify(code)
+        }
+        Volatile.Write(ref asciiInitialized, 1)
+      }
+    }
+
     internal func Resolve(text string) LineBreakMap {
       if text == nil { throw ArgumentNullException("text") }
       if text.Length == 0 {
@@ -84,7 +108,16 @@ internal class LineBreakOpportunities {
         offsets[0] = 0
         return LineBreakMap(offsets)
       }
-
+      if Ascii.IsValid(text.AsSpan()) {
+        let scalars = PopulateAsciiScalars(text)
+        let offsets = List[int32](text.Length)
+        for i in 0 ... text.Length {
+          if IsAsciiBreakAllowed(scalars, i, text.Length) {
+            offsets.Add(i + 1)
+          }
+        }
+        return LineBreakMap(offsets.ToArray())
+      }
       let scalars = DecodeScalars(text)
       let offsets = List[int32](scalars.Count)
       for i in 0 ... scalars.Count {
@@ -95,6 +128,63 @@ internal class LineBreakOpportunities {
         }
       }
       return LineBreakMap(offsets.ToArray())
+    }
+
+    internal func FillFlags(text string, flags []uint8, bit uint8) {
+      if text.Length == 0 { return }
+      if Ascii.IsValid(text.AsSpan()) {
+        let scalars = PopulateAsciiScalars(text)
+        for i in 0 ... text.Length {
+          if IsAsciiBreakAllowed(scalars, i, text.Length) {
+            flags[i + 1] = flags[i + 1] | bit
+          }
+        }
+        return
+      }
+      let scalars = DecodeScalars(text)
+      for i in 0 ... scalars.Count {
+        if ResolveBoundary(scalars, i) != TextLineBreakAction.Prohibited {
+          let end = scalars[i].End
+          flags[end] = flags[end] | bit
+        }
+      }
+    }
+
+    private func PopulateAsciiScalars(text string) List[TextLineBreakScalar] {
+      EnsureAsciiTables()
+      var scalars = scratchScalars
+      if scalars == nil {
+        scalars = List[TextLineBreakScalar](Math.Min(RetainedScratchCapacity, Math.Max(64, text.Length)))
+        scratchScalars = scalars
+      } else {
+        scalars.Clear()
+        if text.Length <= RetainedScratchCapacity && scalars.Capacity < text.Length {
+          scalars.Capacity = text.Length
+        }
+      }
+      for i in 0 ... text.Length {
+        let code = int32(text[i])
+        scalars.Add(TextLineBreakScalar(i, i + 1, code, AsciiOriginalClasses[code],
+          AsciiResolvedClasses[code], AsciiContexts[code], false))
+      }
+      return scalars
+    }
+
+    private func IsAsciiBreakAllowed(scalars List[TextLineBreakScalar], leftIndex int32, count int32) bool {
+      let left = scalars[leftIndex]
+      if leftIndex + 1 >= count {
+        return true
+      }
+      let right = scalars[leftIndex + 1]
+      if (left.Class == TextLineBreakClass.AL || left.Class == TextLineBreakClass.NU)
+        && (right.Class == TextLineBreakClass.AL || right.Class == TextLineBreakClass.NU
+          || right.Class == TextLineBreakClass.SP || right.Class == TextLineBreakClass.CL
+          || right.Class == TextLineBreakClass.CP || right.Class == TextLineBreakClass.EX
+          || right.Class == TextLineBreakClass.IS || right.Class == TextLineBreakClass.SY
+          || right.Class == TextLineBreakClass.HY || right.Class == TextLineBreakClass.BA) {
+            return false
+          }
+      return ResolveBoundary(scalars, leftIndex) != TextLineBreakAction.Prohibited
     }
 
     private func DecodeScalars(text string) List[TextLineBreakScalar] {

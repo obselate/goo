@@ -56,6 +56,16 @@ internal func hb_font_set_scale(font nint, xScale int32, yScale int32) void;
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_nominal_glyph", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_get_nominal_glyph(font nint, codepoint uint32, ref glyph uint32) uint32;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_nominal_glyphs", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_get_nominal_glyphs(font nint, count uint32, firstUnicode nint,
+  unicodeStride uint32, firstGlyph nint, glyphStride uint32) uint32;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_create_sub_font", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_create_sub_font(parentFont nint) nint;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_make_immutable", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_make_immutable(font nint) void;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_glyph_extents", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_get_glyph_extents(font nint, glyph uint32, ref extents VulkanTextGlyphExtents) uint32;
 
@@ -112,6 +122,9 @@ internal func hb_buffer_create() nint;
 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_destroy", CallingConvention: CallingConvention.Cdecl)
 internal func hb_buffer_destroy(buffer nint) void;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_clear_contents", CallingConvention: CallingConvention.Cdecl)
+internal func hb_buffer_clear_contents(buffer nint) void;
 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_add_utf16", CallingConvention: CallingConvention.Cdecl)
 internal func hb_buffer_add_utf16(buffer nint, text nint, textLength int32, itemOffset uint32, itemLength int32) void;
@@ -376,6 +389,9 @@ internal interface VulkanTextProvider {
   prop OutlineHintingAvailable bool { get; }
   func ShapeInto(text string, options VulkanTextShapingOptions,
     workspace VulkanTextShapingWorkspace) VulkanTextProviderResult;
+  func ShapeInto(text string, itemOffset int32, itemLength int32,
+    options VulkanTextShapingOptions, workspace VulkanTextShapingWorkspace) VulkanTextProviderResult;
+  func TryGetNominalGlyph(codepoint uint32, out glyphId uint32) bool;
   func EncodeGlyphInto(glyphId uint32,
     workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult;
   func EncodePaintGlyphInto(glyphId uint32, paletteIndex uint32,
@@ -421,4 +437,5 @@ internal data struct VulkanTextGlyph {
   var YAdvance int32
   var XOffset int32
   var YOffset int32
+  var Flags uint32
 }

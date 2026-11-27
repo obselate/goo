@@ -1583,9 +1583,12 @@ internal class LayoutFixtures {
       Text{ Key: "b", Content: "Shared wrapped text layout" },
     })
     resolver.FlushEffects()
-    for i in 0 ... 257 {
-      let n = reconciler.Mount(Text{ Content: "Evict shared layout " + i.ToString() })
-      TextLayouts.For(n, 100.0F)
+    let evictPad = StringBuilder(48000)
+    for w in 0 ... 450 { evictPad.Append("evictword_0123456789_0123456789_0123456789_0123456789_0123456789_0123456789_0123456789_0123456789 ") }
+    let padSuffix = evictPad.ToString()
+    for i in 0 ... 42 {
+      let n = reconciler.Mount(Text{ Content: "Evict " + i.ToString() + " " + padSuffix })
+      TextLayouts.For(n, 650.0F)
       TextLayouts.Dispose(n)
     }
     let retained = TextLayouts.For(root.Children[0], 100.0F)

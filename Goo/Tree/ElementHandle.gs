@@ -515,9 +515,6 @@ internal class ElementHandles {
         current = value
       }
       if current == handle {
-        if n.Kind != NodeKind.Text {
-          TextLayouts.RemoveGeometry(n)
-        }
         if let same = handle {
           let unchanged = same.AttachedNode() == n && same.AttachedWindow() == owner
           same.Attach(n, owner)
@@ -527,7 +524,6 @@ internal class ElementHandles {
         }
         return
       }
-      TextLayouts.RemoveGeometry(n)
       if let next = handle {
         next.Attach(n, owner)
         MetricSubscriptions.AttachElement(next, owner)
@@ -543,9 +539,6 @@ internal class ElementHandles {
         values.Add(n, next)
         n.HasElementHandle = true
         InputMetadata.Refresh(n)
-        if n.Kind == NodeKind.Text {
-          TextLayouts.Invalidate(n)
-        }
         if n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor { TextGeometryQueries.Prepare(n) }
       }
     }
@@ -554,7 +547,6 @@ internal class ElementHandles {
       if !n.HasElementHandle {
         return nil
       }
-      TextLayouts.RemoveGeometry(n)
       if values.TryGetValue(n, out var value) {
         MetricSubscriptions.DetachElement(value, value.AttachedWindow())
         values.Remove(n)
@@ -1042,7 +1034,7 @@ internal class TextGeometryQueries {
   shared {
     internal func Prepare(n Node) {
       if n.Kind == NodeKind.Text {
-        TextLayouts.For(n, BoxGeometry.ContentWidth(n), true)
+        let _ = TextLayouts.For(n, BoxGeometry.ContentWidth(n))
       }
       if n.Kind == NodeKind.Entry {
         var rect Rect
@@ -1096,30 +1088,91 @@ internal class TextGeometryQueries {
         }
       }
 
-    private func staticPositionAt(n Node, local Point, out position TextPosition) bool {
-      position = TextPosition{}
-      guard let layout = TextLayouts.CurrentForGeometry(n) else { return false }
-      guard let geometry = layout.Geometry else { return false }
-      if layout.Lines.Count == 0 || geometry.Lines.Count != layout.Lines.Count { return false }
-      let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
-      let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
+    private func currentStaticLayout(n Node) TextLayout? {
+      if let current = TextLayouts.CurrentForGeometry(n) { return current }
+      if n.TextLayout == nil { return nil }
+      return TextLayouts.For(n, BoxGeometry.ContentWidth(n, true))
+    }
+
+    private func staticLineBounds(n Node, layout TextLayout, index int32,
+      out lineY float32, out lineHeight float32) {
+        if let rich = layout.Rich {
+          var top = 0.0F
+          for i in 0 ... index { top = top + rich.Lines[i].Height }
+          lineY = top
+          lineHeight = rich.Lines[index].Height
+          return
+        }
+        lineHeight = TextLayouts.resolvedLineHeight(n)
+        lineY = float32(index) * lineHeight
+      }
+
+    private func staticLineAtY(n Node, layout TextLayout, relY float32) int32 {
+      if let rich = layout.Rich {
+        var y = 0.0F
+        for i in 0 ... rich.Lines.Count {
+          let h = rich.Lines[i].Height
+          if relY < y + h || i + 1 == rich.Lines.Count { return i }
+          y = y + h
+        }
+        return rich.Lines.Count - 1
+      }
       let lineHeight = TextLayouts.resolvedLineHeight(n)
-      if lineHeight <= 0.0F { return false }
-      var index = int32((float32(local.Y) - contentY) / lineHeight)
+      if lineHeight <= 0.0F { return -1 }
+      var index = int32(relY / lineHeight)
       if index < 0 { index = 0 }
       if index >= layout.Lines.Count { index = layout.Lines.Count - 1 }
+      return index
+    }
+
+    private func staticPositionAt(n Node, local Point, out position TextPosition) bool {
+      position = TextPosition{}
+      guard let layout = currentStaticLayout(n) else { return false }
+      if layout.Lines.Count == 0 { return false }
+      let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
+      let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
+      let index = staticLineAtY(n, layout, float32(local.Y) - contentY)
+      if index < 0 { return false }
       let line = layout.Lines[index]
-      let geometryLine = geometry.Lines[index]
-      guard let shape = line.Shape else { return false }
       let x = float32(local.X) - contentX - TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n))
-      let hit = shape.HitTest(x)
-      let display = geometryLine.DisplayStart + hit.Index
-      if geometryLine.VisibleEnd < geometryLine.DisplayEnd
-        && hit.Index >= geometryLine.VisibleEnd - geometryLine.DisplayStart{
-          position = TextPosition{ Offset: geometryLine.VisibleEnd, Affinity: TextAffinity.Upstream }
+      var hit TextHit
+      if let shape = line.Shape {
+        hit = shape.HitTest(x)
+      } else if let rich = layout.Rich {
+        let rLine = rich.Lines[index]
+        if rLine.Runs.Count == 0 {
+          position = TextPosition{ Offset: line.DisplayStart, Affinity: TextAffinity.Downstream }
           return true
         }
-      let retainedDisplay = display > geometryLine.VisibleEnd ? geometryLine.VisibleEnd : display
+        var nearest = TextHit{}
+        var nearestDistance = Single.MaxValue
+        for run in rLine.Runs {
+          guard let runShape = run.Shape else { continue }
+          let localRunX = x - run.X
+          let clamped = if localRunX < 0.0F { 0.0F }
+          else if localRunX > runShape.Width { runShape.Width } else { localRunX }
+          let distance = MathF.Abs(localRunX - clamped)
+          let runHit = runShape.HitTest(clamped)
+          if distance < nearestDistance {
+            nearestDistance = distance
+            nearest = TextHit{
+              Index: run.DisplayStart - line.DisplayStart + runHit.Index,
+              Affinity: runHit.Affinity,
+            }
+          }
+          if distance == 0.0F { break }
+        }
+        hit = nearest
+      } else {
+        return false
+      }
+      let display = line.DisplayStart + hit.Index
+      if line.VisibleEnd < line.DisplayEnd
+        && hit.Index >= line.VisibleEnd - line.DisplayStart{
+          position = TextPosition{ Offset: line.VisibleEnd, Affinity: TextAffinity.Upstream }
+          return true
+        }
+      let retainedDisplay = display > line.VisibleEnd ? line.VisibleEnd : display
       position = TextPosition{ Offset: retainedDisplay, Affinity: TextAffinity(hit.Affinity) }
       return true
     }
@@ -1140,28 +1193,46 @@ internal class TextGeometryQueries {
     private func staticCaretRect(n Node, position TextPosition, out rect Rect) bool {
       rect = Rect{}
       if position.Offset < 0 || position.Offset > n.Content.Length { return false }
-      guard let layout = TextLayouts.CurrentForGeometry(n) else { return false }
-      guard let geometry = layout.Geometry else { return false }
-      if geometry.Lines.Count != layout.Lines.Count { return false }
+      guard let layout = currentStaticLayout(n) else { return false }
       var display = position.Offset
       if display > 0 && display < n.Content.Length && n.Content[display] == 10
         && n.Content[display - 1] == 13 {
           display = display - 1
         }
-      let lineIndex = staticLineForDisplay(layout, geometry, display, position.Affinity)
+      let lineIndex = staticLineForDisplay(layout, display, position.Affinity)
       if lineIndex < 0 { return false }
       let line = layout.Lines[lineIndex]
-      let geometryLine = geometry.Lines[lineIndex]
-      if display > geometryLine.VisibleEnd { return false }
-      guard let shape = line.Shape else { return false }
-      let localIndex = display - geometryLine.DisplayStart
+      if display > line.VisibleEnd { return false }
+      let localIndex = display - line.DisplayStart
       if localIndex < 0 || localIndex > line.Content.Length { return false }
+      var caretX = 0.0F
+      var foundCaret = false
+      if let shape = line.Shape {
+        caretX = shape.CaretX(localIndex, int32(position.Affinity))
+        foundCaret = true
+      } else if let rich = layout.Rich {
+        let rLine = rich.Lines[lineIndex]
+        if line.Content.Length == 0 {
+          caretX = 0.0F
+          foundCaret = true
+        } else {
+          for run in rLine.Runs {
+            let runEnd = run.DisplayStart + run.DisplayLength
+            if display < run.DisplayStart || display > runEnd { continue }
+            guard let runShape = run.Shape else { continue }
+            caretX = run.X + runShape.CaretX(display - run.DisplayStart, int32(position.Affinity))
+            foundCaret = true
+            break
+          }
+        }
+      }
+      if !foundCaret { return false }
       let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
       let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
-      let height = TextLayouts.resolvedLineHeight(n)
+      staticLineBounds(n, layout, lineIndex, out var lineRelY, out var height)
       rect = Rect{ X: contentX + TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n))
-        +shape.CaretX(localIndex, int32(position.Affinity)),
-        Y: contentY + float32(lineIndex) * height, W: 1.5F, H: height }
+        +caretX,
+        Y: contentY + lineRelY, W: 1.5F, H: height }
       return true
     }
 
@@ -1182,44 +1253,68 @@ internal class TextGeometryQueries {
       destination Span[ElementRect], out required int32) bool{
         required = 0
         if !validRange(textRange, n.Content.Length) { return false }
-        guard let layout = TextLayouts.CurrentForGeometry(n) else { return false }
-        guard let geometry = layout.Geometry else { return false }
-        if geometry.Lines.Count != layout.Lines.Count { return false }
+        guard let layout = currentStaticLayout(n) else { return false }
         let start = textRange.Start
         let end = textRange.Start + textRange.Length
         if end < start { return false }
         let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
         let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
-        let height = TextLayouts.resolvedLineHeight(n)
         let values = stackalloc[64]float32
+        let contentWidth = BoxGeometry.ContentWidth(n)
         for i in 0 ... layout.Lines.Count {
           let line = layout.Lines[i]
-          let geometryLine = geometry.Lines[i]
-          if end <= geometryLine.DisplayStart || start >= geometryLine.VisibleEnd { continue }
-          guard let shape = line.Shape else { continue }
-          var lineStart = start > geometryLine.DisplayStart ? start : geometryLine.DisplayStart
-          var lineEnd = end < geometryLine.VisibleEnd ? end : geometryLine.VisibleEnd
-          if lineStart < geometryLine.DisplayStart { lineStart = geometryLine.DisplayStart }
-          if lineEnd > geometryLine.DisplayStart + line.Content.Length {
-            lineEnd = geometryLine.DisplayStart + line.Content.Length
+          if end <= line.DisplayStart || start >= line.VisibleEnd { continue }
+          var lineStart = start > line.DisplayStart ? start : line.DisplayStart
+          var lineEnd = end < line.VisibleEnd ? end : line.VisibleEnd
+          if lineStart < line.DisplayStart { lineStart = line.DisplayStart }
+          if lineEnd > line.DisplayStart + line.Content.Length {
+            lineEnd = line.DisplayStart + line.Content.Length
           }
           if lineEnd <= lineStart { continue }
-          let rectCount = shape.SelectionRectCount(lineStart - geometryLine.DisplayStart,
-            lineEnd - geometryLine.DisplayStart)
-          var rectOffset int32 = 0
-          while rectOffset < rectCount {
-            let copied = shape.CopySelectionRects(lineStart - geometryLine.DisplayStart,
-              lineEnd - geometryLine.DisplayStart, rectOffset, values)
-            let appended = appendSelectionRects(n, values, copied,
-              contentX + TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n)),
-              contentY + float32(i) * height, height, space, destination, required)
-            if appended < 0 {
-              required = 0
-              return false
+          staticLineBounds(n, layout, i, out var lineRelY, out var height)
+          let lineOriginX = contentX + TextLayouts.lineOffset(n, line, contentWidth)
+          if let shape = line.Shape {
+            let rectCount = shape.SelectionRectCount(lineStart - line.DisplayStart,
+              lineEnd - line.DisplayStart)
+            var rectOffset int32 = 0
+            while rectOffset < rectCount {
+              let copied = shape.CopySelectionRects(lineStart - line.DisplayStart,
+                lineEnd - line.DisplayStart, rectOffset, values)
+              let appended = appendSelectionRects(n, values, copied,
+                lineOriginX, contentY + lineRelY, height, space, destination, required)
+              if appended < 0 {
+                required = 0
+                return false
+              }
+              required = required + appended
+              if copied == 0 { break }
+              rectOffset = rectOffset + copied / 2
             }
-            required = required + appended
-            if copied == 0 { break }
-            rectOffset = rectOffset + copied / 2
+          } else if let rich = layout.Rich {
+            let rLine = rich.Lines[i]
+            for run in rLine.Runs {
+              guard let runShape = run.Shape else { continue }
+              let runEnd = run.DisplayStart + run.DisplayLength
+              let selStart = lineStart > run.DisplayStart ? lineStart : run.DisplayStart
+              let selEnd = lineEnd < runEnd ? lineEnd : runEnd
+              if selEnd <= selStart { continue }
+              let localStart = selStart - run.DisplayStart
+              let localEnd = selEnd - run.DisplayStart
+              let rectCount = runShape.SelectionRectCount(localStart, localEnd)
+              var rectOffset int32 = 0
+              while rectOffset < rectCount {
+                let copied = runShape.CopySelectionRects(localStart, localEnd, rectOffset, values)
+                let appended = appendSelectionRects(n, values, copied,
+                  lineOriginX + run.X, contentY + lineRelY, height, space, destination, required)
+                if appended < 0 {
+                  required = 0
+                  return false
+                }
+                required = required + appended
+                if copied == 0 { break }
+                rectOffset = rectOffset + copied / 2
+              }
+            }
           }
         }
         return true
@@ -1366,11 +1461,11 @@ internal class TextGeometryQueries {
         return value / 2
       }
 
-    private func staticLineForDisplay(layout TextLayout, geometry TextLayoutGeometry, display int32,
+    private func staticLineForDisplay(layout TextLayout, display int32,
       affinity TextAffinity) int32{
         var fallback = -1
         for i in 0 ... layout.Lines.Count {
-          let line = geometry.Lines[i]
+          let line = layout.Lines[i]
           if display < line.DisplayStart || display > line.DisplayEnd { continue }
           fallback = i
           if display > line.DisplayStart && display < line.DisplayEnd { return i }
