@@ -231,8 +231,18 @@ internal unsafe sealed partial class VulkanTextScene {
       return CacheFallbackSkipGlyph(key, existingFound)
     }
 
-  private func GetGlyph(run ShapedRun, glyphId uint32, ppem int32) VulkanTextAtlasGlyph? {
-    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem, 0u)
+  internal func TouchColorAtlasImage(id ResourceId) {
+    colorGlyphAtlas?.TouchPage(id)
+  }
+
+  private func GetGlyph(run ShapedRun, glyphId uint32, ppem int32, bitmapPpem int32 = 0) VulkanTextAtlasGlyph? {
+    let effectiveBitmapPpem = bitmapPpem > 0 ? bitmapPpem : (ppem > 0 ? ppem : 128)
+    let keyPpem = if !run.Provider.OutlineHintingAvailable && run.Provider.HasColorBitmaps() {
+      effectiveBitmapPpem
+    } else {
+      ppem
+    }
+    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, keyPpem, 0u)
     var existingFound = false
     if glyphs.TryGetValue(key, out var existing) {
       if IsGlyphResident(existing) {
@@ -249,7 +259,7 @@ internal unsafe sealed partial class VulkanTextScene {
     if hasColorPaint {
       if TryEncodePaintWithGrowth(run.Provider, glyphId, glyphWorkspace, out var paintResult) {
         if paintResult.Count > ColorPaintByteThreshold {
-          if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var bitmapOverride)
+          if StoreColorBitmapGlyph(run, glyphId, effectiveBitmapPpem, key, existingFound, out var bitmapOverride)
             && bitmapOverride != nil {
               return bitmapOverride
             }
@@ -263,18 +273,18 @@ internal unsafe sealed partial class VulkanTextScene {
           return nil
         }
       }
-      if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var fallbackBitmap)
+      if StoreColorBitmapGlyph(run, glyphId, effectiveBitmapPpem, key, existingFound, out var fallbackBitmap)
         && fallbackBitmap != nil {
           return fallbackBitmap
         }
       colorGlyphFallback = true
     } else if run.Provider.HasColorBitmaps() {
-      if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var bitmapGlyph)
+      if StoreColorBitmapGlyph(run, glyphId, effectiveBitmapPpem, key, existingFound, out var bitmapGlyph)
         && bitmapGlyph != nil {
           return bitmapGlyph
         }
     } else if run.Provider.HasColorSvg() {
-      if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var svgBitmapFallback)
+      if StoreColorBitmapGlyph(run, glyphId, effectiveBitmapPpem, key, existingFound, out var svgBitmapFallback)
         && svgBitmapFallback != nil {
           return svgBitmapFallback
         }
@@ -339,6 +349,11 @@ internal unsafe sealed partial class VulkanTextScene {
   private func HintPpem(provider VulkanTextProvider, fontSize float32) int32 {
     if !provider.OutlineHintingAvailable || fontSize <= 0.0F { return 0 }
     return Math.Max(1, int32(MathF.Round(fontSize * pixelScale * 64.0F)))
+  }
+
+  private func BitmapPpem(fontSize float32) int32 {
+    if fontSize <= 0.0F { return 0 }
+    return Math.Max(1, int32(MathF.Round(fontSize * pixelScale)))
   }
 
   private func CanRender(glyph VulkanTextAtlasGlyph) bool {

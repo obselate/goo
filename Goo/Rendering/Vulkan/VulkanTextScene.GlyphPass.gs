@@ -152,6 +152,7 @@ internal unsafe sealed partial class VulkanTextScene {
       while runIndex < shape.Runs.Count {
         let run = shape.Runs[runIndex]
         let ppem = if unfitted { 0 } else { HintPpem(run.Provider, fontSize) }
+        let bitmapPpem = BitmapPpem(fontSize)
         let runX = lineX + MathF.Min(run.VisualStart, run.VisualEnd)
         let runOriginX = parentTransform.A * runX + parentTransform.C * baseline + parentTransform.TX
         let runOriginY = parentTransform.B * runX + parentTransform.D * baseline + parentTransform.TY
@@ -159,7 +160,7 @@ internal unsafe sealed partial class VulkanTextScene {
         while glyphIndex < run.Glyphs.Length {
           let glyphId = run.Glyphs[glyphIndex]
           if glyphId != 0u {
-            guard let fillGlyph = GetGlyph(run, glyphId, ppem) else {
+            guard let fillGlyph = GetGlyph(run, glyphId, ppem, bitmapPpem) else {
               resourceDeferred = true
               publicationPending = true
               complete = false

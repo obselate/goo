@@ -78,7 +78,7 @@ internal sealed class ShapedRun : IDisposable {
     let right = GlyphEdge(lastGlyph)
     return ShapedRun(Text, Family, glyphs.ToArray(), points.ToArray(), clusters.ToArray(),
       LogicalStart, RightToLeft, RightToLeft ? right : left, RightToLeft ? left : right,
-      lease == nil, lease)
+      lease == nil, lease, directProvider)
   }
 
   internal func GlyphEdge(glyph int32) float32 ->

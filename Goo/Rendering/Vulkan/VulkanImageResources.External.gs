@@ -205,14 +205,22 @@ internal unsafe partial class VulkanImageResources {
         }
         let logical = LogicalIndexForPhysical(index, entry)
         let safeFence = RetireFence(entry, retireFence)
+        var updated = entry
         if entry.State != VulkanImageResourceState.Retiring {
-            RetireDescriptors(entry, safeFence)
+            updated = RetireDescriptors(entry, safeFence)
             RetireLogical(logical)
         }
-        CompleteLogicalRetirement(logical, entry)
-        currentReferenceCounts[index] = 0
-        entries[index] = VulkanImageResourceEntry{}
-        liveCount--
-        residentBytes -= entry.ResidentBytes
+        updated.State = VulkanImageResourceState.Retiring
+        updated.RetireFence = safeFence
+        updated.DropLogicalOnRetire = true
+        if lost {
+            CompleteLogicalRetirement(logical, updated)
+            currentReferenceCounts[index] = 0
+            entries[index] = VulkanImageResourceEntry{}
+            liveCount--
+            residentBytes -= entry.ResidentBytes
+        } else {
+            entries[index] = updated
+        }
     }
 }

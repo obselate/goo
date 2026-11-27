@@ -28,6 +28,7 @@ internal class MockHybridTextProvider : VulkanTextProvider {
 
     internal var EncodeDrawCallCount int32
     internal var EncodePaintCallCount int32
+    internal var LastBitmapPpem int32
 
     public prop AbiVersion uint32{ get -> VulkanTextProviderAbi.Version }
     public prop Metrics VulkanHarfBuzzMetrics{ get -> MetricsValue }
@@ -178,6 +179,7 @@ internal class MockHybridTextProvider : VulkanTextProvider {
     public func TryDecodeColorBitmapGlyph(glyphId uint32, ppem int32,
         out width int32, out height int32, out rgba([]uint8)?,
         out extents VulkanTextGlyphExtents, out scale int32) bool {
+        LastBitmapPpem = ppem
         width = 0
         height = 0
         rgba = nil
@@ -243,7 +245,7 @@ class TextEngineAtlasTests {
 
     @Fact
     func LargeComplexGlyphGrowsWorkspaceAndAtlasWithoutCrashing() {
-        using let atlasSet = VulkanTextAtlasSet(262144uL)
+        using let atlasSet = VulkanTextAtlasSet(262144uL, allowGrowth: true)
         let scene = VulkanTextScene(atlasSet)
         let provider = MockHybridTextProvider()
         provider.DrawBytesByGlyph[10u] = 327680
@@ -275,7 +277,7 @@ class TextEngineAtlasTests {
 
     @Fact
     func LazyColorEffectOutlinesAndSplitAtlasPagesAvoidCombinedOverflow() {
-        using let atlasSet = VulkanTextAtlasSet(8192uL)
+        using let atlasSet = VulkanTextAtlasSet(8192uL, allowGrowth: true)
         let scene = VulkanTextScene(atlasSet)
         let provider = MockHybridTextProvider()
         provider.PaintEnabled = true
@@ -362,7 +364,7 @@ class TextEngineAtlasTests {
         Assert.Equal(0, frameWithBitmap.CachedTextSegmentCount)
 
         provider.BitmapEnabled = false
-        using let atlasSetNoBitmap = VulkanTextAtlasSet(8192uL)
+        using let atlasSetNoBitmap = VulkanTextAtlasSet(8192uL, allowGrowth: true)
         let sceneNoBitmap = VulkanTextScene(atlasSetNoBitmap)
         let frameNoBitmap = SceneFrame(16)
         sceneNoBitmap.BeginCompile(0uL, 1.0F)
@@ -565,7 +567,7 @@ class TextEngineAtlasTests {
     func FontLimitAndAtlasSetProgressiveDoublingContract() {
         Assert.Equal(536870912, VulkanTextFont.MaxFontBytes)
 
-        using let growing = VulkanTextAtlasSet(262144uL)
+        using let growing = VulkanTextAtlasSet(262144uL, allowGrowth: true)
         Assert.Equal(262144uL, growing.AtlasAt(0).ByteSize)
         let page1 = growing.CreateAtlas()
         let page2 = growing.CreateAtlas()
@@ -575,11 +577,68 @@ class TextEngineAtlasTests {
         Assert.True(growing.TryRetireAtlas(page2, 0uL))
         Assert.Equal(262144uL + 524288uL, growing.ResidentByteSize)
 
+        using let fixedDefault = VulkanTextAtlasSet(1048576uL)
+        let fixedPage1 = fixedDefault.CreateAtlas()
+        Assert.Equal(1048576uL, fixedDefault.AtlasAt(0).ByteSize)
+        Assert.Equal(1048576uL, fixedDefault.AtlasAt(fixedPage1).ByteSize)
+
         using let smokeFixed = VulkanTextAtlasSet(8192uL, 8192uL, false)
         let smokePage1 = smokeFixed.CreateAtlas()
         let smokePage2 = smokeFixed.CreateAtlas()
         Assert.Equal(8192uL, smokeFixed.AtlasAt(0).ByteSize)
         Assert.Equal(8192uL, smokeFixed.AtlasAt(smokePage1).ByteSize)
         Assert.Equal(8192uL, smokeFixed.AtlasAt(smokePage2).ByteSize)
+    }
+
+    @Fact
+    func ColorAtlasAbortTouchSliceAndIntegerBitmapPpemContract() {
+        using let atlasSet = VulkanTextAtlasSet(262144uL)
+        using let colorAtlas = VulkanColorGlyphAtlas(64u, 64u, 2)
+        let scene = VulkanTextScene(atlasSet, colorAtlas)
+        let provider = MockHybridTextProvider()
+        provider.BitmapEnabled = true
+        let pixels = [4 * 4 * 4]uint8
+        var i int32 = 0
+        while i < pixels.Length {
+            pixels[i] = uint8(120)
+            pixels[i + 1] = uint8(180)
+            pixels[i + 2] = uint8(240)
+            pixels[i + 3] = uint8(255)
+            i = i + 4
+        }
+        provider.BitmapRgbaByGlyph[42u] = pixels
+        provider.BitmapSizeByGlyph[42u] = 4
+
+        using let shape = BuildSingleRunShape(provider, []uint32{ 42u })
+        using let sliced = shape.Runs[0].Slice(0, 1)
+        Assert.NotNull(sliced)
+        Assert.Same(provider, sliced!!.Provider)
+
+        let frame = SceneFrame(16)
+        scene.BeginCompile(0uL, 1.0F)
+        frame.BeginChunk(1uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame, shape, 14.0F, 0.0F, 14.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame.EndChunk()
+        Assert.Equal(14, provider.LastBitmapPpem)
+        Assert.Equal(1, colorAtlas.CachedGlyphCount)
+
+        colorAtlas.AbortUploads()
+        Assert.Equal(0, colorAtlas.CachedGlyphCount)
+
+        scene.BeginCompile(0uL, 1.0F)
+        let frame2 = SceneFrame(16)
+        frame2.BeginChunk(2uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 100.0F, Height: 64.0F }, true)
+        Assert.True(scene.EmitShapeForTest(
+            frame2, shape, 14.0F, 0.0F, 14.0F, Color.White, 1.0F, -1, 0.0F, Color.Transparent, nil
+        ))
+        frame2.EndChunk()
+        let imageId = frame2.CachedImages[0].ImageId
+
+        colorAtlas.BeginCompile(1uL)
+        scene.TouchColorAtlasImage(imageId)
+        colorAtlas.MarkUsed(7uL)
+        Assert.Equal(1, colorAtlas.ActivePageCount)
     }
 }

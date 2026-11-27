@@ -102,12 +102,12 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     }
   }
 
-  internal init(byteSize VkDeviceSize, maxByteSize VkDeviceSize = 0uL, allowGrowth bool = true) {
+  internal init(byteSize VkDeviceSize, maxByteSize VkDeviceSize = 0uL, allowGrowth bool = false) {
     if byteSize == 0uL {
       throw ArgumentOutOfRangeException("byteSize")
     }
     let resolvedMax = if maxByteSize == 0uL {
-      Math.Max(byteSize, MaxGrowableAtlasByteSize)
+      if allowGrowth { Math.Max(byteSize, MaxGrowableAtlasByteSize) } else { byteSize }
     } else if maxByteSize < byteSize {
       byteSize
     } else {

@@ -234,7 +234,8 @@ internal unsafe partial class VulkanWindowTarget {
             diagnostics,
             if diagnostics != nil { timestampState } else { nil },
             activeRuntime.QueueWorker.CreateMailbox(nil),
-            readbackLease)
+            readbackLease,
+            colorGlyphAtlas)
           if let accounting = objectAccounting {
             let currentAllocations = accounting.AllocationCount
             let baseline = readbackObjectAllocationBaseline

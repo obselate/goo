@@ -133,6 +133,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
   private let pages List[VulkanColorGlyphAtlasPage]
   private let stagingChunks List[VulkanColorGlyphStagingChunk]
   private let pendingUploads List[VulkanColorGlyphDirtyUpload]
+  private let pendingUploadKeys List[VulkanColorGlyphKey]
   private let dirtyPageIndices List[int32]
   private var nextOfflineLogicalId uint64 = 1uL
   private var nextVersion uint64 = 1uL
@@ -178,6 +179,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       pages = List[VulkanColorGlyphAtlasPage]()
       stagingChunks = List[VulkanColorGlyphStagingChunk]()
       pendingUploads = List[VulkanColorGlyphDirtyUpload]()
+      pendingUploadKeys = List[VulkanColorGlyphKey]()
       dirtyPageIndices = List[int32]()
     }
 
@@ -216,6 +218,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       pages = List[VulkanColorGlyphAtlasPage]()
       stagingChunks = List[VulkanColorGlyphStagingChunk]()
       pendingUploads = List[VulkanColorGlyphDirtyUpload]()
+      pendingUploadKeys = List[VulkanColorGlyphKey]()
       dirtyPageIndices = List[int32]()
     }
 
@@ -452,6 +455,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       } else {
         glyphs.Add(key, placed)
       }
+      pendingUploadKeys.Add(key)
       placement = placed
       return true
     }
@@ -507,6 +511,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
         clearIndex++
       }
       pendingUploads.Clear()
+      pendingUploadKeys.Clear()
       return
     }
     let pipelineBarrier = dispatch.vkCmdPipelineBarrier2
@@ -589,6 +594,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     }
     lastUploadedDirtyCount = pendingUploads.Count
     pendingUploads.Clear()
+    pendingUploadKeys.Clear()
     dirtyPageIndices.Clear()
   }
 
@@ -637,6 +643,12 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     if disposed {
       return
     }
+    var keyIndex int32 = 0
+    while keyIndex < pendingUploadKeys.Count {
+      glyphs.Remove(pendingUploadKeys[keyIndex])
+      keyIndex++
+    }
+    pendingUploadKeys.Clear()
     pendingUploads.Clear()
     dirtyPageIndices.Clear()
     var pageIndex int32 = 0

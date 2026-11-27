@@ -136,9 +136,11 @@ internal partial class VulkanSceneCompiler {
             guard let scene = imageScene else {
                 return false
             }
-            if !scene.TryRetain(rangeData.CachedImages[index]) {
+            let cachedImage = rangeData.CachedImages[index]
+            if !scene.TryRetain(cachedImage) {
                 return false
             }
+            textScene?.TouchColorAtlasImage(cachedImage.ImageId)
         }
         for index in start.AnalyticPathBands ... end.AnalyticPathBands {
             guard let scene = pathScene else {
