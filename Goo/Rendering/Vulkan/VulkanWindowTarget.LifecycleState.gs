@@ -39,6 +39,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var pathResources VulkanPathResources? = nil
   private var pathScene VulkanPathScene? = nil
   private var textAtlas VulkanTextAtlasSet? = nil
+  private var colorGlyphAtlas VulkanColorGlyphAtlas? = nil
   private var textScene VulkanTextScene? = nil
   private var textAtlasDiagnosticsToken uint64
   private var clipMaskAtlas VulkanClipMaskAtlas? = nil

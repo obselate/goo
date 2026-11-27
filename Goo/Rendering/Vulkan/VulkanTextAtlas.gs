@@ -34,6 +34,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   private var atlasBufferView VkBufferView = 0uL
   private var stagingBuffer VkBuffer = 0uL
   private var stagingAllocation VulkanMemoryAllocation? = nil
+  private var testStagingMapped nint = nint(0)
   private var descriptorSetLayout VkDescriptorSetLayout = 0uL
   private var descriptorPool VkDescriptorPool = 0uL
   private var descriptorSet VkDescriptorSet = 0uL
@@ -91,6 +92,18 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
       throw ArgumentOutOfRangeException("atlasByteSize")
     }
     byteSize = atlasByteSize
+  }
+
+  internal init(atlasByteSize VkDeviceSize, nativeTestStaging nint) {
+    if atlasByteSize == 0uL || atlasByteSize > MaxAtlasBytes
+      || (atlasByteSize % AtlasTexelBytes) != 0uL {
+      throw ArgumentOutOfRangeException("atlasByteSize")
+    }
+    if nativeTestStaging == nint(0) {
+      throw ArgumentException("Test staging pointer is null", "nativeTestStaging")
+    }
+    byteSize = atlasByteSize
+    testStagingMapped = nativeTestStaging
   }
 
   internal init(
@@ -151,16 +164,19 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
       if uploadSequence == uint64.MaxValue {
         throw OverflowException("Vulkan text atlas upload sequence overflow")
       }
-      uploadSequence = uploadSequence + 1uL
-      let destination = *uint8(nint(stagingAllocation!!.mapped))
-      var byteIndex int32 = 0
-      let sourceOffset = int32(sourceByteOffset)
-      let copyLength = int32(sourceByteCount)
-      while byteIndex < copyLength {
-        let index = sourceOffset + byteIndex
-        destination[index] = source[index]
-        byteIndex++
+      let destination = if let allocation = stagingAllocation {
+        *uint8(nint(allocation.mapped))
+      } else if testStagingMapped != nint(0) {
+        *uint8(testStagingMapped)
+      } else {
+        throw InvalidOperationException("Vulkan text atlas staging memory is unavailable")
       }
+      uploadSequence = uploadSequence + 1uL
+      Buffer.MemoryCopy(
+        *void(*uint8(nint(source) + nint(sourceByteOffset))),
+        *void(*uint8(nint(destination) + nint(sourceByteOffset))),
+        int64(byteSize - sourceByteOffset),
+        int64(sourceByteCount))
       uploadPending = true
       uploadRecorded = false
       uploadSubmitted = false
@@ -213,6 +229,10 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   internal func FlushBeforeSubmit() VkResult {
     EnsureOpen()
     if !uploadPending || flushPrepared {
+      return VkConstants.VK_SUCCESS
+    }
+    if stagingAllocation == nil {
+      flushPrepared = true
       return VkConstants.VK_SUCCESS
     }
     let result = allocator.FlushBeforeSubmit(stagingAllocation!!,

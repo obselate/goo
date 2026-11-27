@@ -11,6 +11,7 @@ internal unsafe partial class VulkanWindowTarget {
   private var pageCompiler VulkanSceneCompiler?
   private var pageText VulkanTextScene?
   private var pageAtlases VulkanTextAtlasSet?
+  private var pageColorAtlas VulkanColorGlyphAtlas?
   private var pageClips VulkanClipMaskAtlas?
   private var pageImages VulkanImageScene?
   private var pagePaths VulkanPathScene?
@@ -101,15 +102,21 @@ internal unsafe partial class VulkanWindowTarget {
           Size: options.Size, Background: options.Background }
         pageWindow = page
         page.PrepareOffscreenPage(options)
-        let atlasBytes = ResolveTextAtlasByteSize(uint64(properties.limits.maxTexelBufferElements) * 8uL)
+        let maxAtlasBytes = uint64(properties.limits.maxTexelBufferElements) * 8uL
+        let atlasBytes = ResolveTextAtlasByteSize(maxAtlasBytes)
+        let atlasMaxBytes = ResolveTextAtlasMaxByteSize(maxAtlasBytes, atlasBytes)
         let atlases = VulkanTextAtlasSet(device, dispatch, allocator, atlasBytes,
           properties.limits.maxTexelBufferElements, active.PrimitiveState.TextDescriptorSetLayout,
-          objectAccounting, nil, active.Generation)
+          objectAccounting, nil, active.Generation, atlasMaxBytes)
         pageAtlases = atlases
+        let colorAtlas = VulkanColorGlyphAtlas(device, dispatch, allocator,
+          active.ImageResources, active.ImageIdentityRegistry, active.Generation,
+          objectAccounting, nil)
+        pageColorAtlas = colorAtlas
         let clips = VulkanClipMaskAtlas(device, dispatch, allocator, options.PixelWidth, options.PixelHeight,
           clipMaskFormatSupport, uint64(options.MaxBytes), active.Generation, objectAccounting)
         pageClips = clips
-        pageText = VulkanTextScene(atlases)
+        pageText = VulkanTextScene(atlases, colorAtlas)
         pageImages = VulkanImageScene(active.ImageIdentityRegistry, active.ImageResources, active.Generation)
         pagePaths = VulkanPathScene(active.PathResources)
         let compiler = VulkanSceneCompiler()
@@ -129,7 +136,7 @@ internal unsafe partial class VulkanWindowTarget {
             extent, pixels * 4uL, active.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             active.ImageResources, active.Generation, active.MaxStorageBufferRange, active.ResourcePolicy,
             active.PrimitiveState, active.PathResources.Atlas, active.PathResources, clips, atlases,
-            objectAccounting, nil, nil, active.QueueWorker.CreateMailbox(nil), lease)
+            objectAccounting, nil, nil, active.QueueWorker.CreateMailbox(nil), lease, colorAtlas)
           target.EnableResourceUploads()
           leaseTransferred = true
           pageReadback = VulkanReadbackFactory.Create(target, lease, active.Generation)
@@ -169,6 +176,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     let scaleX = float32(float64(pageOptions.PixelWidth) / pageOptions.Size.Width)
     let scaleY = float32(float64(pageOptions.PixelHeight) / pageOptions.Size.Height)
+    pageColorAtlas?.Collect(completed)
     text.PublishCompletedUploads()
     text.BeginCompile(completed, scaleY)
     let result = compiler.Compile(page.Tree, pageOptions.Background,
@@ -263,12 +271,15 @@ internal unsafe partial class VulkanWindowTarget {
     pagePaths = nil
     pageText = nil
     if status == OffscreenRenderStatus.DeviceLost {
+      pageColorAtlas?.DisposeAfterDeviceLoss()
       pageAtlases?.DisposeAfterDeviceLoss()
       pageClips?.DisposeAfterDeviceLoss()
     } else {
+      pageColorAtlas?.Dispose()
       pageAtlases?.Dispose()
       pageClips?.Dispose()
     }
+    pageColorAtlas = nil
     pageAtlases = nil
     pageClips = nil
     pageCompiler = nil

@@ -57,7 +57,7 @@ internal unsafe sealed class FontData : SafeHandle {
         using let file = FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete)
         let length = file.Length
         if length == 0 || length > VulkanTextFont.MaxFontBytes {
-          throw InvalidDataException("Font file must contain between 1 byte and 64 MiB")
+          throw InvalidDataException("Font file must contain between 1 byte and 512 MiB")
         }
         let identity = FontFileIdentity.Read(file.SafeFileHandle.DangerousGetHandle(), length)
         if files.TryGetValue(identity, out var weak) && weak.TryGetTarget(out var current)

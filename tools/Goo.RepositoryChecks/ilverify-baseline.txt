@@ -358,6 +358,9 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyImageView()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyLayerViews()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroySampler()] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::DestroyStagingChunks()] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::DestroyVulkanPageResources(uint64, uint64, [Goo]Goo.VulkanMemoryAllocation)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::RecordUploads(native int)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteCombinedImageSampler(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, int32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteStorageBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, uint64)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteUniformTexelBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64)] ImportCalli not implemented

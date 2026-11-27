@@ -3,12 +3,15 @@ package Goo
 import System
 import System.Diagnostics
 import System.IO
+import System.IO.Compression
 import System.Runtime.InteropServices
 import System.Text
 
 internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   const MaxTextUnits int32 = 1048576
-  internal const MaxFontBytes int32 = 67108864
+  internal const MaxFontBytes int32 = 536870912
+  const MaxSvgBlobBytes int32 = 4194304
+  const MaxBitmapRgbaBytes int64 = 67108864L
   const MaxVariations int32 = 16
   const MaxFeatures int32 = 32
   const MaxLanguageUnits int32 = 64
@@ -18,6 +21,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   private var harfBuzzFace nint
   private var harfBuzzFont nint
   private var harfBuzzDesignFont nint
+  private var harfBuzzBitmapFont nint
   private var harfBuzzDraw nint
   private var harfBuzzPaint nint
   private var harfBuzzDesignScale int32
@@ -30,6 +34,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   private var hasColorPaint bool
   private var hasColorLayers bool
   private var hasColorBitmaps bool
+  private var hasColorSvg bool
+  private var hasColorPalettes bool
   private var disposed bool
   private let profileName string?
 
@@ -100,6 +106,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         hasColorPaint = hb_ot_color_has_paint(harfBuzzFace) != 0u
         hasColorLayers = hb_ot_color_has_layers(harfBuzzFace) != 0u
         hasColorBitmaps = hb_ot_color_has_png(harfBuzzFace) != 0u
+        hasColorSvg = hb_ot_color_has_svg(harfBuzzFace) != 0u
+        hasColorPalettes = hb_ot_color_has_palettes(harfBuzzFace) != 0u
         let upem = hb_face_get_upem(harfBuzzFace)
         if upem == 0u || upem > uint32(Int32.MaxValue) {
           throw InvalidOperationException("HarfBuzz face UPEM is invalid")
@@ -399,6 +407,24 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     }
   }
 
+  public func HasColorBitmaps() bool {
+    lock (nativeGate) {
+      if disposed {
+        throw ObjectDisposedException("VulkanTextFont")
+      }
+      return hasColorBitmaps
+    }
+  }
+
+  public func HasColorSvg() bool {
+    lock (nativeGate) {
+      if disposed {
+        throw ObjectDisposedException("VulkanTextFont")
+      }
+      return hasColorSvg
+    }
+  }
+
   public func GlyphHasColorPaint(glyphId uint32) bool {
     lock (nativeGate) {
       if disposed {
@@ -424,6 +450,183 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     }
   }
 
+  public func TryDecodeColorBitmapGlyph(glyphId uint32, ppem int32,
+    out width int32, out height int32, out rgba([]uint8)?,
+    out extents VulkanTextGlyphExtents, out scale int32) bool {
+      width = 0
+      height = 0
+      rgba = nil
+      extents = VulkanTextGlyphExtents{}
+      scale = harfBuzzDesignScale
+      lock (nativeGate) {
+        if disposed || !hasColorBitmaps {
+          return false
+        }
+        try {
+          if harfBuzzBitmapFont == nint(0) {
+            harfBuzzBitmapFont = hb_font_create(harfBuzzFace)
+            if harfBuzzBitmapFont == nint(0) {
+              return false
+            }
+            hb_font_set_scale(harfBuzzBitmapFont, harfBuzzDesignScale, harfBuzzDesignScale)
+            hb_ot_font_set_funcs(harfBuzzBitmapFont)
+            ApplyVariations(harfBuzzBitmapFont, variations, nil)
+          }
+          let effectivePpem = ppem > 0 ? uint32(ppem) : 128u
+          hb_font_set_scale(harfBuzzBitmapFont, harfBuzzDesignScale, harfBuzzDesignScale)
+          hb_font_set_ppem(harfBuzzBitmapFont, effectivePpem, effectivePpem)
+          let blob = hb_ot_color_glyph_reference_png(harfBuzzBitmapFont, glyphId)
+          if blob == nint(0) {
+            return false
+          }
+          try {
+            var dataLength uint32 = 0u
+            let dataPtr = hb_blob_get_data(blob, ref dataLength)
+            if dataPtr == nint(0) || dataLength == 0u || dataLength > uint32(Int32.MaxValue) {
+              return false
+            }
+            let encoded = [int32(dataLength)]uint8
+            Marshal.Copy(dataPtr, encoded, 0, int32(dataLength))
+            using let decoded = NativeImage.Decode(ReadOnlySpan[uint8](encoded))
+            let decodedWidth = decoded.Width
+            let decodedHeight = decoded.Height
+            if decodedWidth <= 0 || decodedHeight <= 0 {
+              return false
+            }
+            let pixelByteCount64 = int64(decodedWidth) * int64(decodedHeight) * 4L
+            if pixelByteCount64 <= 0L || pixelByteCount64 > MaxBitmapRgbaBytes {
+              return false
+            }
+            let totalBytes = int32(pixelByteCount64)
+            let srcPixels = decoded.Pixels
+            let premultiplied = [totalBytes]uint8
+            var offset int32 = 0
+            while offset < totalBytes {
+              let r = uint32(srcPixels[offset])
+              let g = uint32(srcPixels[offset + 1])
+              let b = uint32(srcPixels[offset + 2])
+              let a = uint32(srcPixels[offset + 3])
+              if a == 255u {
+                premultiplied[offset] = uint8(r)
+                premultiplied[offset + 1] = uint8(g)
+                premultiplied[offset + 2] = uint8(b)
+                premultiplied[offset + 3] = uint8(255)
+              } else if a == 0u {
+                premultiplied[offset] = uint8(0)
+                premultiplied[offset + 1] = uint8(0)
+                premultiplied[offset + 2] = uint8(0)
+                premultiplied[offset + 3] = uint8(0)
+              } else {
+                premultiplied[offset] = uint8((r * a + 127u) / 255u)
+                premultiplied[offset + 1] = uint8((g * a + 127u) / 255u)
+                premultiplied[offset + 2] = uint8((b * a + 127u) / 255u)
+                premultiplied[offset + 3] = uint8(a)
+              }
+              offset = offset + 4
+            }
+            var glyphExtents = VulkanTextGlyphExtents{}
+            let gotExtents = hb_font_get_glyph_extents(harfBuzzBitmapFont, glyphId, ref glyphExtents) != 0u
+            if !gotExtents || glyphExtents.Width <= 0 || glyphExtents.Height >= 0 {
+              let fallbackAscent = metrics.Ascender > 0 ? metrics.Ascender : harfBuzzDesignScale
+              let fallbackSpan = metrics.Ascender - metrics.Descender
+              let fallbackHeight = fallbackSpan > 0 ? fallbackSpan : harfBuzzDesignScale
+              glyphExtents = VulkanTextGlyphExtents{
+                XBearing: 0,
+                YBearing: fallbackAscent,
+                Width: harfBuzzDesignScale,
+                Height: -fallbackHeight,
+              }
+            }
+            width = decodedWidth
+            height = decodedHeight
+            rgba = premultiplied
+            extents = glyphExtents
+            scale = harfBuzzDesignScale
+            return true
+          } finally {
+            hb_blob_destroy(blob)
+          }
+        } catch (error Exception) {
+          width = 0
+          height = 0
+          rgba = nil
+          return false
+        }
+      }
+    }
+
+  public func TryGetColorSvgGlyph(glyphId uint32, out svgBytes([]uint8)?,
+    out extents VulkanTextGlyphExtents, out scale int32) bool {
+      svgBytes = nil
+      extents = VulkanTextGlyphExtents{}
+      scale = harfBuzzDesignScale
+      lock (nativeGate) {
+        if disposed || !hasColorSvg {
+          return false
+        }
+        try {
+          let blob = hb_ot_color_glyph_reference_svg(harfBuzzFace, glyphId)
+          if blob == nint(0) {
+            return false
+          }
+          try {
+            var dataLength uint32 = 0u
+            let dataPtr = hb_blob_get_data(blob, ref dataLength)
+            if dataPtr == nint(0) || dataLength == 0u || dataLength > uint32(MaxSvgBlobBytes) {
+              return false
+            }
+            let rawLength = int32(dataLength)
+            let rawBytes = [rawLength]uint8
+            Marshal.Copy(dataPtr, rawBytes, 0, rawLength)
+            if rawLength >= 2 && rawBytes[0] == uint8(31) && rawBytes[1] == uint8(139) {
+              using let compressed = MemoryStream(rawBytes)
+              using let gzip = GZipStream(compressed, CompressionMode.Decompress)
+              using let output = MemoryStream()
+              let scratch = [4096]uint8
+              while true {
+                let readCount = gzip.Read(scratch, 0, scratch.Length)
+                if readCount <= 0 {
+                  break
+                }
+                if output.Length + int64(readCount) > int64(MaxSvgBlobBytes) {
+                  return false
+                }
+                output.Write(scratch, 0, readCount)
+              }
+              svgBytes = output.ToArray()
+            } else {
+              svgBytes = rawBytes
+            }
+            if svgBytes == nil || svgBytes.Length == 0 {
+              svgBytes = nil
+              return false
+            }
+            var glyphExtents = VulkanTextGlyphExtents{}
+            let gotExtents = hb_font_get_glyph_extents(harfBuzzDesignFont, glyphId, ref glyphExtents) != 0u
+            if !gotExtents || glyphExtents.Width <= 0 || glyphExtents.Height >= 0 {
+              let fallbackAscent = metrics.Ascender > 0 ? metrics.Ascender : harfBuzzDesignScale
+              let fallbackSpan = metrics.Ascender - metrics.Descender
+              let fallbackHeight = fallbackSpan > 0 ? fallbackSpan : harfBuzzDesignScale
+              glyphExtents = VulkanTextGlyphExtents{
+                XBearing: 0,
+                YBearing: fallbackAscent,
+                Width: harfBuzzDesignScale,
+                Height: -fallbackHeight,
+              }
+            }
+            extents = glyphExtents
+            scale = harfBuzzDesignScale
+            return true
+          } finally {
+            hb_blob_destroy(blob)
+          }
+        } catch (error Exception) {
+          svgBytes = nil
+          return false
+        }
+      }
+    }
+
   public func Dispose() {
     lock (nativeGate) {
       if disposed {
@@ -447,6 +650,10 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
       if harfBuzzDesignFont != nint(0) {
         hb_font_destroy(harfBuzzDesignFont)
         harfBuzzDesignFont = nint(0)
+      }
+      if harfBuzzBitmapFont != nint(0) {
+        hb_font_destroy(harfBuzzBitmapFont)
+        harfBuzzBitmapFont = nint(0)
       }
       if harfBuzzFace != nint(0) {
         hb_face_destroy(harfBuzzFace)

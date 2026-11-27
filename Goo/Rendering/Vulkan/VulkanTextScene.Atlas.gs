@@ -5,137 +5,332 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal unsafe sealed partial class VulkanTextScene {
+  private func IsGlyphResident(glyph VulkanTextAtlasGlyph) bool {
+    if glyph.RenderMode == GlyphRenderModeColorAtlas {
+      return colorGlyphAtlas?.IsPlacementResident(glyph.ColorPlacement) == true
+    }
+    if glyph.RenderMode == GlyphRenderModeEmptySkip {
+      return true
+    }
+    return atlasSet.FindIndex(glyph.AtlasId) >= 0
+  }
+
+  private func TryEncodeDrawWithGrowth(
+    provider VulkanTextProvider,
+    glyphId uint32,
+    workspace VulkanTextProviderWorkspace,
+    ppem int32,
+    out encodedResult VulkanTextProviderResult) bool {
+      encodedResult = provider.EncodeGlyphInto(glyphId, workspace, ppem)
+      if encodedResult.AbiVersion != VulkanTextProviderAbi.Version {
+        return false
+      }
+      if encodedResult.Status == VulkanTextProviderAbi.CapacityExceeded {
+        if !workspace.EnsureByteCapacity(encodedResult.Required) {
+          return false
+        }
+        encodedResult = provider.EncodeGlyphInto(glyphId, workspace, ppem)
+        if encodedResult.AbiVersion != VulkanTextProviderAbi.Version {
+          return false
+        }
+      }
+      if encodedResult.Status != VulkanTextProviderAbi.Success {
+        return false
+      }
+      return encodedResult.Count >= 0 && (encodedResult.Count & 7) == 0
+    }
+
+  private func TryEncodePaintWithGrowth(
+    provider VulkanTextProvider,
+    glyphId uint32,
+    workspace VulkanTextProviderWorkspace,
+    out encodedResult VulkanTextProviderResult) bool {
+      encodedResult = provider.EncodePaintGlyphInto(glyphId, 0u, workspace)
+      if encodedResult.AbiVersion != VulkanTextProviderAbi.Version {
+        return false
+      }
+      if encodedResult.Status == VulkanTextProviderAbi.CapacityExceeded {
+        if !workspace.EnsureByteCapacity(encodedResult.Required) {
+          return false
+        }
+        encodedResult = provider.EncodePaintGlyphInto(glyphId, 0u, workspace)
+        if encodedResult.AbiVersion != VulkanTextProviderAbi.Version {
+          return false
+        }
+      }
+      if encodedResult.Status != VulkanTextProviderAbi.Success {
+        return false
+      }
+      return encodedResult.Count >= 0 && (encodedResult.Count & 7) == 0
+    }
+
+  private func StoreColorBitmapGlyph(
+    run ShapedRun,
+    glyphId uint32,
+    ppem int32,
+    key VulkanTextAtlasGlyphKey,
+    existingFound bool,
+    out result VulkanTextAtlasGlyph?) bool {
+      result = nil
+      guard let colorAtlas = colorGlyphAtlas else {
+        return false
+      }
+      if !run.Provider.HasColorBitmaps() {
+        return false
+      }
+      var placement VulkanColorGlyphPlacement
+      if !colorAtlas.TryGetCachedPlacement(run.Family, run.Provider, glyphId, ppem, out placement) {
+        if !run.Provider.TryDecodeColorBitmapGlyph(glyphId, ppem,
+          out var width, out var height, out var rgba, out var extents, out var scale) {
+            return false
+          }
+        if rgba == nil || width <= 0 || height <= 0 {
+          return false
+        }
+        if !colorAtlas.TryAcquireGlyph(run.Family, run.Provider, glyphId, ppem,
+          width, height, rgba, extents, scale, out placement) {
+            return false
+          }
+      }
+      let created = VulkanTextAtlasGlyph{
+        AtlasId: ResourceId{},
+        ByteOffset: 0u,
+        ByteLength: 0u,
+        EffectByteOffset: 0u,
+        EffectByteLength: 0u,
+        Scale: placement.Scale,
+        Extents: placement.Extents,
+        EffectExtents: placement.Extents,
+        RenderMode: GlyphRenderModeColorAtlas,
+        ColorPlacement: placement,
+      }
+      if existingFound {
+        glyphs[key] = created
+      } else {
+        glyphs.Add(key, created)
+      }
+      result = created
+      return true
+    }
+
+  private func TryPackIntoAtlas(
+    key VulkanTextAtlasGlyphKey,
+    existingFound bool,
+    byteCount int32,
+    extents VulkanTextGlyphExtents,
+    scale int32,
+    renderMode uint32,
+    out glyphResult VulkanTextAtlasGlyph?,
+    out memoryPressure bool) bool {
+      glyphResult = nil
+      memoryPressure = false
+      let totalByteCount = uint64(byteCount)
+      if totalByteCount > atlasSet.HardwareMaxByteSize || byteCount < 0 {
+        return false
+      }
+      var state = CurrentState()
+      if uint64(state.NextByteOffset) + totalByteCount > state.Atlas.ByteSize
+        || state.KeyCount >= int32(state.Atlas.ByteSize / 8uL) {
+          var createdIndex = -1
+          trimAtlasPages = true
+          try {
+            createdIndex = atlasSet.CreateAtlas(totalByteCount)
+          } catch (pressure VulkanMemoryPressureException) {
+            if !RecycleAtlas(totalByteCount) {
+              atlasSet.RecordPressureFailure()
+              memoryPressure = true
+              return false
+            }
+          } catch (error Exception) {
+            return false
+          }
+          if createdIndex >= 0 {
+            if states.Length < atlasSet.AtlasSlotCapacity {
+              Array.Resize(ref states, atlasSet.AtlasSlotCapacity)
+              Array.Resize(ref activeAtlasUse, atlasSet.AtlasSlotCapacity)
+            }
+            EnsureAtlasStates()
+            state = states[createdIndex]!!
+          } else {
+            state = CurrentState()
+          }
+          if totalByteCount > state.Atlas.ByteSize {
+            return false
+          }
+        }
+      let byteOffset = state.NextByteOffset
+      if byteOffset > uint32(Int32.MaxValue) {
+        return false
+      }
+      let requiredByteCount = byteOffset + uint32(byteCount)
+      state.EnsureByteCapacity(requiredByteCount)
+      if byteCount > 0 {
+        Array.Copy(glyphWorkspace.ByteBuffer, 0, state.Bytes, int32(byteOffset), byteCount)
+      }
+      let isMonochrome = renderMode == GlyphRenderModeMonochrome
+      let result = VulkanTextAtlasGlyph{
+        AtlasId: state.Identity,
+        ByteOffset: byteOffset,
+        ByteLength: uint32(byteCount),
+        EffectByteOffset: if isMonochrome { byteOffset } else { 0u },
+        EffectByteLength: if isMonochrome { uint32(byteCount) } else { 0u },
+        Scale: scale,
+        Extents: extents,
+        EffectExtents: extents,
+        RenderMode: renderMode,
+      }
+      if existingFound {
+        glyphs[key] = result
+      } else {
+        glyphs.Add(key, result)
+      }
+      state.AddKey(key)
+      state.NextByteOffset = requiredByteCount
+      glyphResult = result
+      return true
+    }
+
+  private func CacheFallbackSkipGlyph(
+    key VulkanTextAtlasGlyphKey,
+    existingFound bool) VulkanTextAtlasGlyph {
+      fallbackGlyphSkipCount = fallbackGlyphSkipCount + 1uL
+      colorGlyphFallback = true
+      let empty = VulkanTextAtlasGlyph{
+        RenderMode: GlyphRenderModeEmptySkip,
+      }
+      if existingFound {
+        glyphs[key] = empty
+      } else {
+        glyphs.Add(key, empty)
+      }
+      return empty
+    }
+
+  private func TryFallbackNotdefOrEmptySkip(
+    run ShapedRun,
+    originalGlyphId uint32,
+    ppem int32,
+    key VulkanTextAtlasGlyphKey,
+    existingFound bool,
+    out memoryPressure bool) VulkanTextAtlasGlyph? {
+      memoryPressure = false
+      if originalGlyphId != 0u {
+        if TryEncodeDrawWithGrowth(run.Provider, 0u, glyphWorkspace, ppem, out var notdefResult) {
+          if TryPackIntoAtlas(key, existingFound, notdefResult.Count,
+            glyphWorkspace.GlyphExtents, glyphWorkspace.GlyphScale, GlyphRenderModeMonochrome,
+            out var packedNotdef, out memoryPressure) && packedNotdef != nil {
+              fallbackGlyphSkipCount = fallbackGlyphSkipCount + 1uL
+              colorGlyphFallback = true
+              return packedNotdef
+            }
+          if memoryPressure {
+            return nil
+          }
+        }
+      }
+      return CacheFallbackSkipGlyph(key, existingFound)
+    }
+
   private func GetGlyph(run ShapedRun, glyphId uint32, ppem int32) VulkanTextAtlasGlyph? {
-    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem)
+    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem, 0u)
     var existingFound = false
     if glyphs.TryGetValue(key, out var existing) {
-      let existingIndex = atlasSet.FindIndex(existing.AtlasId)
-      if existingIndex >= 0 {
+      if IsGlyphResident(existing) {
+        if existing.RenderMode == GlyphRenderModeColorAtlas {
+          colorGlyphAtlas?.TouchPage(existing.ColorPlacement.ImageId)
+        }
         return existing
       }
       existingFound = true
     }
-    var renderMode uint32 = 2u
-    var providerResult VulkanTextProviderResult
-    var effectResult VulkanTextProviderResult
-    var effectExtents VulkanTextGlyphExtents
-    let hasColorGlyph = (run.Provider.HasColorPaint() && run.Provider.GlyphHasColorPaint(glyphId))
+
+    let hasColorPaint = (run.Provider.HasColorPaint() && run.Provider.GlyphHasColorPaint(glyphId))
       || (run.Provider.HasColorLayers() && run.Provider.GlyphHasColorLayers(glyphId))
-    if hasColorGlyph {
-      providerResult = run.Provider.EncodePaintGlyphInto(glyphId, 0u, glyphWorkspace)
-      if providerResult.Status == VulkanTextProviderAbi.Success {
-        renderMode = 3u
-        let effectWorkspace = effectGlyphWorkspace ?? VulkanTextProviderWorkspace([glyphWorkspace.ByteCapacity]uint8)
-        effectGlyphWorkspace = effectWorkspace
-        effectResult = run.Provider.EncodeGlyphInto(glyphId, effectWorkspace, ppem)
-        if effectResult.AbiVersion != VulkanTextProviderAbi.Version {
-          throw InvalidOperationException("Vulkan text provider ABI version is invalid")
+    if hasColorPaint {
+      if TryEncodePaintWithGrowth(run.Provider, glyphId, glyphWorkspace, out var paintResult) {
+        if paintResult.Count > ColorPaintByteThreshold {
+          if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var bitmapOverride)
+            && bitmapOverride != nil {
+              return bitmapOverride
+            }
         }
-        if effectResult.Status == VulkanTextProviderAbi.CapacityExceeded {
-          throw InvalidOperationException("Vulkan text color effect glyph exceeds workspace capacity")
-        }
-        if effectResult.Status == VulkanTextProviderAbi.Success {
-          if effectResult.Count < 0 || (effectResult.Count & 7) != 0 {
-            throw InvalidOperationException("Vulkan text color effect encoding is not texel aligned")
+        if TryPackIntoAtlas(key, existingFound, paintResult.Count,
+          glyphWorkspace.GlyphExtents, glyphWorkspace.GlyphScale, GlyphRenderModeColorPaint,
+          out var paintGlyph, out var paintPressure) && paintGlyph != nil {
+            return paintGlyph
           }
-          effectExtents = effectWorkspace.GlyphExtents
-        }
-      } else if providerResult.Status == VulkanTextProviderAbi.CapacityExceeded {
-        throw InvalidOperationException("Vulkan text color glyph exceeds workspace capacity")
-      } else {
-        colorGlyphFallback = true
-        providerResult = run.Provider.EncodeGlyphInto(glyphId, glyphWorkspace, ppem)
-      }
-    } else {
-      providerResult = run.Provider.EncodeGlyphInto(glyphId, glyphWorkspace, ppem)
-    }
-    if providerResult.AbiVersion != VulkanTextProviderAbi.Version {
-      throw InvalidOperationException("Vulkan text provider ABI version is invalid")
-    }
-    if providerResult.Status == VulkanTextProviderAbi.CapacityExceeded {
-      throw InvalidOperationException("Vulkan text glyph exceeds workspace capacity")
-    }
-    if providerResult.Status != VulkanTextProviderAbi.Success {
-      throw InvalidOperationException("Vulkan text glyph encoding failed")
-    }
-    if providerResult.Count < 0 || (providerResult.Count & 7) != 0 {
-      throw InvalidOperationException("Vulkan text glyph encoding is not texel aligned")
-    }
-    var effectByteCount uint32 = 0u
-    if renderMode == 3u && effectResult.Status == VulkanTextProviderAbi.Success {
-      effectByteCount = uint32(effectResult.Count)
-    }
-    let totalByteCount = uint64(providerResult.Count) + uint64(effectByteCount)
-    var state = CurrentState()
-    if uint64(state.NextByteOffset) + totalByteCount > state.Atlas.ByteSize
-      || state.KeyCount >= int32(state.Atlas.ByteSize / 8uL) {
-        var createdIndex = -1
-        trimAtlasPages = true
-        try {
-          createdIndex = atlasSet.CreateAtlas()
-        } catch (pressure VulkanMemoryPressureException) {
-          if !RecycleAtlas() {
-            atlasSet.RecordPressureFailure()
-            return nil
-          }
-        }
-        if createdIndex >= 0 {
-          if states.Length < atlasSet.AtlasSlotCapacity {
-            Array.Resize(ref states, atlasSet.AtlasSlotCapacity)
-            Array.Resize(ref activeAtlasUse, atlasSet.AtlasSlotCapacity)
-          }
-          EnsureAtlasStates()
-          state = states[createdIndex]!!
-        } else {
-          state = CurrentState()
-        }
-        if totalByteCount > state.Atlas.ByteSize {
-          throw InvalidOperationException("Vulkan text glyph exceeds atlas capacity")
+        if paintPressure {
+          return nil
         }
       }
-    let byteOffset = state.NextByteOffset
-    if byteOffset > uint32(Int32.MaxValue) {
-      throw InvalidOperationException("Vulkan text atlas byte offset exceeds managed array limits")
+      if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var fallbackBitmap)
+        && fallbackBitmap != nil {
+          return fallbackBitmap
+        }
+      colorGlyphFallback = true
+    } else if run.Provider.HasColorBitmaps() {
+      if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var bitmapGlyph)
+        && bitmapGlyph != nil {
+          return bitmapGlyph
+        }
+    } else if run.Provider.HasColorSvg() {
+      if StoreColorBitmapGlyph(run, glyphId, ppem, key, existingFound, out var svgBitmapFallback)
+        && svgBitmapFallback != nil {
+          return svgBitmapFallback
+        }
+      if run.Provider.TryGetColorSvgGlyph(glyphId, out var svgBytes, out var svgExtents, out var svgScale) {
+        let _ = svgBytes
+        let _ = svgExtents
+        let _ = svgScale
+      }
+      colorGlyphFallback = true
     }
-    let effectByteOffset = byteOffset + uint32(providerResult.Count)
-    let requiredByteCount = effectByteOffset + effectByteCount
-    state.EnsureByteCapacity(requiredByteCount)
-    Array.Copy(glyphWorkspace.ByteBuffer, 0, state.Bytes, int32(byteOffset), providerResult.Count)
-    if effectByteCount != 0u {
-      Array.Copy(effectGlyphWorkspace!!.ByteBuffer, 0, state.Bytes,
-        int32(effectByteOffset), int32(effectByteCount))
+
+    if TryEncodeDrawWithGrowth(run.Provider, glyphId, glyphWorkspace, ppem, out var drawResult) {
+      if TryPackIntoAtlas(key, existingFound, drawResult.Count,
+        glyphWorkspace.GlyphExtents, glyphWorkspace.GlyphScale, GlyphRenderModeMonochrome,
+        out var drawGlyph, out var drawPressure) && drawGlyph != nil {
+          return drawGlyph
+        }
+      if drawPressure {
+        return nil
+      }
     }
-    let result = VulkanTextAtlasGlyph{
-      AtlasId: state.Identity,
-      ByteOffset: byteOffset,
-      ByteLength: uint32(providerResult.Count),
-      EffectByteOffset: if renderMode == 3u {
-        if effectByteCount == 0u { 0u } else { effectByteOffset }
-      } else { byteOffset },
-      EffectByteLength: if renderMode == 3u {
-        effectByteCount
-      } else { uint32(providerResult.Count) },
-      Scale: glyphWorkspace.GlyphScale,
-      Extents: glyphWorkspace.GlyphExtents,
-      EffectExtents: if renderMode != 3u || effectByteCount == 0u {
-        glyphWorkspace.GlyphExtents
-      } else { effectExtents },
-      RenderMode: renderMode,
+    return TryFallbackNotdefOrEmptySkip(run, glyphId, ppem, key, existingFound, out var notdefPressure)
+  }
+
+  private func GetEffectOutlineGlyph(run ShapedRun, glyphId uint32, ppem int32) VulkanTextAtlasGlyph? {
+    let fillKey = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem, 0u)
+    if glyphs.TryGetValue(fillKey, out var fillGlyph)
+      && fillGlyph.RenderMode == GlyphRenderModeMonochrome
+      && IsGlyphResident(fillGlyph) {
+        return fillGlyph
+      }
+    let effectKey = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem, GlyphRenderModeMonochrome)
+    var existingFound = false
+    if glyphs.TryGetValue(effectKey, out var existing) {
+      if IsGlyphResident(existing) {
+        return existing
+      }
+      existingFound = true
     }
-    if existingFound {
-      glyphs[key] = result
-    } else {
-      glyphs.Add(key, result)
+    if TryEncodeDrawWithGrowth(run.Provider, glyphId, glyphWorkspace, ppem, out var effectResult) {
+      if TryPackIntoAtlas(effectKey, existingFound, effectResult.Count,
+        glyphWorkspace.GlyphExtents, glyphWorkspace.GlyphScale, GlyphRenderModeMonochrome,
+        out var packed, out var memoryPressure) && packed != nil {
+          return packed
+        }
+      if memoryPressure {
+        return nil
+      }
     }
-    state.AddKey(key)
-    state.NextByteOffset = requiredByteCount
-    return result
+    return CacheFallbackSkipGlyph(effectKey, existingFound)
   }
 
   private func CachedGlyph(run ShapedRun, glyphId uint32, ppem int32) VulkanTextAtlasGlyph? {
-    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem)
+    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem, 0u)
     if glyphs.TryGetValue(key, out var value)
-      && atlasSet.FindIndex(value.AtlasId) >= 0 {
+      && IsGlyphResident(value) {
         return value
       }
     return nil
@@ -147,6 +342,12 @@ internal unsafe sealed partial class VulkanTextScene {
   }
 
   private func CanRender(glyph VulkanTextAtlasGlyph) bool {
+    if glyph.RenderMode == GlyphRenderModeEmptySkip {
+      return true
+    }
+    if glyph.RenderMode == GlyphRenderModeColorAtlas {
+      return colorGlyphAtlas?.IsPlacementResident(glyph.ColorPlacement) == true
+    }
     let glyphEnd = uint64(glyph.ByteOffset) + uint64(glyph.ByteLength)
     return IsAtlasRangeResident(glyph.AtlasId, glyphEnd)
   }
@@ -232,7 +433,7 @@ internal unsafe sealed partial class VulkanTextScene {
     EnsureAtlasStates()
   }
 
-  private func RecycleAtlas() bool {
+  private func RecycleAtlas(minimumByteSize VkDeviceSize = 0uL) bool {
     EnsureAtlasStates()
     let index = atlasSet.FindReclaimable(
       completedGlobalSubmissionSerial, activeAtlasUse)
@@ -244,12 +445,12 @@ internal unsafe sealed partial class VulkanTextScene {
     }
     var identity ResourceId
     try {
-      identity = atlasSet.RecycleAtlas(index, completedGlobalSubmissionSerial)
+      identity = atlasSet.RecycleAtlas(index, completedGlobalSubmissionSerial, minimumByteSize)
     } catch (error Exception) {
       RemoveStateGlyphs(state)
       states[index] = nil
       stateCount = stateCount - 1
-      rethrow
+      return false
     }
     RemoveStateGlyphs(state)
     state.Reset(atlasSet.AtlasAt(index), identity)
@@ -294,6 +495,13 @@ internal unsafe sealed partial class VulkanTextScene {
     && left.Version == right.Version
 
   private func MarkActiveAtlas(glyph VulkanTextAtlasGlyph) {
+    if glyph.RenderMode == GlyphRenderModeColorAtlas {
+      colorGlyphAtlas?.TouchPage(glyph.ColorPlacement.ImageId)
+      return
+    }
+    if glyph.RenderMode == GlyphRenderModeEmptySkip || !glyph.AtlasId.IsValid {
+      return
+    }
     TryMarkAtlasActive(glyph.AtlasId)
   }
 }

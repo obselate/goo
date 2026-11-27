@@ -174,6 +174,11 @@ internal unsafe partial class VulkanWindowTarget {
     }
     textScene = nil
     RemoveTextAtlasDiagnosticContribution()
+    let staleColorGlyphAtlas = colorGlyphAtlas
+    colorGlyphAtlas = nil
+    if let colorAtlas = staleColorGlyphAtlas {
+      try { colorAtlas.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
+    }
     let staleTextAtlas = textAtlas
     textAtlas = nil
     if let atlas = staleTextAtlas {

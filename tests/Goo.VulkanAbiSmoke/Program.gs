@@ -163,6 +163,28 @@ internal shared class Program {
                 disposedEncoding.Required != 0 {
                 throw InvalidOperationException("Vulkan text provider disposed encoding contract failed")
             }
+            if VulkanTextFont.MaxFontBytes != 536870912 {
+                throw InvalidOperationException("Vulkan text font 512 MiB limit contract failed")
+            }
+            let colorEmojiFont = "/usr/share/fonts/noto/NotoColorEmoji.ttf"
+            if File.Exists(colorEmojiFont) {
+                using let emojiData = FontData.FromPath(colorEmojiFont)
+                using let emojiFont = VulkanTextFont(emojiData, 64u, 0u, nil)
+                if !emojiFont.HasColorBitmaps() {
+                    throw InvalidOperationException("Expected color bitmaps on NotoColorEmoji")
+                }
+                let emojiShape = VulkanTextShapingWorkspace(8)
+                let shapedEmoji = emojiFont.ShapeInto("😀", options, emojiShape)
+                if shapedEmoji.Status != VulkanTextProviderAbi.Success || emojiShape.GlyphCount == 0 {
+                    throw InvalidOperationException("Failed shaping color emoji bitmap glyph")
+                }
+                let emojiGlyph = emojiShape.GlyphBuffer[0].GlyphId
+                if !emojiFont.TryDecodeColorBitmapGlyph(emojiGlyph, 128,
+                    out var ew, out var eh, out var ergba, out var eext, out var escale)
+                    || ew <= 0 || eh <= 0 || ergba == nil || escale <= 0 || eext.Width <= 0 {
+                    throw InvalidOperationException("Failed decoding color emoji bitmap PNG")
+                }
+            }
             Console.WriteLine(
                 "TEXT_PROVIDER_ABI_SMOKE shapeRequired=" + capacityResult.Required.ToString() +
                     " glyphRequired=" +

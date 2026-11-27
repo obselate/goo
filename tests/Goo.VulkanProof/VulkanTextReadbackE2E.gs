@@ -11,6 +11,13 @@ internal class VulkanCaptionTextCell : Cell {
   }
 }
 
+internal class VulkanColorEmojiTextCell : Cell {
+  override func Build() Blob -> Container{
+    Width: 96, Height: 96, BackgroundColor: Color.Black,
+    Text{Content: "😀", FontFamily: "Color emoji proof", FontSize: 48, Color: Color.White},
+  }
+}
+
 internal class VulkanTextReadbackContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
@@ -489,6 +496,50 @@ internal unsafe func RunProductionTextReadback(effects bool) {
   }
   if !effects {
     RunTextAtlasOverflowReadback()
+    RunColorBitmapEmojiReadback()
+  }
+}
+
+internal unsafe func RunColorBitmapEmojiReadback() {
+  let emojiPath = "/usr/share/fonts/noto/NotoColorEmoji.ttf"
+  if !File.Exists(emojiPath) {
+    return
+  }
+  using let emojiSource = FontSource.FromPath("Color emoji proof", 400, false, emojiPath)
+  emojiSource.Register()
+  let emojiWindow = Window{Title: "Goo color emoji proof", Size: LayoutSize(96, 96),
+    Root: VulkanColorEmojiTextCell{}}.Open()
+  try {
+    WindowReadbackTestFixture.ForceRender(emojiWindow, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(emojiWindow, 2000)
+    if emojiWindow.RequestCapture() != WindowCaptureRequestStatus.Accepted {
+      throw InvalidOperationException("Color emoji capture was not accepted")
+    }
+    var pixels WindowCapture?
+    let deadline = Environment.TickCount64 + 5000L
+    while pixels == nil && Environment.TickCount64 < deadline {
+      emojiWindow.Pump(0.0)
+      pixels = emojiWindow.PollCapture()
+    }
+    guard let image = pixels else { throw TimeoutException("Color emoji capture timed out") }
+    var coloredPixels uint32 = 0u
+    for y in 0 ... int32(image.Height) {
+      for x in 0 ... int32(image.Width) {
+        let baseIdx = y * int32(image.RowBytes) + x * 4
+        let r = image.Pixels[baseIdx]
+        let g = image.Pixels[baseIdx + 1]
+        let b = image.Pixels[baseIdx + 2]
+        if r != g || g != b || r != b {
+          coloredPixels = coloredPixels + 1u
+        }
+      }
+    }
+    if coloredPixels < 100u {
+      throw InvalidOperationException("Color emoji GPU readback produced too few colored pixels: $coloredPixels")
+    }
+    Console.WriteLine("Text color bitmap emoji GPU readback: coloredPixels=$coloredPixels passed")
+  } finally {
+    CloseVulkanProductionProofWindow(emojiWindow)
   }
 }
 

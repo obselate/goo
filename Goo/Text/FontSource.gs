@@ -9,7 +9,7 @@ public class FontSource : IDisposable {
   shared {
     private const MaxVariations int32 = 16
 
-    /// Creates an unregistered font source backed by a read-only file mapping of at most 64 MiB.
+    /// Creates an unregistered font source backed by a read-only file mapping of at most 512 MiB.
     /// Do not change or truncate the file while the source or its text layouts are in use.
     /// Live sources for the same file share one read-only backing.
     public func FromPath(family string, weight int32, italic bool, path string) FontSource ->

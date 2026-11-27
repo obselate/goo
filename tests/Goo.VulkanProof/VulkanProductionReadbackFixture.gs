@@ -251,7 +251,7 @@ internal unsafe sealed partial class VulkanTextScene {
   internal prop CachedGlyphCountForProof int32 { get -> glyphs.Count }
   internal prop CpuBufferBytesForProof uint64 {
     get {
-      var bytes = uint64(glyphWorkspace.ByteCapacity) + uint64(effectGlyphWorkspace?.ByteCapacity ?? 0)
+      var bytes = uint64(glyphWorkspace.ByteCapacity)
       for state in states {
         if state != nil {
           bytes += uint64(state.Bytes.Length)

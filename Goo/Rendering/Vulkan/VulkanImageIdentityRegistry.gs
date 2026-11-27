@@ -301,6 +301,24 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     }
   }
 
+  internal func AcquireColorAtlasPageId(
+    out providerId uint64,
+    out sourceId uint64,
+    version uint64 = 1uL) ResourceId {
+      EnsureOpen()
+      if version == 0uL {
+        throw ArgumentOutOfRangeException("version")
+      }
+      providerId = NextProviderId()
+      sourceId = NextSourceId()
+      let logicalId = NextLogicalId()
+      return ResourceId{
+        Kind: SceneResourceKind.Image,
+        LogicalId: logicalId,
+        Version: version,
+      }
+    }
+
   private func NextProviderId() uint64 {
     if nextProviderId == 0uL || nextProviderId == uint64.MaxValue {
       throw OverflowException("Vulkan provider identity overflow")

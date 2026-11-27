@@ -105,6 +105,7 @@ internal unsafe partial class VulkanWindowTarget {
       ResolveDiagnosticTimestamp(selectedSlot, slotIndex)
       if let atlas = textAtlas {
         atlas.Collect(completedGraphicsSubmissionSerial)
+        colorGlyphAtlas?.Collect(completedGraphicsSubmissionSerial)
         textScene?.PublishCompletedUploads()
       }
       if let resources = imageResources {
@@ -219,6 +220,7 @@ internal unsafe partial class VulkanWindowTarget {
         }
         completedGraphicsSubmissionSerial = completed
         textAtlas?.Collect(completed)
+        colorGlyphAtlas?.Collect(completed)
         textScene?.PublishCompletedUploads()
         pathScene?.Collect(completed)
       }
@@ -322,6 +324,7 @@ internal unsafe partial class VulkanWindowTarget {
           var recordedBytes VkDeviceSize = 0uL
           var recordedBarriers int32 = 0
           atlas.RecordUploads(slot.CommandBuffer, out recordedBytes, out recordedBarriers)
+          colorGlyphAtlas?.RecordUploads(slot.CommandBuffer)
           RecordDiagnosticBarrierCount(recordedBarriers)
           uploadBytes = uploadBytes + uint64(recordedBytes)
         }

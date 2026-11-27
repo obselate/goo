@@ -25,7 +25,8 @@ internal unsafe sealed partial class VulkanTextScene {
         || segment.ClipChainId != frame.ActiveClipChainId
         || segment.Color != color
         || segment.EffectMode != effectMode
-        || segment.Unfitted{
+        || segment.Unfitted
+        || segment.HasExternalColorGlyphs{
           return false
         }
       return SameTextFloat(segment.FontSize, fontSize)

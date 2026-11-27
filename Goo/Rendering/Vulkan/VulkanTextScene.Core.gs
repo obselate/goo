@@ -10,13 +10,18 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   private const TextEffectShadow uint32 = 1u
   private const TextEffectStroke uint32 = 2u
   private const TextEffectBlurShadow uint32 = 3u
+  internal const ColorPaintByteThreshold int32 = 65536
+  private const GlyphRenderModeMonochrome uint32 = 2u
+  private const GlyphRenderModeColorPaint uint32 = 3u
+  private const GlyphRenderModeColorAtlas uint32 = 4u
+  private const GlyphRenderModeEmptySkip uint32 = 5u
 
   private let atlasSet VulkanTextAtlasSet
+  private let colorGlyphAtlas VulkanColorGlyphAtlas?
   private var states []VulkanTextSceneAtlasState?
   private let glyphs Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]
   private let glyphWorkspace VulkanTextProviderWorkspace
   private let buildWorkspace VulkanTextSegmentBuildWorkspace
-  private var effectGlyphWorkspace VulkanTextProviderWorkspace?
   private let entryMetrics TextMetrics
   private var activeAtlasUse []bool
   private let nodeSegments ConditionalWeakTable[VulkanSceneOwnerId, VulkanTextNodeSegmentCache]
@@ -32,6 +37,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   private var colorGlyphFallback bool
   private var publicationPending bool
   private var emissionFailed bool
+  private var fallbackGlyphSkipCount uint64
   private var completedGlobalSubmissionSerial uint64
   private var textLayoutRequestCount int32
   private var pixelScale float32 = 1.0F
@@ -43,6 +49,9 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   internal prop RedrawRequired bool{ get -> redrawRequired }
   internal prop ResourceDeferred bool{ get -> resourceDeferred }
   internal prop TextLayoutRequestCount int32{ get -> textLayoutRequestCount }
+  internal prop FallbackGlyphSkipCount uint64{ get -> fallbackGlyphSkipCount }
+  internal prop GlyphWorkspaceByteCapacity int32{ get -> glyphWorkspace.ByteCapacity }
+  internal prop ColorGlyphAtlas VulkanColorGlyphAtlas?{ get -> colorGlyphAtlas }
 
   internal func AtlasBytes(index int32, out length int32) []uint8 {
     let state = states[index] ?? throw ArgumentOutOfRangeException("index")
@@ -69,11 +78,13 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
     return result
   }
 
-  internal init(nativeAtlases VulkanTextAtlasSet) {
+  internal init(nativeAtlases VulkanTextAtlasSet,
+    nativeColorGlyphAtlas VulkanColorGlyphAtlas? = nil) {
     if nativeAtlases == nil {
       throw ArgumentNullException("nativeAtlases")
     }
     atlasSet = nativeAtlases
+    colorGlyphAtlas = nativeColorGlyphAtlas
     states = [nativeAtlases.AtlasSlotCapacity]VulkanTextSceneAtlasState?
     glyphs = Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]()
     activeAtlasUse = [nativeAtlases.AtlasSlotCapacity]bool
@@ -84,7 +95,8 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
     if atlasBytes > uint64(Int32.MaxValue) {
       throw ArgumentOutOfRangeException("nativeAtlases")
     }
-    glyphWorkspace = VulkanTextProviderWorkspace([int32(atlasBytes)]uint8)
+    let initialWorkspaceBytes = Math.Min(Math.Max(int32(atlasBytes), 65536), 262144)
+    glyphWorkspace = VulkanTextProviderWorkspace([initialWorkspaceBytes]uint8)
     buildWorkspace = VulkanTextSegmentBuildWorkspace(4)
     entryMetrics = TextMetrics()
     EnsureAtlasStates()
@@ -109,6 +121,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
     completedGlobalSubmissionSerial = completedSerial
     textLayoutRequestCount = 0
     Array.Clear(activeAtlasUse, 0, activeAtlasUse.Length)
+    colorGlyphAtlas?.BeginCompile(completedSerial)
   }
 
   internal func ResetCompileCounters() {
@@ -116,6 +129,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   }
 
   internal func PublishCompletedUploads() {
+    colorGlyphAtlas?.PublishCompletedUploads()
     EnsureAtlasStates()
     var stateIndex int32 = 0
     while stateIndex < states.Length {
@@ -168,6 +182,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   }
 
   internal func RestoreUpload() {
+    colorGlyphAtlas?.AbortUploads()
     var stateIndex int32 = 0
     while stateIndex < states.Length {
       if atlasSet.IsActive(stateIndex) {
@@ -315,7 +330,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
             if glyphId != 0u {
               guard let glyph = CachedGlyph(run, glyphId, ppem) else { return false }
               if !CanRender(glyph) { return false }
-              if glyph.ByteLength != 0u {
+              if glyph.ByteLength != 0u || glyph.RenderMode == GlyphRenderModeColorAtlas {
                 let extents = glyph.Extents
                 let minX = float32(extents.XBearing)
                 let minY = float32(extents.YBearing + extents.Height)

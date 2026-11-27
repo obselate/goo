@@ -91,6 +91,7 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
   internal var EffectOffsetY float32
   internal var ParentTransform PrimitiveTransform
   internal var BaselineReusable bool
+  internal var HasExternalColorGlyphs bool
   internal var SceneValidationVersion uint64
   internal var RendererValidationVersion uint64
   internal var RendererValidationAtlasGeneration uint64

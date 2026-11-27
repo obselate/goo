@@ -9,18 +9,22 @@ internal struct VulkanTextAtlasGlyphKey : IEquatable[VulkanTextAtlasGlyphKey] {
   internal prop Provider VulkanTextProvider{ get; init; }
   internal prop GlyphId uint32{ get; init; }
   internal prop Ppem int32{ get; init; }
+  internal prop RenderMode uint32{ get; init; }
 
-  internal init(family string, provider VulkanTextProvider, glyphId uint32, ppem int32 = 0) {
+  internal init(family string, provider VulkanTextProvider, glyphId uint32,
+    ppem int32 = 0, renderMode uint32 = 0u) {
     Family = family
     Provider = provider
     GlyphId = glyphId
     Ppem = ppem
+    RenderMode = renderMode
   }
 
   public func Equals(other VulkanTextAtlasGlyphKey) bool -> String.Equals(Family, other.Family, StringComparison.Ordinal)
     && Object.ReferenceEquals(Provider, other.Provider)
     && GlyphId == other.GlyphId
     && Ppem == other.Ppem
+    && RenderMode == other.RenderMode
 
   public override func Equals(value object?) bool -> switch value {
     case other is VulkanTextAtlasGlyphKey: Equals(other)
@@ -30,7 +34,7 @@ internal struct VulkanTextAtlasGlyphKey : IEquatable[VulkanTextAtlasGlyphKey] {
   public override func GetHashCode() int32 {
     let familyHash = Family == nil ? 0 : StringComparer.Ordinal.GetHashCode(Family)
     return HashCode.Combine(familyHash,
-      RuntimeHelpers.GetHashCode(Provider), int32(GlyphId), Ppem)
+      RuntimeHelpers.GetHashCode(Provider), int32(GlyphId), Ppem, int32(RenderMode))
   }
 }
 
@@ -150,6 +154,7 @@ internal sealed class VulkanTextAtlasGlyph {
   internal prop Extents VulkanTextGlyphExtents{ get; init; }
   internal prop EffectExtents VulkanTextGlyphExtents{ get; init; }
   internal prop RenderMode uint32{ get; init; }
+  internal prop ColorPlacement VulkanColorGlyphPlacement{ get; init; }
 
   internal init() {
   }

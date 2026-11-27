@@ -1103,14 +1103,18 @@ internal unsafe partial class VulkanWindowTarget {
       physicalProperties.limits.maxImageArrayLayers)
     let maxAtlasBytes = uint64(physicalProperties.limits.maxTexelBufferElements) * 8uL
     let atlasByteSize = ResolveTextAtlasByteSize(maxAtlasBytes)
+    let atlasMaxByteSize = ResolveTextAtlasMaxByteSize(maxAtlasBytes, atlasByteSize)
     if atlasByteSize < 8192uL {
       throw InvalidOperationException("Vulkan text atlas capacity is too small")
     }
     textAtlas = VulkanTextAtlasSet(device, dispatch, memoryAllocator!!, atlasByteSize,
       physicalProperties.limits.maxTexelBufferElements,
       activeRuntime.PrimitiveState.TextDescriptorSetLayout, windowObjectAccounting,
-      diagnostics, activeRuntime.Generation)
-    textScene = VulkanTextScene(textAtlas!!)
+      diagnostics, activeRuntime.Generation, atlasMaxByteSize)
+    colorGlyphAtlas = VulkanColorGlyphAtlas(device, dispatch, memoryAllocator!!,
+      activeRuntime.ImageResources, activeRuntime.ImageIdentityRegistry,
+      activeRuntime.Generation, windowObjectAccounting, diagnostics)
+    textScene = VulkanTextScene(textAtlas!!, colorGlyphAtlas)
     if let currentDiagnostics = diagnostics {
       textAtlasDiagnosticsToken = currentDiagnostics.RegisterTextAtlasContribution()
     }
@@ -1156,6 +1160,20 @@ internal unsafe partial class VulkanWindowTarget {
       } catch (error Exception) { }
     }
     return atlasByteSize
+  }
+
+  private func ResolveTextAtlasMaxByteSize(maxAtlasBytes uint64, initialByteSize uint64) uint64 {
+    if diagnostics != nil
+      && Environment.GetEnvironmentVariable("GOO_TEXT_ATLAS_SMOKE") == "1" {
+        let overrideValue = Environment.GetEnvironmentVariable("GOO_VK_TEXT_ATLAS_BYTES")
+        if overrideValue != nil && overrideValue != "" {
+          return initialByteSize
+        }
+      }
+    let capped = maxAtlasBytes < uint64(VulkanTextAtlasSet.MaxGrowableAtlasByteSize)
+      ? maxAtlasBytes
+      : uint64(VulkanTextAtlasSet.MaxGrowableAtlasByteSize)
+    return capped < initialByteSize ? initialByteSize : capped
   }
 
   private func AcquireQueue() {

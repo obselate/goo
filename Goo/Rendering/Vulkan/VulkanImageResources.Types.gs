@@ -47,6 +47,7 @@ internal data struct VulkanImageResourceEntry {
   var Cacheable bool
   var State VulkanImageResourceState
   var GpuPublished bool
+  var AtlasOwned bool
   var Image VkImage
   var ImageView VkImageView
   var Allocation VulkanMemoryAllocation?

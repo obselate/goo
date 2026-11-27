@@ -5,6 +5,31 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal unsafe sealed partial class VulkanTextScene {
+  internal func EmitShapeForTest(
+    frame SceneFrame,
+    shape ShapedText,
+    fontSize float32,
+    lineX float32,
+    baseline float32,
+    fillColor Color,
+    opacity float32,
+    parentTransformIndex int32,
+    strokeWidth float32,
+    strokeColor Color,
+    shadows BoxShadowStack?,
+    cacheOverride VulkanTextNodeSegmentCache? = nil) bool{
+      let cache = cacheOverride ?? VulkanTextNodeSegmentCache()
+      cache.BeginBuild()
+      activeNodeSegments = cache
+      activeSegmentReuse = true
+      try {
+        return EmitShapeWithStyle(frame, shape, fontSize, lineX, baseline, fillColor,
+          opacity, parentTransformIndex, strokeWidth, strokeColor, shadows)
+      } finally {
+        activeNodeSegments = nil
+      }
+    }
+
   private func EmitShapeWithStyle(
     frame SceneFrame,
     shape ShapedText,
@@ -121,6 +146,7 @@ internal unsafe sealed partial class VulkanTextScene {
       let workspace = buildWorkspace
       let parentScale = ParentTransformMinimumScale(frame, parentTransformIndex)
       var hasBounds bool = false
+      var usedExternalColorOrSkipped bool = false
       var result bool = true
       var runIndex int32 = 0
       while runIndex < shape.Runs.Count {
@@ -133,11 +159,39 @@ internal unsafe sealed partial class VulkanTextScene {
         while glyphIndex < run.Glyphs.Length {
           let glyphId = run.Glyphs[glyphIndex]
           if glyphId != 0u {
-            guard let glyph = GetGlyph(run, glyphId, ppem) else {
+            guard let fillGlyph = GetGlyph(run, glyphId, ppem) else {
               resourceDeferred = true
               publicationPending = true
               complete = false
               result = false
+              glyphIndex = glyphIndex + 1
+              continue
+            }
+            var glyph = fillGlyph
+            if effectMode != TextEffectFill && fillGlyph.RenderMode != GlyphRenderModeMonochrome {
+              if fillGlyph.RenderMode == GlyphRenderModeEmptySkip {
+                usedExternalColorOrSkipped = true
+                glyphIndex = glyphIndex + 1
+                continue
+              }
+              guard let effectGlyph = GetEffectOutlineGlyph(run, glyphId, ppem) else {
+                resourceDeferred = true
+                publicationPending = true
+                complete = false
+                result = false
+                glyphIndex = glyphIndex + 1
+                continue
+              }
+              if effectGlyph.RenderMode == GlyphRenderModeEmptySkip || effectGlyph.ByteLength == 0u {
+                usedExternalColorOrSkipped = true
+                colorEffectSkipped = true
+                glyphIndex = glyphIndex + 1
+                continue
+              }
+              glyph = effectGlyph
+            }
+            if glyph.RenderMode == GlyphRenderModeEmptySkip {
+              usedExternalColorOrSkipped = true
               glyphIndex = glyphIndex + 1
               continue
             }
@@ -150,15 +204,60 @@ internal unsafe sealed partial class VulkanTextScene {
               glyphIndex = glyphIndex + 1
               continue
             }
-            if effectMode != TextEffectFill && glyph.RenderMode == 3u
-              && glyph.EffectByteLength == 0u {
-                colorEffectSkipped = true
-                emissionFailed = true
-                complete = false
-                result = false
-                glyphIndex = glyphIndex + 1
-                continue
+            if glyph.RenderMode == GlyphRenderModeColorAtlas {
+              usedExternalColorOrSkipped = true
+              let extents = glyph.Extents
+              let minX = float32(extents.XBearing)
+              let minY = float32(extents.YBearing + extents.Height)
+              let maxX = float32(extents.XBearing + extents.Width)
+              let maxY = float32(extents.YBearing)
+              if maxX > minX && maxY > minY && glyph.Scale > 0 {
+                let scale = fontSize / float32(glyph.Scale)
+                if scale > 0.0F && FiniteValue(scale) {
+                  let point = run.Points[glyphIndex]
+                  let originX = lineX + point.X
+                  let originY = baseline - point.Y
+                  let quadMinX = originX + minX * scale
+                  let quadMinY = originY - maxY * scale
+                  let quadMaxX = originX + maxX * scale
+                  let quadMaxY = originY - minY * scale
+                  if FiniteValue(quadMinX) && FiniteValue(quadMinY)
+                    && FiniteValue(quadMaxX) && FiniteValue(quadMaxY)
+                    && quadMaxX > quadMinX && quadMaxY > quadMinY {
+                      let quadBounds = ConservativeBounds{
+                        X: quadMinX,
+                        Y: quadMinY,
+                        Width: quadMaxX - quadMinX,
+                        Height: quadMaxY - quadMinY,
+                      }
+                      let quadOpacity = float32(int32(color) & int32(255)) / 255.0F
+                      frame.AddCachedImage(CachedImageRefRecord{
+                        Bounds: quadBounds,
+                        ImageId: glyph.ColorPlacement.ImageId,
+                        SamplerId: glyph.ColorPlacement.SamplerId,
+                        SourceX: glyph.ColorPlacement.SourceX,
+                        SourceY: glyph.ColorPlacement.SourceY,
+                        SourceWidth: glyph.ColorPlacement.SourceWidth,
+                        SourceHeight: glyph.ColorPlacement.SourceHeight,
+                        Opacity: quadOpacity,
+                        Sampling: 1u,
+                        TransformIndex: parentTransformIndex,
+                      })
+                      if TransformGlyphBounds(parentTransform, quadMinX, quadMinY,
+                        quadMaxX, quadMaxY, out var colorWorldBounds) {
+                          if !hasBounds {
+                            workspace.Bounds = colorWorldBounds
+                            hasBounds = true
+                          } else {
+                            workspace.Bounds = UnionBounds(workspace.Bounds, colorWorldBounds)
+                          }
+                        }
+                    }
+                }
               }
+              glyphIndex = glyphIndex + 1
+              continue
+            }
             let extents = if effectMode == TextEffectFill {
               glyph.Extents
             } else {
@@ -329,7 +428,7 @@ internal unsafe sealed partial class VulkanTextScene {
       if result && workspace.RecordCount > 0 {
         CommitSegment(segment)
         segment.Shape = shape
-        segment.RendererValidationCacheEligible = activeSegmentReuse
+        segment.RendererValidationCacheEligible = activeSegmentReuse && !usedExternalColorOrSkipped
         segment.FontSize = fontSize
         segment.SizeChanged = sizeChanged
         segment.Unfitted = unfitted
@@ -341,7 +440,8 @@ internal unsafe sealed partial class VulkanTextScene {
         segment.EffectOffsetX = effectOffsetX
         segment.EffectOffsetY = effectOffsetY
         segment.ParentTransform = parentTransform
-        segment.BaselineReusable = parentTransformIndex == -1
+        segment.BaselineReusable = parentTransformIndex == -1 && !usedExternalColorOrSkipped
+        segment.HasExternalColorGlyphs = usedExternalColorOrSkipped
         frame.AddCachedTextSegment(segment.CreateReference())
       }
       return result
