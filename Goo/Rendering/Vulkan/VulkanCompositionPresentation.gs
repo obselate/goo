@@ -81,12 +81,13 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
 
     private func IsDeviceLoss(error Exception) bool {
       if error is ExternalException {
-        let code = error.ErrorCode
-        if code == int32(VkConstants.VK_ERROR_DEVICE_LOST) { return true }
-        return error is COMException && uint32(code) >= 0x887A0005u && uint32(code) <= 0x887A0007u
+        return error.ErrorCode == int32(VkConstants.VK_ERROR_DEVICE_LOST) || (error is COMException && IsDeviceRemoved(error.ErrorCode))
       }
       return false
     }
+
+    private func IsDeviceRemoved(result int32) bool
+    -> uint32(result) >= 0x887A0005u && uint32(result) <= 0x887A0007u
 
     private func DeviceLuid(runtime VulkanSharedLease) uint64? {
       var identity = VkPhysicalDeviceIDProperties{ sType: 1000071004 }
@@ -286,19 +287,31 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
       let signal = cast[unmanaged[Stdcall](nint, nint, uint64) -> int32](WindowsCompositionDevice.Method(interopContext, 147))
       let copy = cast[unmanaged[Stdcall](nint, nint, nint) -> void](WindowsCompositionDevice.Method(context, 47))
       let flush = cast[unmanaged[Stdcall](nint) -> void](WindowsCompositionDevice.Method(context, 111))
-      if wait(interopContext, fence, value) < 0 { return VkConstants.VK_ERROR_DEVICE_LOST }
+      var result = Result(wait(interopContext, fence, value), "Wait")
+      if result != VkConstants.VK_SUCCESS { return result }
       copy(context, backbuffer, texture)
-      if signal(interopContext, fence, value + 1uL) < 0 { return VkConstants.VK_ERROR_DEVICE_LOST }
+      result = Result(signal(interopContext, fence, value + 1uL), "Signal")
+      if result != VkConstants.VK_SUCCESS { return result }
       readyValue = value + 1uL
       flush(context)
     }
     let present = cast[unmanaged[Stdcall](nint, uint32, uint32) -> int32](WindowsCompositionDevice.Method(swapchain, 8))
-    if present(swapchain, if vsync { 1u } else { 0u }, 0u) < 0 { return VkConstants.VK_ERROR_DEVICE_LOST }
+    let presented = Result(present(swapchain, if vsync { 1u } else { 0u }, 0u), "Present")
+    if presented != VkConstants.VK_SUCCESS { return presented }
     if !attached {
-      if Root.Commit(swapchain) < 0 { return VkConstants.VK_ERROR_DEVICE_LOST }
+      let committed = Result(Root.Commit(swapchain), "Commit")
+      if committed != VkConstants.VK_SUCCESS { return committed }
       attached = true
     }
     return VkConstants.VK_SUCCESS
+  }
+
+  private func Result(result int32, operation string) VkResult {
+    if result >= 0 { return VkConstants.VK_SUCCESS }
+    if Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1" {
+      Console.Error.WriteLine("Goo Windows presentation: " + operation + " failed, HResult=0x" + result.ToString("x8"))
+    }
+    return if IsDeviceRemoved(result) { VkConstants.VK_ERROR_DEVICE_LOST } else { VkConstants.VK_ERROR_UNKNOWN }
   }
 
   internal func RecordBegin(command VkCommandBuffer, family uint32, undefined bool) {
