@@ -71,6 +71,13 @@ internal sealed class VulkanTextSceneAtlasState {
   internal func Reset(nativeAtlas VulkanTextAtlas, identity ResourceId) {
     Atlas = nativeAtlas
     Identity = identity
+    if uint64(Bytes.Length) > nativeAtlas.ByteSize {
+      var byteCapacity = InitialByteCapacity
+      if nativeAtlas.ByteSize < uint64(byteCapacity) {
+        byteCapacity = int32(nativeAtlas.ByteSize)
+      }
+      Bytes = [byteCapacity]uint8
+    }
     NextByteOffset = 0u
     PublishedBytePrefix = 0u
     QueuedBytePrefix = 0u

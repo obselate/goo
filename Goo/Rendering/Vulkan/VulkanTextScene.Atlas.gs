@@ -5,8 +5,8 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal unsafe sealed partial class VulkanTextScene {
-  private func GetGlyph(run ShapedRun, glyphId uint32, ppem int32) VulkanTextAtlasGlyph? {
-    let key = VulkanTextAtlasGlyphKey(run.Family, run.Provider, glyphId, ppem)
+  internal func AcquireGlyph(family string, provider VulkanTextProvider, glyphId uint32, ppem int32) VulkanTextAtlasGlyph? {
+    let key = VulkanTextAtlasGlyphKey(family, provider, glyphId, ppem)
     var existingFound = false
     if glyphs.TryGetValue(key, out var existing) {
       let existingIndex = atlasSet.FindIndex(existing.AtlasId)
@@ -19,15 +19,15 @@ internal unsafe sealed partial class VulkanTextScene {
     var providerResult VulkanTextProviderResult
     var effectResult VulkanTextProviderResult
     var effectExtents VulkanTextGlyphExtents
-    let hasColorGlyph = (run.Provider.HasColorPaint() && run.Provider.GlyphHasColorPaint(glyphId))
-      || (run.Provider.HasColorLayers() && run.Provider.GlyphHasColorLayers(glyphId))
+    let hasColorGlyph = (provider.HasColorPaint() && provider.GlyphHasColorPaint(glyphId))
+      || (provider.HasColorLayers() && provider.GlyphHasColorLayers(glyphId))
     if hasColorGlyph {
-      providerResult = run.Provider.EncodePaintGlyphInto(glyphId, 0u, glyphWorkspace)
+      providerResult = EncodeColorGlyph(provider, glyphId)
       if providerResult.Status == VulkanTextProviderAbi.Success {
         renderMode = 3u
-        let effectWorkspace = effectGlyphWorkspace ?? VulkanTextProviderWorkspace([glyphWorkspace.ByteCapacity]uint8)
+        var effectWorkspace = effectGlyphWorkspace ?? VulkanTextProviderWorkspace([4096]uint8)
+        effectResult = EncodeOutlineGlyph(provider, glyphId, ppem, ref effectWorkspace)
         effectGlyphWorkspace = effectWorkspace
-        effectResult = run.Provider.EncodeGlyphInto(glyphId, effectWorkspace, ppem)
         if effectResult.AbiVersion != VulkanTextProviderAbi.Version {
           throw InvalidOperationException("Vulkan text provider ABI version is invalid")
         }
@@ -44,10 +44,10 @@ internal unsafe sealed partial class VulkanTextScene {
         throw InvalidOperationException("Vulkan text color glyph exceeds workspace capacity")
       } else {
         colorGlyphFallback = true
-        providerResult = run.Provider.EncodeGlyphInto(glyphId, glyphWorkspace, ppem)
+        providerResult = EncodeOutlineGlyph(provider, glyphId, ppem, ref glyphWorkspace)
       }
     } else {
-      providerResult = run.Provider.EncodeGlyphInto(glyphId, glyphWorkspace, ppem)
+      providerResult = EncodeOutlineGlyph(provider, glyphId, ppem, ref glyphWorkspace)
     }
     if providerResult.AbiVersion != VulkanTextProviderAbi.Version {
       throw InvalidOperationException("Vulkan text provider ABI version is invalid")
@@ -72,9 +72,9 @@ internal unsafe sealed partial class VulkanTextScene {
         var createdIndex = -1
         trimAtlasPages = true
         try {
-          createdIndex = atlasSet.CreateAtlas()
+          createdIndex = atlasSet.CreateAtlas(totalByteCount)
         } catch (pressure VulkanMemoryPressureException) {
-          if !RecycleAtlas() {
+          if totalByteCount > atlasSet.DefaultPageByteSize || !RecycleAtlas() {
             atlasSet.RecordPressureFailure()
             return nil
           }
@@ -129,6 +129,48 @@ internal unsafe sealed partial class VulkanTextScene {
     }
     state.AddKey(key)
     state.NextByteOffset = requiredByteCount
+    return result
+  }
+
+  private func GrowWorkspaceCapacity(current int32, required int32) int32 {
+    if required <= 0 || required > VulkanTextProviderWorkspace.MaxByteCapacity {
+      return -1
+    }
+    var capacity = current < 4096 ? 4096 : current
+    while capacity < required {
+      if capacity > VulkanTextProviderWorkspace.MaxByteCapacity / 2 {
+        capacity = VulkanTextProviderWorkspace.MaxByteCapacity
+        break
+      }
+      capacity = capacity * 2
+    }
+    return capacity
+  }
+
+  private func EncodeColorGlyph(provider VulkanTextProvider, glyphId uint32) VulkanTextProviderResult {
+    var result = provider.EncodePaintGlyphInto(glyphId, 0u, glyphWorkspace)
+    if result.AbiVersion == VulkanTextProviderAbi.Version
+      && result.Status == VulkanTextProviderAbi.CapacityExceeded {
+        let next = GrowWorkspaceCapacity(glyphWorkspace.ByteCapacity, result.Required)
+        if next > glyphWorkspace.ByteCapacity {
+          glyphWorkspace = VulkanTextProviderWorkspace([next]uint8)
+          result = provider.EncodePaintGlyphInto(glyphId, 0u, glyphWorkspace)
+        }
+      }
+    return result
+  }
+
+  private func EncodeOutlineGlyph(provider VulkanTextProvider, glyphId uint32, ppem int32,
+    ref workspace VulkanTextProviderWorkspace) VulkanTextProviderResult {
+    var result = provider.EncodeGlyphInto(glyphId, workspace, ppem)
+    if result.AbiVersion == VulkanTextProviderAbi.Version
+      && result.Status == VulkanTextProviderAbi.CapacityExceeded {
+        let next = GrowWorkspaceCapacity(workspace.ByteCapacity, result.Required)
+        if next > workspace.ByteCapacity {
+          workspace = VulkanTextProviderWorkspace([next]uint8)
+          result = provider.EncodeGlyphInto(glyphId, workspace, ppem)
+        }
+      }
     return result
   }
 

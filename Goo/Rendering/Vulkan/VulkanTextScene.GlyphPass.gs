@@ -133,7 +133,7 @@ internal unsafe sealed partial class VulkanTextScene {
         while glyphIndex < run.Glyphs.Length {
           let glyphId = run.Glyphs[glyphIndex]
           if glyphId != 0u {
-            guard let glyph = GetGlyph(run, glyphId, ppem) else {
+            guard let glyph = AcquireGlyph(run.Family, run.Provider, glyphId, ppem) else {
               resourceDeferred = true
               publicationPending = true
               complete = false
