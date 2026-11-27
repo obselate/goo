@@ -12,6 +12,8 @@ class SpikeTheme {
         let Magenta Color = Color.Rgb(255, 0, 255)
         let Reference Color = Color.Rgb(255, 255, 0)
         let Cyan Color = Color.Rgb(0, 255, 255)
+        let Overlay Color = Color.Rgba(255, 0, 0, 128)
+        let OverlayText Color = Color.Rgb(255, 255, 255)
 
         const WindowPadding float64 = 24.0
         const PanelPadding float64 = 16.0
@@ -19,5 +21,8 @@ class SpikeTheme {
         const BorderWidth float64 = 4.0
         const RegionWidth float64 = 500.0
         const RegionHeight float64 = 300.0
+        const BadgeWidth float64 = 160.0
+        const BadgeHeight float64 = 80.0
+        const BadgeRadius float64 = 16.0
     }
 }

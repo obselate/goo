@@ -18,6 +18,13 @@ shared class ScreenCapture {
     private const Tolerance int32 = 48
 
     // Reads the composed desktop, so DWM layers such as DirectComposition visuals are included.
+    func Capture(area PixelRect, path string)[]uint8 {
+        Native.Check(Native.DwmFlush(), "DwmFlush")
+        let pixels = Read(area)
+        Save(path, area.Width, area.Height, pixels)
+        return pixels
+    }
+
     func Sample(
         area PixelRect,
         region PixelRect,
@@ -28,9 +35,7 @@ shared class ScreenCapture {
         frame uint32,
         path string
     ) ScreenSample {
-        Native.Check(Native.DwmFlush(), "DwmFlush")
-        let pixels = Read(area)
-        Save(path, area.Width, area.Height, pixels)
+        let pixels = Capture(area, path)
         let local = region.Offset(-area.Left, -area.Top)
         let middle = border / 2
         let edge = local.Inset(-middle - 1)
@@ -79,7 +84,7 @@ shared class ScreenCapture {
         Matched: a.Matched + b.Matched
     }
 
-    private func Count(pixels[]uint8, width int32, rect PixelRect, rgb uint32) PixelCount {
+    func Count(pixels[]uint8, width int32, rect PixelRect, rgb uint32) PixelCount {
         let height = pixels.Length / (width * 4)
         var sampled int32
         var matched int32

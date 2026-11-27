@@ -46,6 +46,22 @@ struct BitmapHeader {
     var ColorsImportant uint32
 }
 
+@StructLayout(LayoutKind.Sequential)
+struct SwapChainDescription {
+    var Width uint32
+    var Height uint32
+    var Format uint32
+    var Stereo int32
+    var SampleCount uint32
+    var SampleQuality uint32
+    var BufferUsage uint32
+    var BufferCount uint32
+    var Scaling uint32
+    var SwapEffect uint32
+    var AlphaMode uint32
+    var Flags uint32
+}
+
 @UnmanagedFunctionPointer(CallingConvention.Winapi)
 delegate SubclassProcedure(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint;
 
@@ -56,6 +72,9 @@ shared class Native {
     const NoZOrder uint32 = 0x0004u
     const NoActivate uint32 = 0x0010u
     const MoveMessage uint32 = 0x0003u
+    const MouseMoveMessage uint32 = 0x0200u
+    const LeftButtonDownMessage uint32 = 0x0201u
+    const LeftButtonUpMessage uint32 = 0x0202u
 
     func Check(result int32, operation string) {
         if result < 0 {
@@ -153,4 +172,21 @@ shared class Native {
 
     @DllImport("dcomp.dll")
     func DCompositionCreateDevice2(device nint, ref identifier Guid, out composition nint) int32;
+
+    @DllImport("user32.dll")
+    func PostMessageW(window nint, message uint32, wparam nuint, lparam nint) int32;
+
+    @DllImport("d3d11.dll")
+    func D3D11CreateDevice(
+        adapter nint,
+        driverType int32,
+        software nint,
+        flags uint32,
+        levels nint,
+        levelCount uint32,
+        sdkVersion uint32,
+        out device nint,
+        out level int32,
+        out context nint
+    ) int32;
 }
