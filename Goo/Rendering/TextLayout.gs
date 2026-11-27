@@ -508,7 +508,11 @@ internal class TextLayouts {
         widthLimit = Single.PositiveInfinity
         richLine = nil
         if ranges == nil {
-          let whole = shapedParagraph.MaterializePlainLine(0, text.Length, shapedParagraph.TotalWidth)
+          let whole = if n.TextTrimming == TextTrimming.Ellipsis && maxWidth >= 0.0F {
+            shape(n, shapedParagraph.Paragraph, 0, text.Length)
+          } else {
+            shapedParagraph.MaterializePlainLine(0, text.Length, shapedParagraph.TotalWidth)
+          }
           if n.TextTrimming != TextTrimming.Ellipsis || maxWidth < 0.0F || whole.Width <= maxWidth {
             minWidth = whole.Width
             return whole
