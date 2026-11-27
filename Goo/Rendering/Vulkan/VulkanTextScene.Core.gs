@@ -14,7 +14,7 @@ internal unsafe sealed partial class VulkanTextScene : VulkanGpuCache {
   private let atlasSet VulkanTextAtlasSet
   private var states []VulkanTextSceneAtlasState?
   private let glyphs Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]
-  private let glyphWorkspace VulkanTextProviderWorkspace
+  private var glyphWorkspace VulkanTextProviderWorkspace
   private let buildWorkspace VulkanTextSegmentBuildWorkspace
   private var effectGlyphWorkspace VulkanTextProviderWorkspace?
   private let entryMetrics TextMetrics

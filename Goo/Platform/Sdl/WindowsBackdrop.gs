@@ -131,6 +131,8 @@ internal class WindowsBackdrop : NativeBackdrop {
 
     private func SizingFrame(window nint) bool -> (GetWindowLongPtr(window, -16) & nint(0xC40000)) == nint(0x40000)
 
+    private func HasCaption(window nint) bool -> (GetWindowLongPtr(window, -16) & nint(0xC00000)) == nint(0xC00000)
+
     private func CaptionMessage(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
       if message == 0x7Cu && (wparam & nuint(0xffffffffu)) == nuint(0xfffffff0u) {
         let style = nint(Marshal.ReadInt32(lparam, 4))
@@ -166,8 +168,22 @@ internal class WindowsBackdrop : NativeBackdrop {
     }
 
     private func ClearRedirectionSurface(window nint) {
-      if GetClientRect(window, out var rect) == 0 { return }
-      let dc = GetDC(window)
+      var rect BackdropWindowsRect
+      var dc nint
+      if !HasCaption(window) {
+        if GetWindowRect(window, out var windowRect) == 0 { return }
+        rect = BackdropWindowsRect{
+          Left: 0,
+          Top: 0,
+          Right: windowRect.Right - windowRect.Left,
+          Bottom: windowRect.Bottom - windowRect.Top,
+        }
+        if rect.Right <= 0 || rect.Bottom <= 0 { return }
+        dc = GetWindowDC(window)
+      } else {
+        if GetClientRect(window, out rect) == 0 { return }
+        dc = GetDC(window)
+      }
       if dc == nint(0) { return }
       try {
         let brush = GetStockObject(4)
@@ -176,7 +192,20 @@ internal class WindowsBackdrop : NativeBackdrop {
     }
 
     private func EraseMessage(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
-      if message == 0x0014u {
+      if message == 0x0046u && lparam != nint(0) {
+        let flagsOffset = nint.Size * 2 + 16
+        let flags = Marshal.ReadInt32(lparam, flagsOffset)
+        if (flags & 0x0001) == 0 || (flags & 0x0020) != 0 {
+          Marshal.WriteInt32(lparam, flagsOffset, flags | 0x0100)
+        }
+      } else if message == 0x0083u && wparam != nuint(0) && SizingFrame(window) && IsZoomed(window) == 0 {
+        DefSubclassProc(window, message, wparam, lparam)
+        return nint(0x0300)
+      } else if message == 0x0085u && SizingFrame(window) {
+        return nint(0)
+      } else if message == 0x0086u && SizingFrame(window) {
+        return DefSubclassProc(window, message, wparam, nint(-1))
+      } else if message == 0x0014u {
         let dc = nint(wparam)
         if dc != nint(0) && GetClientRect(window, out var rect) != 0 {
           let brush = GetStockObject(4)
@@ -198,8 +227,10 @@ internal class WindowsBackdrop : NativeBackdrop {
 
     @DllImport("gdi32.dll") private func GetStockObject(index int32) nint;
     @DllImport("user32.dll") private func GetDC(window nint) nint;
+    @DllImport("user32.dll") private func GetWindowDC(window nint) nint;
     @DllImport("user32.dll") private func ReleaseDC(window nint, dc nint) int32;
     @DllImport("user32.dll") private func GetClientRect(window nint, out rect BackdropWindowsRect) int32;
+    @DllImport("user32.dll") private func GetWindowRect(window nint, out rect BackdropWindowsRect) int32;
     @DllImport("user32.dll") private func FillRect(dc nint, ref rect BackdropWindowsRect, brush nint) int32;
     @DllImport("dwmapi.dll") private func DwmEnableBlurBehindWindow(window nint, ref blurBehind BackdropWindowsBlurBehind) int32;
     @DllImport("dwmapi.dll") private func DwmSetWindowAttribute(window nint, attribute uint32, ref value int32, size uint32) int32;

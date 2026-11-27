@@ -14,7 +14,8 @@
 
 ### Fixed
 
-- Zero the Win32 GDI redirection surface (`BLACK_BRUSH`) on resize and paint and disable conflicting legacy `DwmEnableBlurBehindWindow` so transparent Windows Acrylic windows do not retain stale resize-edge marks.
+- Suppress Win32 non-client frame painting and resize bit-blitting (`SWP_NOCOPYBITS`, `WVR_REDRAW`, `WM_NCPAINT`, `WM_NCACTIVATE`), zero the full-window GDI redirection surface via `GetWindowDC`, and disable conflicting legacy `DwmEnableBlurBehindWindow` so transparent Windows Acrylic windows do not retain stale resize-edge bars or stripes.
+- Scale glyph encoding workspaces and Vulkan text atlas pages dynamically on demand so large color emojis and outline glyphs exceeding 256 KiB render without crashing.
 
 ## 0.32.10 - 2026-11-26
 

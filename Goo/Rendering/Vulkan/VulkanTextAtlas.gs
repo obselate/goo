@@ -22,7 +22,7 @@ internal data struct VulkanTextAtlasStats {
 
 internal unsafe partial class VulkanTextAtlas : IDisposable {
   private const AtlasTexelBytes VkDeviceSize = 8uL
-  private const MaxAtlasBytes VkDeviceSize = 2147483647uL
+  internal const MaxAtlasBytes VkDeviceSize = 2147483647uL
 
   private let device VkDevice
   private let dispatch VkDeviceDispatch
