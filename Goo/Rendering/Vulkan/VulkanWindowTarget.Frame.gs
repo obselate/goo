@@ -44,10 +44,6 @@ internal unsafe partial class VulkanWindowTarget {
       } else {
         throw InvalidOperationException("Vulkan swapchain image layout is invalid")
       }
-      if let composition = current.Composition {
-        composition.RecordOwnership(slot.CommandBuffer, queueFamilyIndex, true,
-          oldLayout == VkConstants.VK_IMAGE_LAYOUT_UNDEFINED)
-      } else {
       VulkanTransitions.RecordImage(
         slot.CommandBuffer,
         dispatch.vkCmdPipelineBarrier2,
@@ -59,7 +55,6 @@ internal unsafe partial class VulkanWindowTarget {
         srcAccessMask,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
-      }
       RecordDiagnosticBarrier()
       var attachment = VkRenderingAttachmentInfo{}
       attachment.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
@@ -97,9 +92,6 @@ internal unsafe partial class VulkanWindowTarget {
       let endRendering = dispatch.vkCmdEndRendering
       endRendering(slot.CommandBuffer)
       EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Main)
-      if let composition = current.Composition {
-        composition.RecordOwnership(slot.CommandBuffer, queueFamilyIndex, false)
-      } else {
       VulkanTransitions.RecordImage(
         slot.CommandBuffer,
         dispatch.vkCmdPipelineBarrier2,
@@ -111,7 +103,6 @@ internal unsafe partial class VulkanWindowTarget {
         VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
         VkConstants.VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
         VkConstants.VK_ACCESS_2_NONE)
-      }
       RecordDiagnosticBarrier()
     }
 }

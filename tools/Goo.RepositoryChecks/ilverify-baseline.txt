@@ -358,12 +358,6 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyImageView()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyLayerViews()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroySampler()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::Create(uint32, uint32)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::Dispose()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::ImportImage(native int, uint32, uint32)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::Present(uint64)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::RecordOwnership(native int, uint32, bool, bool)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::TryCreate([Goo]Goo.VulkanSharedLease, native int, [Goo]Goo.VkExtent2D, bool, [Goo]Goo.VulkanCompositionPresentation, [Goo]Goo.VulkanObjectAccounting)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteCombinedImageSampler(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, int32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteStorageBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, uint64)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteUniformTexelBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64)] ImportCalli not implemented
@@ -520,7 +514,4 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::SelectPhysicalDevice()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ValidateSharedPresentationSupport()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::WaitDeviceIdleResult()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.WindowsCompositionDevice::Attach(native int)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.WindowsCompositionDevice::Query(native int, string)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.WindowsCompositionDevice::Release(native int)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.WindowsDropTarget::OwnData(native int)] ImportCalli not implemented

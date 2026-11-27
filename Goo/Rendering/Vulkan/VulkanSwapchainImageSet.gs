@@ -37,11 +37,11 @@ internal unsafe class VulkanSwapchainImageSet {
     imageCount int32,
     format VkFormat,
     enablePresentFence bool,
-    nativeObjectAccounting VulkanObjectAccounting?, suppliedImage VkImage = 0uL) {
+    nativeObjectAccounting VulkanObjectAccounting?) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if swapchain == 0uL && suppliedImage == 0uL {
+      if swapchain == 0uL {
         throw ArgumentException("Vulkan swapchain is null", "swapchain")
       }
       if imageCount <= 0 {
@@ -62,12 +62,7 @@ internal unsafe class VulkanSwapchainImageSet {
       appliedSceneVersions = [imageCount]uint64
       pendingSceneVersions = [imageCount]uint64
       try {
-        if suppliedImage != 0uL {
-          images[0] = suppliedImage
-          CreateViews(format, false)
-        } else {
-          Create(swapchain, format)
-        }
+        Create(swapchain, format)
       } catch (error Exception) {
         try { DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
         rethrow
@@ -394,10 +389,6 @@ internal unsafe class VulkanSwapchainImageSet {
       }
       trackedImageCount = trackedImageCount + 1
     }
-    CreateViews(format)
-  }
-
-  private func CreateViews(format VkFormat, createSemaphores bool = true) {
     var index int32 = 0
     while index < images.Length {
       imageViews[index] = VulkanImageFactory.CreateView(
@@ -414,7 +405,7 @@ internal unsafe class VulkanSwapchainImageSet {
       index = index + 1
     }
     index = 0
-    while createSemaphores && index < images.Length {
+    while index < images.Length {
       renderSemaphores[index] = VulkanSynchronizationFactory.CreateSemaphore(
         device,
         dispatch,
