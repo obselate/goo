@@ -104,7 +104,9 @@ internal unsafe partial class VulkanWindowTarget {
           return false
         }
       }
-    } catch (error System.Runtime.InteropServices.ExternalException) {
+    } catch (error System.Runtime.InteropServices.ExternalException) when (
+      error.ErrorCode == int32(VkConstants.VK_ERROR_DEVICE_LOST)
+      || ((host as SdlHost?)?.WindowsPresentationHandle ?? nint(0)) == nint(0)) {
       recreatePending = true
       if error.ErrorCode == int32(VkConstants.VK_ERROR_DEVICE_LOST) {
         HandleFrameFailure(VkConstants.VK_ERROR_DEVICE_LOST, VulkanDiagnosticEventIds.SwapchainCreate)

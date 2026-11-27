@@ -38,8 +38,11 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
     accounting = objectAccounting
     try {
       CreateSwapchain()
-      if root.AdapterMatched && CanInterop(active, extent) { CreateSharedTexture() }
-      else {
+      if root.AdapterMatched && CanInterop(active, extent) {
+        try { CreateSharedTexture() }
+        catch (error Exception) when (!IsDeviceLoss(error)) { ReleaseImageAndInterop() }
+      }
+      if Image == 0uL {
         CreateImage(nint(0))
         CreateStaging()
       }
@@ -64,9 +67,18 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
         let root = if let old = previous { old.Root.Retain() }
           else { WindowsCompositionDevice(hwnd, DeviceLuid(runtime)) }
         return VulkanCompositionPresentation(runtime, root, extent, vsync, accounting)
-      } catch (error COMException) {
+      } catch (error COMException) when (IsDeviceLoss(error)) {
         throw ExternalException(error.Message, int32(VkConstants.VK_ERROR_DEVICE_LOST))
       }
+    }
+
+    private func IsDeviceLoss(error Exception) bool {
+      if error is ExternalException {
+        let code = error.ErrorCode
+        if code == int32(VkConstants.VK_ERROR_DEVICE_LOST) { return true }
+        return error is COMException && uint32(code) >= 0x887A0005u && uint32(code) <= 0x887A0007u
+      }
+      return false
     }
 
     private func DeviceLuid(runtime VulkanSharedLease) uint64? {
@@ -331,6 +343,30 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
     record(command, &dependency)
   }
 
+  private func ReleaseImageAndInterop() {
+    if semaphore != 0uL {
+      let destroy = runtime.Dispatch.vkDestroySemaphore
+      destroy(runtime.Device, semaphore, nil)
+      semaphore = 0uL
+    }
+    if Image != 0uL {
+      let destroy = runtime.Dispatch.vkDestroyImage
+      destroy(runtime.Device, Image, nil)
+      Image = 0uL
+    }
+    if memory != 0uL {
+      let free = runtime.Dispatch.vkFreeMemory
+      free(runtime.Device, memory, nil)
+      memory = 0uL
+    }
+    WindowsCompositionDevice.Release(fence)
+    WindowsCompositionDevice.Release(texture)
+    WindowsCompositionDevice.Release(interopContext)
+    fence = nint(0)
+    texture = nint(0)
+    interopContext = nint(0)
+  }
+
   public func Dispose() {
     if disposed { return }
     disposed = true
@@ -344,10 +380,6 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
       if result == VkConstants.VK_ERROR_DEVICE_LOST { runtime.MarkDeviceLost() }
       else { Check(result, "Composition copy retirement failed") }
     }
-    if semaphore != 0uL {
-      let destroy = runtime.Dispatch.vkDestroySemaphore
-      destroy(runtime.Device, semaphore, nil)
-    }
     if stagingPointer != nint(0) {
       let unmap = runtime.Dispatch.vkUnmapMemory
       unmap(runtime.Device, stagingMemory)
@@ -360,19 +392,9 @@ internal unsafe sealed class VulkanCompositionPresentation : IDisposable {
       let free = runtime.Dispatch.vkFreeMemory
       free(runtime.Device, stagingMemory, nil)
     }
-    if Image != 0uL {
-      let destroy = runtime.Dispatch.vkDestroyImage
-      destroy(runtime.Device, Image, nil)
-    }
-    if memory != 0uL {
-      let free = runtime.Dispatch.vkFreeMemory
-      free(runtime.Device, memory, nil)
-    }
+    ReleaseImageAndInterop()
     WindowsCompositionDevice.Release(backbuffer)
     WindowsCompositionDevice.Release(swapchain)
-    WindowsCompositionDevice.Release(fence)
-    WindowsCompositionDevice.Release(texture)
-    WindowsCompositionDevice.Release(interopContext)
     if let objects = accounting {
       for index in 0 ... accountedObjects { objects.Release() }
     }
