@@ -23,7 +23,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
 
   internal prop CommandBuffer VkCommandBuffer{ get -> commandBuffer }
   internal prop AcquireSemaphore VkSemaphore{ get -> acquireSemaphore }
-  internal prop SubmitWaitSemaphore VkSemaphore { get -> if acquireWaitPending { acquireSemaphore } else { 0uL } }
+  internal prop SubmitWaitSemaphore VkSemaphore { get -> if acquireWaitPending { acquireSemaphore } else { VkSemaphore.Null } }
   internal prop InFlight bool{ get -> inFlight }
   internal prop SubmissionSerial uint64{ get -> submissionSerial }
   internal prop NextSubmissionSerial uint64{ get -> submissionSerial + 1uL }
@@ -39,10 +39,10 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     suppliedCommandBuffer VkCommandBuffer, nativeObjectAccounting VulkanObjectAccounting?,
     nativeSharedLease VulkanSharedLease) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if suppliedCommandBuffer == nint(0) {
+      if suppliedCommandBuffer == VkCommandBuffer.Null {
         throw ArgumentException("Vulkan command buffer is null", "suppliedCommandBuffer")
       }
       if nativeSharedLease == nil {
@@ -97,7 +97,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     if !inFlight {
       return VkConstants.VK_SUCCESS
     }
-    let result = sharedLease.PollGraphicsSubmission(globalSubmissionSerial)
+    let result = sharedLease.Runtime.PollGraphicsSubmission(globalSubmissionSerial)
     if result == VkConstants.VK_SUCCESS {
       lastCompletedSerial = submissionSerial
       lastCompletedGlobalSubmissionSerial = globalSubmissionSerial
@@ -195,7 +195,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     if submissionFailed || !acquired || inFlight {
       throw InvalidOperationException("VulkanFrameSlot has no abandonable acquired work")
     }
-    let drainResult = if acquireWaitPending { sharedLease.DrainAcquiredSemaphore(acquireSemaphore) }
+    let drainResult = if acquireWaitPending { sharedLease.Runtime.DrainAcquiredSemaphore(acquireSemaphore) }
       else { VkConstants.VK_SUCCESS }
     if drainResult != VkConstants.VK_SUCCESS {
       return drainResult
@@ -217,7 +217,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     if !inFlight {
       return VkConstants.VK_SUCCESS
     }
-    let result = sharedLease.WaitGraphicsSubmission(
+    let result = sharedLease.Runtime.WaitGraphicsSubmission(
       globalSubmissionSerial, VkConstants.VK_WHOLE_SIZE)
     if result == VkConstants.VK_SUCCESS {
       lastCompletedSerial = submissionSerial
@@ -235,7 +235,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
       throw InvalidOperationException("VulkanFrameSlot has unconsumed acquired work")
     }
     if inFlight {
-      let status = sharedLease.PollGraphicsSubmission(globalSubmissionSerial)
+      let status = sharedLease.Runtime.PollGraphicsSubmission(globalSubmissionSerial)
       if status != VkConstants.VK_SUCCESS {
         throw InvalidOperationException("VulkanFrameSlot submission is still in flight")
       }
@@ -244,13 +244,13 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
       inFlight = false
     }
     disposed = true
-    if acquireSemaphore != 0uL {
+    if acquireSemaphore != VkSemaphore.Null {
       let destroySemaphore = dispatch.vkDestroySemaphore
       destroySemaphore(device, acquireSemaphore, nil)
       if let accounting = objectAccounting {
         accounting.Release()
       }
-      acquireSemaphore = 0uL
+      acquireSemaphore = VkSemaphore.Null
     }
   }
 }

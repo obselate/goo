@@ -66,13 +66,13 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
   internal let Format VulkanClipMaskFormat
   internal let BytesPerPixel uint32
   internal let ResidentBytes VkDeviceSize
-  internal var Image VkImage = 0uL
+  internal var Image VkImage = VkImage.Null
   internal var ImageAccounted bool
   internal var Allocation VulkanMemoryAllocation? = nil
-  internal var ImageView VkImageView = 0uL
+  internal var ImageView VkImageView = VkImageView.Null
   internal var LayerViews []VkImageView
   internal var LayerViewAccounted []bool
-  internal var Sampler VkSampler = 0uL
+  internal var Sampler VkSampler = VkSampler.Null
   internal var LastUseSerial uint64
   internal var disposed bool
   private var layerLayouts []VkImageLayout
@@ -86,7 +86,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     nativeHeight uint32,
     nativeLayerCount uint32,
     nativeFormat VulkanClipMaskFormat) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeWidth == 0u || nativeHeight == 0u
@@ -134,7 +134,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
       throw ArgumentOutOfRangeException("layer")
     }
     let value = LayerViews[int32(layer)]
-    if value == 0uL {
+    if value == VkImageView.Null {
       throw InvalidOperationException("Vulkan clip mask layer view is unavailable")
     }
     return value
@@ -142,7 +142,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
 
   internal func RecordLayerForColorAttachment(commandBuffer VkCommandBuffer, layer uint32) {
     EnsureOpen()
-    if commandBuffer == nint(0) || layer >= LayerCount {
+    if commandBuffer == VkCommandBuffer.Null || layer >= LayerCount {
       throw ArgumentException("Vulkan clip mask transition arguments are invalid")
     }
     let index = int32(layer)
@@ -176,7 +176,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
 
   internal func RecordForSampling(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
     var index int32 = 0
@@ -299,7 +299,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     var createdSampler VkSampler
     let result = createSampler(Device, &samplerInfo, nil, &createdSampler)
     Sampler = createdSampler
-    if result != VkConstants.VK_SUCCESS || Sampler == 0uL {
+    if result != VkConstants.VK_SUCCESS || Sampler == VkSampler.Null {
       throw InvalidOperationException("vkCreateSampler failed for Vulkan clip mask atlas")
     }
     if let accounting = ObjectAccounting {
@@ -308,14 +308,14 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
       } catch (error Exception) {
         let destroySampler = Dispatch.vkDestroySampler
         destroySampler(Device, Sampler, nil)
-        Sampler = 0uL
+        Sampler = VkSampler.Null
         rethrow
       }
     }
   }
 
   private func DestroySampler() {
-    if Sampler == 0uL {
+    if Sampler == VkSampler.Null {
       return
     }
     let destroySampler = Dispatch.vkDestroySampler
@@ -323,11 +323,11 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     if let accounting = ObjectAccounting {
       accounting.Release()
     }
-    Sampler = 0uL
+    Sampler = VkSampler.Null
   }
 
   private func DestroyImageView() {
-    if ImageView == 0uL {
+    if ImageView == VkImageView.Null {
       return
     }
     let destroyView = Dispatch.vkDestroyImageView
@@ -335,14 +335,14 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     if let accounting = ObjectAccounting {
       accounting.Release()
     }
-    ImageView = 0uL
+    ImageView = VkImageView.Null
   }
 
   private func DestroyLayerViews() {
     var layer int32 = 0
     while layer < LayerViews.Length {
       let view = LayerViews[layer]
-      if view != 0uL {
+      if view != VkImageView.Null {
         let destroyView = Dispatch.vkDestroyImageView
         destroyView(Device, view, nil)
         if LayerViewAccounted[layer] {
@@ -351,8 +351,8 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
           }
           LayerViewAccounted[layer] = false
         }
-        if view != 0uL {
-          LayerViews[layer] = 0uL
+        if view != VkImageView.Null {
+          LayerViews[layer] = VkImageView.Null
         }
       }
       layer++
@@ -360,7 +360,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
   }
 
   private func DestroyImage() {
-    if Image != 0uL {
+    if Image != VkImage.Null {
       let destroyImage = Dispatch.vkDestroyImage
       destroyImage(Device, Image, nil)
       if ImageAccounted {
@@ -369,7 +369,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
         }
         ImageAccounted = false
       }
-      Image = 0uL
+      Image = VkImage.Null
     }
     if let allocation = Allocation {
       Allocator.Release(allocation)
@@ -478,9 +478,9 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         PressureFailureCount: pressureFailureCount,
         LastUseSerial: value?.LastUseSerial ?? 0uL,
         CompletedSerial: completedSerial,
-        Image: value?.Image ?? 0uL,
-        ImageView: value?.ImageView ?? 0uL,
-        Sampler: value?.Sampler ?? 0uL,
+        Image: value?.Image ?? VkImage.Null,
+        ImageView: value?.ImageView ?? VkImageView.Null,
+        Sampler: value?.Sampler ?? VkSampler.Null,
       }
     }
   }
@@ -495,7 +495,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     nativeByteBudget VkDeviceSize,
     nativeGeneration uint64,
     nativeObjectAccounting VulkanObjectAccounting?, nativeDiagnostics VulkanDiagnostics? = nil) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeWidth == 0u || nativeHeight == 0u {
@@ -992,7 +992,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       if !deviceLost {
         throw InvalidOperationException("Vulkan clip mask atlas is not abandoned")
       }
-      if nativeDevice == nint(0) || nativeGeneration == 0uL {
+      if nativeDevice == VkDevice.Null || nativeGeneration == 0uL {
         throw ArgumentException("Vulkan clip mask rebuild arguments are invalid")
       }
       let rebuiltFormat = SelectFormat(nativeFormatSupport)

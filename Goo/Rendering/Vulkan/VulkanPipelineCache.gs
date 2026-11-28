@@ -40,7 +40,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
     profileTraceId = recorder.TraceId
     profileBaseline = recorder.BaselineVersion
     recorder.Resource(FrameResourceKind.PipelineCache,
-      recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache),
+      recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache.Raw),
       VulkanDiagnosticEventIds.ResourceCreate, "pipeline.cache",
       bytes: uint64(loadedBytes), device: uint64(device), baseline: true)
   }
@@ -51,7 +51,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       device = nativeDevice
       dispatch = nativeDispatch
       objectAccounting = nativeObjectAccounting
-      if nativeDevice == nint(0) || pipelineCacheUuid == nil
+      if nativeDevice == VkDevice.Null || pipelineCacheUuid == nil
         || Environment.GetEnvironmentVariable("GOO_VK_PIPELINE_CACHE") == "0" {
           return
         }
@@ -72,12 +72,12 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         let initialData = LoadInitialData(vendorId, deviceId, uuid)
         let loadEnd = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
         cache = Create(initialData)
-        var initialDataAccepted bool = cache != 0uL
-        if cache == 0uL && initialData.Length != 0 {
+        var initialDataAccepted bool = cache != VkPipelineCache.Null
+        if cache == VkPipelineCache.Null && initialData.Length != 0 {
           cache = Create([]uint8{})
           initialDataAccepted = false
         }
-        if cache == 0uL {
+        if cache == VkPipelineCache.Null {
           persistenceEnabled = false
           cachePath = ""
           return
@@ -88,7 +88,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
           } catch (error Exception) {
             let destroy = dispatch.vkDestroyPipelineCache
             destroy(device, cache, nil)
-            cache = 0uL
+            cache = VkPipelineCache.Null
             rethrow
           }
         }
@@ -96,7 +96,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
           loadedBytes = int64(initialData.Length)
         }
         if let trace = recorder {
-          let id = trace.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache)
+          let id = trace.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache.Raw)
           trace.Resource(FrameResourceKind.PipelineCache, id, VulkanDiagnosticEventIds.ResourceCreate,
             "pipeline.cache.create", bytes: uint64(loadedBytes), device: uint64(device))
           trace.ResourceDuration(FrameResourceKind.PipelineCache, id,
@@ -104,13 +104,13 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
             loadStart, bytes: uint64(initialData.Length), device: uint64(device), end: loadEnd)
         }
       } catch (error Exception) {
-        if cache != 0uL {
+        if cache != VkPipelineCache.Null {
           let destroy = dispatch.vkDestroyPipelineCache
           try { destroy(device, cache, nil) } catch (cleanup Exception) { }
         }
         persistenceEnabled = false
         cachePath = ""
-        cache = 0uL
+        cache = VkPipelineCache.Null
         loadedBytes = 0L
       }
     }
@@ -121,7 +121,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       try {
         lock (metricsGate) {
           return VulkanPipelineCacheMetrics{
-            Enabled: cache != 0uL,
+            Enabled: cache != VkPipelineCache.Null,
             LoadedBytes: loadedBytes,
             PersistedBytes: persistedBytes,
             GraphicsPipelineCreateCount: graphicsPipelineCreateCount,
@@ -147,12 +147,12 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
           graphicsPipelineCreateNanoseconds += TicksToNanoseconds(elapsed)
         }
         if let recorder = FrameRecorder.Current {
-          let parent = recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache)
+          let parent = recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache.Raw)
           for i in 0 ... int32(count) {
-            let id = recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipelines[i])
+            let id = recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipelines[i].Raw)
             recorder.ResourceDuration(FrameResourceKind.Pipeline, id, "pipeline.create", start,
               device: uint64(device), result: int32(result), end: start + elapsed)
-            if result == VkConstants.VK_SUCCESS && pipelines[i] != 0uL {
+            if result == VkConstants.VK_SUCCESS && pipelines[i] != VkPipeline.Null {
               recorder.Resource(FrameResourceKind.Pipeline, id, VulkanDiagnosticEventIds.ResourceCreate,
                 "pipeline", device: uint64(device), parent: parent)
             }
@@ -184,7 +184,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         pinned = true
         data = *void(pin.AddrOfPinnedObject())
       }
-      var created VkPipelineCache = 0uL
+      var created VkPipelineCache = VkPipelineCache.Null
       var info = VkPipelineCacheCreateInfo{
         sType: VkConstants.VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
         flags: 0u,
@@ -194,11 +194,11 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       let create = dispatch.vkCreatePipelineCache
       let result = create(device, &info, nil, &created)
       if result != VkConstants.VK_SUCCESS {
-        if created != 0uL {
+        if created != VkPipelineCache.Null {
           let destroy = dispatch.vkDestroyPipelineCache
           try { destroy(device, created, nil) } catch (cleanup Exception) { }
         }
-        return 0uL
+        return VkPipelineCache.Null
       }
       return created
     } finally {
@@ -266,7 +266,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
   }
 
   private func PersistCore() {
-    if !persistenceEnabled || cache == 0uL || cachePath == "" {
+    if !persistenceEnabled || cache == VkPipelineCache.Null || cachePath == "" {
       return
     }
     try {
@@ -372,16 +372,16 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       }
       disposed = true
       if save { PersistCore() }
-      if cache != 0uL {
+      if cache != VkPipelineCache.Null {
         let destroy = dispatch.vkDestroyPipelineCache
         destroy(device, cache, nil)
         if let recorder = FrameRecorder.Current {
           recorder.Resource(FrameResourceKind.PipelineCache,
-            recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache, remove: true),
+            recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache.Raw, remove: true),
             VulkanDiagnosticEventIds.PipelineDestroy, "pipeline.cache.destroy", device: uint64(device))
         }
         if let accounting = objectAccounting { accounting.Release() }
-        cache = 0uL
+        cache = VkPipelineCache.Null
       }
     } finally {
       cacheGate.ExitWriteLock()

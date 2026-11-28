@@ -11,7 +11,6 @@ internal class VulkanDiagnosticEventIds {
     const WindowCreate uint64 = 100uL
     const WindowDestroy uint64 = 101uL
     const SurfaceCreate uint64 = 110uL
-    const SurfaceDestroy uint64 = 111uL
     const SwapchainCreate uint64 = 120uL
     const SwapchainDestroy uint64 = 121uL
     const SwapchainAcquire uint64 = 122uL
@@ -22,7 +21,6 @@ internal class VulkanDiagnosticEventIds {
     const ResourceEvict uint64 = 203uL
     const PipelineCreate uint64 = 220uL
     const PipelineDestroy uint64 = 221uL
-    const DescriptorUpdate uint64 = 230uL
     const FrameBegin uint64 = 300uL
     const FrameEnd uint64 = 301uL
     const EventWait uint64 = 310uL
@@ -132,151 +130,156 @@ internal data struct VulkanDiagnosticValidationRecord {
   var messageTruncated uint32
 }
 
-internal data struct VulkanDiagnosticFatalExtensionRecord {
-  var extensionKind uint32
-  var hash uint32
-  var length uint32
-  var offset uint32
-  var truncated uint32
+internal enum VulkanCounterId {
+  RebuildCount;
+  LayoutCount;
+  PlanCompileCount;
+  UploadCount;
+  RecordCount;
+  SubmitCount;
+  PresentCount;
+  ReadbackCount;
+  ManagedAllocatedBytes;
+  HeapBudgetAvailable;
+  HeapBudgetSampleCurrent;
+  HeapBudget;
+  DriverHeapUsage;
+  HeapHeadroom;
+  MemoryEvictionCount;
+  MemoryAllocationRetryCount;
+  MemoryPressureCount;
+  VulkanObjectCount;
+  VulkanObjectAllocationCount;
+  VulkanDeviceMemoryAllocationCount;
+  VulkanDeviceMemoryBytes;
+  CacheBytes;
+  ImageResidentBytes;
+  ImageLiveObjectCount;
+  ImagePeakResidentBytes;
+  ImagePeakLiveObjectCount;
+  ImageUploadChunkCount;
+  ImageUploadDeferredCount;
+  ImageUploadCompletedCount;
+  ImagePressureFailureCount;
+  TextAtlasPressureFailureCount;
+  TextAtlasCount;
+  TextAtlasResidentBytes;
+  TextAtlasLiveObjectCount;
+  TextAtlasPeakCount;
+  TextAtlasPeakResidentBytes;
+  TextAtlasPeakLiveObjectCount;
+  TextAtlasRecordedUploadBytes;
+  TextAtlasEvictionCount;
+  TextAtlasRetirementCount;
+  PathAtlasByteBudget;
+  PathAtlasResidentWords;
+  PathAtlasFreeWords;
+  PathAtlasPathCount;
+  PathAtlasActiveReferenceCount;
+  PathAtlasLiveObjectCount;
+  PathAtlasEvictionCount;
+  PathAtlasRetiredWords;
+  PathAtlasReuseCount;
+  PathAtlasPressureEventCount;
+  PathAtlasPressureFailureCount;
+  ClipMaskAtlasByteBudget;
+  ClipMaskAtlasResidentBytes;
+  ClipMaskAtlasRegionCount;
+  ClipMaskAtlasFreePlacementCount;
+  ClipMaskAtlasActiveLayerCount;
+  ClipMaskAtlasMaximumLayerCount;
+  ClipMaskAtlasRetiredGenerationCount;
+  ClipMaskAtlasEvictionCount;
+  ClipMaskAtlasPressureEventCount;
+  ClipMaskAtlasPressureFailureCount;
+  ClipFrameWrittenBytes;
+  ClipFrameSkippedBytes;
+  ClipFrameMappedWrites;
+  ClipFrameFlushes;
+  ClipFrameRetainedReuse;
+  ClipFrameSlotIndex;
+  ClipFrameDrawCount;
+  ClipFrameMaskCount;
+  ClipFrameChainCount;
+  ClipFrameLayerCount;
+  ClipFrameByteCount;
+  ClipFrameCapacity;
+  ClipFrameBufferGeneration;
+  ClipFrameLastUseSerial;
+  ClipFrameRetentionEligible;
+  ClipFrameRetained;
+  ClipFrameRetentionValid;
+  TextFrameWrittenBytes;
+  TextFrameSkippedBytes;
+  TextFrameDirtySegmentCount;
+  TextFrameUploadRangeCount;
+  TextFrameFullUploadCount;
+  TextFrameMappedWrites;
+  TextFrameFlushes;
+  TextFrameRetainedReuse;
+  TextFrameSlotIndex;
+  TextFrameSegmentCount;
+  TextFrameRunCount;
+  TextFrameRecordCount;
+  TextFrameByteCount;
+  TextFrameCapacity;
+  TextFrameBufferGeneration;
+  TextFrameTopologyKey;
+  TextFrameLastUseSerial;
+  TextFramePrepared;
+  TextLayoutCacheBytes;
+  TextLayoutCacheEntries;
+  TextLayoutCacheHits;
+  TextLayoutCacheMisses;
+  TextLayoutCacheEvictions;
+  TextRunShapeCacheBytes;
+  TextRunShapeCacheEntries;
+  TextRunShapeCacheHits;
+  TextRunShapeCacheMisses;
+  TextRunShapeCacheEvictions;
+  ImageEvictionCount;
+  ImageRetirementCount;
+  AllocatorBytes;
+  DirtyChunkCount;
+  ReusedChunkCount;
+  UploadBytes;
+  DrawCount;
+  PipelineChangeCount;
+  DescriptorChangeCount;
+  PassCount;
+  BarrierCount;
+  DamageCount;
+  DamageArea;
+  SurfaceRecoveryCount;
+  DeviceRecoveryCount;
+  ValidationErrorCount;
+  ResultCount;
+  ResultFailureCount;
+  LayerPoolResidentBytes;
+  LayerPoolTargetCount;
+  LayerPoolLeasedCount;
+  LayerPoolResolutionShift;
+  LayerPoolCreateCount;
+  LayerPoolReuseCount;
+  LayerPoolEvictionCount;
+  LayerPoolPressureEventCount;
+  LayerPoolPressureFailureCount;
+  LayerPoolFailureCount;
+  LayerPoolPassCount;
+  LayerPoolCompositeCount;
+  Count;
 }
 
 internal data struct VulkanDiagnosticCounterSnapshot {
-  var rebuildCount uint64
-  var layoutCount uint64
-  var planCompileCount uint64
-  var uploadCount uint64
-  var recordCount uint64
-  var submitCount uint64
-  var presentCount uint64
-  var readbackCount uint64
-  var managedAllocatedBytes uint64
-  var heapBudgetAvailable uint32
-  var heapBudgetSampleCurrent uint32
-  var heapBudget uint64
-  var driverHeapUsage uint64
-  var heapHeadroom uint64
-  var memoryEvictionCount uint64
-  var memoryAllocationRetryCount uint64
-  var memoryPressureCount uint64
-  var vulkanObjectCount uint64
-  var vulkanObjectAllocationCount uint64
-  var vulkanDeviceMemoryAllocationCount uint64
-  var vulkanDeviceMemoryBytes uint64
-  var cacheBytes uint64
-  var imageResidentBytes uint64
-  var imageLiveObjectCount uint64
-  var imagePeakResidentBytes uint64
-  var imagePeakLiveObjectCount uint64
-  var imageUploadChunkCount uint64
-  var imageUploadDeferredCount uint64
-  var imageUploadCompletedCount uint64
-  var imagePressureFailureCount uint64
-  var textAtlasPressureFailureCount uint64
-  var textAtlasCount uint64
-  var textAtlasResidentBytes uint64
-  var textAtlasLiveObjectCount uint64
-  var textAtlasPeakCount uint64
-  var textAtlasPeakResidentBytes uint64
-  var textAtlasPeakLiveObjectCount uint64
-  var textAtlasRecordedUploadBytes uint64
-  var textAtlasEvictionCount uint64
-  var textAtlasRetirementCount uint64
-  var pathAtlasByteBudget uint64
-  var pathAtlasResidentWords uint64
-  var pathAtlasFreeWords uint64
-  var pathAtlasPathCount uint64
-  var pathAtlasActiveReferenceCount uint64
-  var pathAtlasLiveObjectCount uint64
-  var pathAtlasEvictionCount uint64
-  var pathAtlasRetiredWords uint64
-  var pathAtlasReuseCount uint64
-  var pathAtlasPressureEventCount uint64
-  var pathAtlasPressureFailureCount uint64
-  var clipMaskAtlasByteBudget uint64
-  var clipMaskAtlasResidentBytes uint64
-  var clipMaskAtlasRegionCount uint64
-  var clipMaskAtlasFreePlacementCount uint64
-  var clipMaskAtlasActiveLayerCount uint64
-  var clipMaskAtlasMaximumLayerCount uint64
-  var clipMaskAtlasRetiredGenerationCount uint64
-  var clipMaskAtlasEvictionCount uint64
-  var clipMaskAtlasPressureEventCount uint64
-  var clipMaskAtlasPressureFailureCount uint64
-  var clipFrameWrittenBytes uint64
-  var clipFrameSkippedBytes uint64
-  var clipFrameMappedWrites uint64
-  var clipFrameFlushes uint64
-  var clipFrameRetainedReuse uint64
-  var clipFrameSlotIndex uint64
-  var clipFrameDrawCount uint64
-  var clipFrameMaskCount uint64
-  var clipFrameChainCount uint64
-  var clipFrameLayerCount uint64
-  var clipFrameByteCount uint64
-  var clipFrameCapacity uint64
-  var clipFrameBufferGeneration uint64
-  var clipFrameLastUseSerial uint64
-  var clipFrameRetentionEligible uint32
-  var clipFrameRetained uint32
-  var clipFrameRetentionValid uint32
-  var textFrameWrittenBytes uint64
-  var textFrameSkippedBytes uint64
-  var textFrameDirtySegmentCount uint64
-  var textFrameUploadRangeCount uint64
-  var textFrameFullUploadCount uint64
-  var textFrameMappedWrites uint64
-  var textFrameFlushes uint64
-  var textFrameRetainedReuse uint64
-  var textFrameSlotIndex uint64
-  var textFrameSegmentCount uint64
-  var textFrameRunCount uint64
-  var textFrameRecordCount uint64
-  var textFrameByteCount uint64
-  var textFrameCapacity uint64
-  var textFrameBufferGeneration uint64
-  var textFrameTopologyKey uint64
-  var textFrameLastUseSerial uint64
-  var textFramePrepared uint32
-  var textLayoutCacheBytes uint64
-  var textLayoutCacheEntries uint64
-  var textLayoutCacheHits uint64
-  var textLayoutCacheMisses uint64
-  var textLayoutCacheEvictions uint64
-  var textRunShapeCacheBytes uint64
-  var textRunShapeCacheEntries uint64
-  var textRunShapeCacheHits uint64
-  var textRunShapeCacheMisses uint64
-  var textRunShapeCacheEvictions uint64
-  var imageEvictionCount uint64
-  var imageRetirementCount uint64
-  var allocatorBytes uint64
-  var dirtyChunkCount uint64
-  var reusedChunkCount uint64
-  var uploadBytes uint64
-  var drawCount uint64
-  var pipelineChangeCount uint64
-  var descriptorChangeCount uint64
-  var passCount uint64
-  var barrierCount uint64
-  var damageCount uint64
-  var damageArea uint64
-  var surfaceRecoveryCount uint64
-  var deviceRecoveryCount uint64
-  var validationErrorCount uint64
-  var resultCount uint64
-  var resultFailureCount uint64
-  var layerPoolResidentBytes uint64
-  var layerPoolTargetCount uint64
-  var layerPoolLeasedCount uint64
-  var layerPoolResolutionShift uint64
-  var layerPoolCreateCount uint64
-  var layerPoolReuseCount uint64
-  var layerPoolEvictionCount uint64
-  var layerPoolPressureEventCount uint64
-  var layerPoolPressureFailureCount uint64
-  var layerPoolFailureCount uint64
-  var layerPoolPassCount uint64
-  var layerPoolCompositeCount uint64
+  private let values [] ? uint64
+
+  internal init(values [] ? uint64 = nil) {
+    this.values = values
+  }
+
+  internal prop this[id VulkanCounterId] uint64{
+    get -> if let arr = values { arr[int32(id)] } else { 0uL }
+  }
 }
 
 internal data struct VulkanDiagnosticLiveSnapshot {
@@ -320,8 +323,6 @@ internal data struct VulkanDiagnosticFatalSnapshot {
   var debugUtilsAvailable uint32
   var instanceExtensionCount uint32
   var deviceExtensionCount uint32
-  var extensionCount uint32
-  var extensionDropped uint32
   var window uint64
   var surface uint64
   var swapchain uint64

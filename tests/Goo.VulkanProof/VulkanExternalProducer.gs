@@ -326,7 +326,7 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
             signalSemaphoreInfoCount: if syncFd { 2u } else { 1u }, pSignalSemaphoreInfos: signals,
             waitSemaphoreInfoCount: if syncFd { 1u } else { 0u }, pWaitSemaphoreInfos: &wait }
         let queueSubmit = dispatch.vkQueueSubmit2
-        Check(queueSubmit(queue, 1u, &submit, 0uL))
+        Check(queueSubmit(queue, 1u, &submit, VkFence.Null))
         submitted = true
     }
 
@@ -352,29 +352,29 @@ internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
         disposed = true
         handle?.Dispose()
         semaphoreHandle?.Dispose()
-        if device == nint(0) { return }
+        if device == VkDevice.Null { return }
         DestroySyncFd()
-        if completion != 0uL {
+        if completion != VkSemaphore.Null {
             let destroy = dispatch.vkDestroySemaphore
             destroy(device, completion, nil)
         }
-        if pool != 0uL {
+        if pool != VkCommandPool.Null {
             let destroy = dispatch.vkDestroyCommandPool
             destroy(device, pool, nil)
         }
-        if image != 0uL {
+        if image != VkImage.Null {
             let destroy = dispatch.vkDestroyImage
             destroy(device, image, nil)
         }
-        if memory != 0uL {
+        if memory != VkDeviceMemory.Null {
             let free = dispatch.vkFreeMemory
             free(device, memory, nil)
         }
-        if staging != 0uL {
+        if staging != VkBuffer.Null {
             let destroy = dispatch.vkDestroyBuffer
             destroy(device, staging, nil)
         }
-        if stagingMemory != 0uL {
+        if stagingMemory != VkDeviceMemory.Null {
             let free = dispatch.vkFreeMemory
             free(device, stagingMemory, nil)
         }

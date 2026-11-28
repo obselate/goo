@@ -137,12 +137,12 @@ func ShaderEffectWarmRetainedResources(window Window) {
     ShaderEffectWaitForGraphics(window)
     let after = WindowReadbackTestFixture.DiagnosticCounters(window)
     let primitive = WindowReadbackTestFixture.PrimitiveFrameRetention(window)
-    if ShaderEffectDelta(after.vulkanObjectAllocationCount,
-      before.vulkanObjectAllocationCount) == 0uL
-      && ShaderEffectDelta(after.vulkanDeviceMemoryAllocationCount,
-        before.vulkanDeviceMemoryAllocationCount) == 0uL
-      && ShaderEffectDelta(after.layerPoolCreateCount,
-        before.layerPoolCreateCount) == 0uL {
+    if ShaderEffectDelta(after[VulkanCounterId.VulkanObjectAllocationCount],
+      before[VulkanCounterId.VulkanObjectAllocationCount]) == 0uL
+      && ShaderEffectDelta(after[VulkanCounterId.VulkanDeviceMemoryAllocationCount],
+        before[VulkanCounterId.VulkanDeviceMemoryAllocationCount]) == 0uL
+      && ShaderEffectDelta(after[VulkanCounterId.LayerPoolCreateCount],
+        before[VulkanCounterId.LayerPoolCreateCount]) == 0uL {
           if primitive.SlotIndex == 0 {
             stableSlots = stableSlots | 1u
           } else if primitive.SlotIndex == 1 {
@@ -365,17 +365,17 @@ func RunShaderEffectSmoke() {
         && retainedDataFrame.RetainedReuse > 0uL,
       "ShaderEffect unchanged retained data was uploaded again")
     let retainedDataObjectAllocations = ShaderEffectDelta(
-      dataCountersAfter.vulkanObjectAllocationCount,
-      dataCountersBefore.vulkanObjectAllocationCount)
+      dataCountersAfter[VulkanCounterId.VulkanObjectAllocationCount],
+      dataCountersBefore[VulkanCounterId.VulkanObjectAllocationCount])
     let retainedDataMemoryAllocations = ShaderEffectDelta(
-      dataCountersAfter.vulkanDeviceMemoryAllocationCount,
-      dataCountersBefore.vulkanDeviceMemoryAllocationCount)
+      dataCountersAfter[VulkanCounterId.VulkanDeviceMemoryAllocationCount],
+      dataCountersBefore[VulkanCounterId.VulkanDeviceMemoryAllocationCount])
     Require(retainedDataObjectAllocations == 0uL && retainedDataMemoryAllocations == 0uL,
       "ShaderEffect retained data frame created Vulkan resources: objects="
       +retainedDataObjectAllocations.ToString() + " memory="
       +retainedDataMemoryAllocations.ToString() + " layers="
-      +ShaderEffectDelta(dataCountersAfter.layerPoolCreateCount,
-        dataCountersBefore.layerPoolCreateCount).ToString())
+      +ShaderEffectDelta(dataCountersAfter[VulkanCounterId.LayerPoolCreateCount],
+        dataCountersBefore[VulkanCounterId.LayerPoolCreateCount]).ToString())
     let copiedData = BitConverter.GetBytes(1.0F)
     data.Publish(copiedData)
     var copiedDataIndex int32
@@ -401,10 +401,10 @@ func RunShaderEffectSmoke() {
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     ShaderEffectWaitForGraphics(opened)
     let countersAfter = WindowReadbackTestFixture.DiagnosticCounters(opened)
-    warmObjectAllocations = ShaderEffectDelta(countersAfter.vulkanObjectAllocationCount,
-      countersBefore.vulkanObjectAllocationCount)
-    warmDeviceMemoryAllocations = ShaderEffectDelta(countersAfter.vulkanDeviceMemoryAllocationCount,
-      countersBefore.vulkanDeviceMemoryAllocationCount)
+    warmObjectAllocations = ShaderEffectDelta(countersAfter[VulkanCounterId.VulkanObjectAllocationCount],
+      countersBefore[VulkanCounterId.VulkanObjectAllocationCount])
+    warmDeviceMemoryAllocations = ShaderEffectDelta(countersAfter[VulkanCounterId.VulkanDeviceMemoryAllocationCount],
+      countersBefore[VulkanCounterId.VulkanDeviceMemoryAllocationCount])
     Require(warmObjectAllocations == 0uL && warmDeviceMemoryAllocations == 0uL,
       "ShaderEffect warm parameter frame created Vulkan resources")
     let second = PrimitiveReadback(opened, metrics)
@@ -463,11 +463,11 @@ func RunShaderEffectSmoke() {
     WindowReadbackTestFixture.ForceRenderNonblocking(opened, 0.0166666666666667)
     Require(WindowReadbackTestFixture.RuntimeQueueWorkPending(opened),
       "Shader effect resize did not stage pending window queue work")
-    Require(WindowReadbackTestFixture.DiagnosticCounters(opened).layerPoolTargetCount > 0uL,
+    Require(WindowReadbackTestFixture.DiagnosticCounters(opened)[VulkanCounterId.LayerPoolTargetCount] > 0uL,
       "Shader effect resize has no cached layer targets")
     Require(WindowReadbackTestFixture.Resize(opened, 176, 120, 264, 180),
       "Shader effect synthetic 1.5x resize failed")
-    Require(WindowReadbackTestFixture.DiagnosticCounters(opened).layerPoolTargetCount > 0uL,
+    Require(WindowReadbackTestFixture.DiagnosticCounters(opened)[VulkanCounterId.LayerPoolTargetCount] > 0uL,
       "Shader effect resize discarded reusable completed layer targets")
     let scaledMetrics = WindowReadbackTestFixture.Metrics(opened)
     Require(Math.Abs(scaledMetrics.DisplayScaleX - 1.5) < 0.001
@@ -481,12 +481,12 @@ func RunShaderEffectSmoke() {
       +scaledTextMinX.ToString())
     resizedMetrics = scaledMetrics
 
-    let recoveryBefore = WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount
+    let recoveryBefore = WindowReadbackTestFixture.DiagnosticCounters(opened)[VulkanCounterId.DeviceRecoveryCount]
     VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
     effect.SetParameter(0, Vector4(1.0F, 0.25F, 0.25F, 0.0F))
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667, waitForPresentation: true)
     deviceRecoveries = ShaderEffectDelta(
-      WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount,
+      WindowReadbackTestFixture.DiagnosticCounters(opened)[VulkanCounterId.DeviceRecoveryCount],
       recoveryBefore)
     Require(deviceRecoveries == 1uL,
       "Shader effect pipeline did not survive device recovery")

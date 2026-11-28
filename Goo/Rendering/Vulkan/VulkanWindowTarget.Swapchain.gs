@@ -32,7 +32,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func ReleaseHiddenResources() {
-    if runtime?.DeviceLost == true {
+    if runtime?.Runtime.DeviceLost == true {
       hideReleasePending = false
       return
     }
@@ -159,11 +159,11 @@ internal unsafe partial class VulkanWindowTarget {
         created.Format,
         64,
         imageResources,
-        activeRuntime.Generation,
-        activeRuntime.MaxStorageBufferRange,
-        activeRuntime.PrimitiveState,
+        activeRuntime.Runtime.Generation,
+        activeRuntime.Runtime.MaxStorageBufferRange,
+        activeRuntime.Runtime.PrimitiveState,
         2,
-        activeRuntime.PathResources.Atlas,
+        activeRuntime.Runtime.PathResources.Atlas,
         textAtlas,
         windowObjectAccounting,
         memoryAllocator,
@@ -175,7 +175,7 @@ internal unsafe partial class VulkanWindowTarget {
       let layerRuntime = runtime else {
         throw InvalidOperationException("Vulkan layer pool resources are unavailable")
       }
-      let policy = layerRuntime.ResourcePolicy
+      let policy = layerRuntime.Runtime.ResourcePolicy
       layerPool = VulkanOffscreenLayerPool(
         device,
         dispatch,
@@ -184,7 +184,7 @@ internal unsafe partial class VulkanWindowTarget {
         created.Format,
         windowObjectAccounting,
         policy.OffscreenLayerInitialCapacity,
-        layerRuntime.Facts.MaxImageDimension2D,
+        layerRuntime.Runtime.Facts.MaxImageDimension2D,
         diagnostics)
     }
     primitiveRenderer!!.SetLayerPool(layerPool)
@@ -205,7 +205,7 @@ internal unsafe partial class VulkanWindowTarget {
     recreatePending = false
     forceFullRedraw = true
     if surfaceRecovery {
-      diagnostics?.AddSurfaceRecovery(1uL)
+      diagnostics?.AddCounter(VulkanCounterId.SurfaceRecoveryCount)
     }
     return true
   }
@@ -213,7 +213,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func RetireCurrentSwapchain(destroySurface bool) bool {
     if let old = generation {
       if let activeRuntime = runtime {
-        if activeRuntime.QueueWorker.HasOutstandingWork {
+        if activeRuntime.Runtime.QueueWorker.HasOutstandingWork {
           frameFailureRetryable = true
           host.Wake()
           return false
@@ -266,13 +266,13 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DestroyCurrentSurface() {
-    if surfaceCreated && instance != nint(0) {
-      host.DestroyVulkanSurface(instance, surface)
+    if surfaceCreated && instance != VkInstance.Null {
+      host.DestroyVulkanSurface(instance.Raw, surface.Raw)
       if let accounting = windowObjectAccounting {
         accounting.Release()
       }
     }
-    surface = 0uL
+    surface = VkSurfaceKHR.Null
     surfaceCreated = false
   }
 
@@ -315,7 +315,7 @@ internal unsafe partial class VulkanWindowTarget {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
     if let activeRuntime = runtime {
-      if activeRuntime.QueueWorker.HasOutstandingWork {
+      if activeRuntime.Runtime.QueueWorker.HasOutstandingWork {
         return VkConstants.VK_NOT_READY
       }
     }
@@ -363,16 +363,17 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RecreateSurface() bool {
     DestroyCurrentSurface()
-    var createdSurface VkSurfaceKHR = 0uL
-    if !host.CreateVulkanSurface(instance, out createdSurface) || createdSurface == 0uL {
+    var createdSurfaceRaw uint64 = 0uL
+    if !host.CreateVulkanSurface(instance.Raw, out createdSurfaceRaw) || createdSurfaceRaw == 0uL {
       return false
     }
+    let createdSurface = VkSurfaceKHR(createdSurfaceRaw)
     try {
       if let accounting = windowObjectAccounting {
         accounting.Allocate()
       }
     } catch (error Exception) {
-      try { host.DestroyVulkanSurface(instance, createdSurface) } catch (cleanup Exception) { }
+      try { host.DestroyVulkanSurface(instance.Raw, createdSurface.Raw) } catch (cleanup Exception) { }
       rethrow
     }
     surface = createdSurface
@@ -424,7 +425,7 @@ internal unsafe partial class VulkanWindowTarget {
         try {
           if let probe = SecondaryStartupForTest { probe() }
           return CreateGeneration(width, height, requestedVsync, transparent,
-            allowInherited, preferExtent, generationId, stale?.Handle ?? 0uL)
+            allowInherited, preferExtent, generationId, stale?.Handle ?? VkSwapchainKHR.Null)
         } finally {
           try { stale?.Dispose() } finally { host.Wake() }
         }
@@ -433,7 +434,7 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     let created = CreateGeneration(width, height, vsync, host.Transparent, host.AllowInheritedCompositeAlpha,
-      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL)
+      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? VkSwapchainKHR.Null)
     next = created.Generation
     if created.SurfaceLost {
       surfaceLost = true
@@ -731,7 +732,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func WaitForGpu() bool {
     if let activeRuntime = runtime {
-      if activeRuntime.QueueWorker.HasOutstandingWork {
+      if activeRuntime.Runtime.QueueWorker.HasOutstandingWork {
         frameFailureRetryable = true
         host.Wake()
         return false
@@ -799,9 +800,9 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func WaitDeviceIdleResult() VkResult {
     if let activeRuntime = runtime {
-      return activeRuntime.WaitDeviceIdleResult()
+      return activeRuntime.Runtime.WaitDeviceIdleResult()
     }
-    if device == nint(0) || deviceWaitIdleAddress == nint(0) {
+    if device == VkDevice.Null || deviceWaitIdleAddress == nint(0) {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
     let nullable = deviceWaitIdleAddress as (unmanaged[Cdecl](VkDevice) -> VkResult)?
@@ -839,7 +840,7 @@ internal unsafe partial class VulkanWindowTarget {
       nativeHeight,
       clipMaskFormatSupport,
       0uL,
-      activeRuntime.Generation,
+      activeRuntime.Runtime.Generation,
       windowObjectAccounting, diagnostics)
     clipMaskRedrawPending = true
     clipMaskAtlasAbandoned = false
@@ -848,10 +849,10 @@ internal unsafe partial class VulkanWindowTarget {
   private func CompletedGlobalSubmissionSerial() uint64 {
     guard let activeRuntime = runtime else { return 0uL }
     var completed uint64
-    let result = activeRuntime.GetCompletedGraphicsSubmissionSerial(out completed)
+    let result = activeRuntime.Runtime.GetCompletedGraphicsSubmissionSerial(out completed)
     RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
     if result != VkConstants.VK_SUCCESS {
-      if result == VkConstants.VK_ERROR_DEVICE_LOST { activeRuntime.MarkDeviceLost() }
+      if result == VkConstants.VK_ERROR_DEVICE_LOST { activeRuntime.Runtime.MarkDeviceLost() }
       throw InvalidOperationException("Vulkan graphics timeline query failed: " + result.ToString())
     }
     return completed

@@ -175,7 +175,7 @@ public class LayerWindowImage {
         uploading = transfer
         transfer.ContinueWith((task Task) -> owner.NotifyStillImageReady(), TaskScheduler.Default)
       } else {
-        let maxDimension = int32(active.Facts.MaxImageDimension2D)
+        let maxDimension = int32(active.Runtime.Facts.MaxImageDimension2D)
         let job = Task.Run[LayerImageDecode](() -> {
           let image = Load(maxDimension, CancellationToken.None)
           return LayerImageDecode(image, image?.Width ?? 0, image?.Height ?? 0)

@@ -19,7 +19,7 @@ internal unsafe class VulkanPipelineFactory {
 
         let pin = GCHandle.Alloc(code, GCHandleType.Pinned)
         try {
-          var module VkShaderModule = 0uL
+          var module VkShaderModule = VkShaderModule.Null
           var accounted bool = false
           var info = VkShaderModuleCreateInfo{
             sType: VkConstants.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -34,15 +34,15 @@ internal unsafe class VulkanPipelineFactory {
             let start = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
             let result = createShaderModule(device, &info, nil, &module)
             if let trace = recorder {
-              let id = trace.NativeResource(FrameResourceKind.Shader, uint64(device), module)
+              let id = trace.NativeResource(FrameResourceKind.Shader, uint64(device), module.Raw)
               trace.ResourceDuration(FrameResourceKind.Shader, id, "shader.create", start,
                 bytes: uint64(code.Length), device: uint64(device), result: int32(result))
-              if result == VkConstants.VK_SUCCESS && module != 0uL {
+              if result == VkConstants.VK_SUCCESS && module != VkShaderModule.Null {
                 trace.Resource(FrameResourceKind.Shader, id, VulkanDiagnosticEventIds.ResourceCreate,
                   "shader.module", name: artifactName, bytes: uint64(code.Length), device: uint64(device))
               }
             }
-            if result != VkConstants.VK_SUCCESS || module == 0uL {
+            if result != VkConstants.VK_SUCCESS || module == VkShaderModule.Null {
               throw InvalidOperationException(
                 "vkCreateShaderModule failed for " + artifactName + ": " + result.ToString())
             }
@@ -52,7 +52,7 @@ internal unsafe class VulkanPipelineFactory {
             }
             return module
           } catch (error Exception) {
-            if module != 0uL {
+            if module != VkShaderModule.Null {
               try {
                 VulkanNativeHandleDestroyer.DestroyShaderModule(device, dispatch.vkDestroyShaderModule, nil, ref module)
               } catch (cleanup Exception) { }
@@ -85,7 +85,7 @@ internal unsafe class VulkanPipelineFactory {
           throw ArgumentNullException("pushConstantRanges")
         }
 
-        var layout VkPipelineLayout = 0uL
+        var layout VkPipelineLayout = VkPipelineLayout.Null
         var accounted bool = false
         var info = VkPipelineLayoutCreateInfo{
           sType: VkConstants.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -99,7 +99,7 @@ internal unsafe class VulkanPipelineFactory {
         try {
           let createPipelineLayout = dispatch.vkCreatePipelineLayout
           let result = createPipelineLayout(device, &info, nil, &layout)
-          if result != VkConstants.VK_SUCCESS || layout == 0uL {
+          if result != VkConstants.VK_SUCCESS || layout == VkPipelineLayout.Null {
             throw InvalidOperationException(
               "vkCreatePipelineLayout failed: " + result.ToString())
           }
@@ -109,7 +109,7 @@ internal unsafe class VulkanPipelineFactory {
           }
           return layout
         } catch (error Exception) {
-          if layout != 0uL {
+          if layout != VkPipelineLayout.Null {
             let destroyPipelineLayout = dispatch.vkDestroyPipelineLayout
             try { destroyPipelineLayout(device, layout, nil) } catch (cleanup Exception) { }
           }
@@ -227,14 +227,14 @@ internal unsafe class VulkanPipelineFactory {
             pColorBlendState: &colorBlend,
             pDynamicState: &dynamicState,
             layout: layout,
-            renderPass: 0uL,
+            renderPass: VkRenderPass.Null,
           }
 
-          var pipeline VkPipeline = 0uL
+          var pipeline VkPipeline = VkPipeline.Null
           var accounted bool = false
           try {
             let result = pipelineCache.CreateGraphicsPipelines(1u, &info, &pipeline)
-            if result != VkConstants.VK_SUCCESS || pipeline == 0uL {
+            if result != VkConstants.VK_SUCCESS || pipeline == VkPipeline.Null {
               throw InvalidOperationException(
                 "vkCreateGraphicsPipelines failed: " + result.ToString())
             }
@@ -244,7 +244,7 @@ internal unsafe class VulkanPipelineFactory {
             }
             return pipeline
           } catch (error Exception) {
-            if pipeline != 0uL {
+            if pipeline != VkPipeline.Null {
               try {
                 VulkanNativeHandleDestroyer.DestroyPipeline(device, dispatch.vkDestroyPipeline, nil, ref pipeline)
               } catch (cleanup Exception) { }

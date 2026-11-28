@@ -182,7 +182,7 @@ internal unsafe partial class SdlRuntime {
         if createAddress == nil { return false }
         let create = createAddress
         var info = VkInstanceCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO }
-        var instance VkInstance = nint(0)
+        var instance VkInstance = VkInstance.Null
         let result = create(&info, nil, &instance)
         if result == VkConstants.VK_ERROR_INCOMPATIBLE_DRIVER { return true }
         if result != VkConstants.VK_SUCCESS { return false }

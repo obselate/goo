@@ -86,10 +86,10 @@ internal unsafe sealed class VulkanQueueMailbox {
       SubmitCommandBuffer = commandBuffer
       SubmitWaitSemaphore = waitSemaphore
       SubmitSignalSemaphore = signalSemaphore
-      SubmitTimeline = 0uL
+      SubmitTimeline = VkSemaphore.Null
       SubmitSerial = 0uL
-      SubmitHasWait = waitSemaphore != 0uL
-      SubmitHasSignal = signalSemaphore != 0uL
+      SubmitHasWait = waitSemaphore != VkSemaphore.Null
+      SubmitHasSignal = signalSemaphore != VkSemaphore.Null
     }
 
   internal func AddExternalWait(semaphore VkSemaphore, value uint64, pin object) {
@@ -189,7 +189,7 @@ internal unsafe sealed class VulkanQueueMailbox {
     try {
       if faulted {
         completionResult = VkConstants.VK_ERROR_DEVICE_LOST
-      } else if completionFence != 0uL {
+      } else if completionFence != VkFence.Null {
         var fence = completionFence
         let wait = dispatch.vkWaitForFences
         completionResult = wait(completionDevice, 1u, &fence, VkConstants.VK_TRUE,
@@ -252,7 +252,7 @@ internal unsafe sealed class VulkanQueueMailbox {
     var submitInfo = VkSubmitInfo2{}
     submitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
     submitInfo.waitSemaphoreInfoCount = uint32(externalWaitCount) + if SubmitHasWait { 1u } else { 0u }
-    let hasCommand = SubmitCommandBuffer != nint(0)
+    let hasCommand = SubmitCommandBuffer != VkCommandBuffer.Null
     submitInfo.commandBufferInfoCount = if hasCommand { 1u } else { 0u }
     submitInfo.pCommandBufferInfos = if hasCommand { &commandInfo } else { nil }
     submitInfo.signalSemaphoreInfoCount = if SubmitHasSignal { 2u } else { 1u }
@@ -263,7 +263,7 @@ internal unsafe sealed class VulkanQueueMailbox {
       fixed signals *VkSemaphoreSubmitInfo = signalInfos {
         submitInfo.pWaitSemaphoreInfos = if SubmitHasWait { waits } else { waits + 1 }
         submitInfo.pSignalSemaphoreInfos = signals
-        submitResult = queueSubmit(queue, 1u, &submitInfo, 0uL)
+        submitResult = queueSubmit(queue, 1u, &submitInfo, VkFence.Null)
       }
     }
     if let current = TraceRecorder {

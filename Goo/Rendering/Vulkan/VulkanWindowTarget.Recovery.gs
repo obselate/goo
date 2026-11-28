@@ -15,10 +15,10 @@ internal unsafe partial class VulkanWindowTarget {
   internal func RecordDeviceRecovery(result VkResult, oldGeneration uint64,
     targetCount int32) {
       if let currentDiagnostics = diagnostics {
-        currentDiagnostics.AddDeviceRecovery(1uL)
+        currentDiagnostics.AddCounter(VulkanCounterId.DeviceRecoveryCount)
       }
       let newGeneration = if let currentRuntime = runtime {
-        currentRuntime.Generation
+        currentRuntime.Runtime.Generation
       } else {
         0uL
       }
@@ -71,17 +71,17 @@ internal unsafe partial class VulkanWindowTarget {
     let staleDevice = device
     let staleSurface = surface
     let staleSurfaceCreated = surfaceCreated
-    surface = 0uL
+    surface = VkSurfaceKHR.Null
     surfaceCreated = false
-    if staleSurfaceCreated && staleSurface != 0uL && staleInstance != nint(0) {
+    if staleSurfaceCreated && staleSurface != VkSurfaceKHR.Null && staleInstance != VkInstance.Null {
       try {
-        host.DestroyVulkanSurface(staleInstance, staleSurface)
+        host.DestroyVulkanSurface(staleInstance.Raw, staleSurface.Raw)
         if let accounting = windowObjectAccounting {
           accounting.Release()
         }
       } catch (cleanup Exception) { }
     }
-    if staleDevice != nint(0) {
+    if staleDevice != VkDevice.Null {
       var destroyed = false
       if deviceDestroyAvailable {
         try {
@@ -89,7 +89,7 @@ internal unsafe partial class VulkanWindowTarget {
           destroyDevice(staleDevice, nil)
           destroyed = true
         } catch (cleanup Exception) { }
-      } else if staleInstance != nint(0) {
+      } else if staleInstance != VkInstance.Null {
         try {
           let nullable = ResolveGlobalProc(staleInstance, "vkDestroyDevice") as (unmanaged[Cdecl](VkDevice, *VkAllocationCallbacks) -> void)?
           if nullable != nil {
@@ -104,10 +104,10 @@ internal unsafe partial class VulkanWindowTarget {
           try { accounting.Release() } catch (cleanup Exception) { }
         }
       }
-      device = nint(0)
+      device = VkDevice.Null
     }
     try { DestroyValidationMessenger() } catch (cleanup Exception) { }
-    if staleInstance != nint(0) {
+    if staleInstance != VkInstance.Null {
       var destroyed = false
       if instanceDestroyAvailable {
         try {
@@ -130,7 +130,7 @@ internal unsafe partial class VulkanWindowTarget {
           try { accounting.Release() } catch (cleanup Exception) { }
         }
       }
-      instance = nint(0)
+      instance = VkInstance.Null
     }
   }
 
@@ -160,7 +160,7 @@ internal unsafe partial class VulkanWindowTarget {
     pendingGlobalSubmissionSerial = 0uL
     pendingSubmitStart = 0uL
     pendingPresentStart = 0uL
-    pendingPresentFence = 0uL
+    pendingPresentFence = VkFence.Null
     completedGraphicsSubmissionSerial = 0uL
     let staleImageScene = imageScene
     imageScene = nil
@@ -216,9 +216,9 @@ internal unsafe partial class VulkanWindowTarget {
     let staleDevice = device
     let staleCommandPool = commandPool
     let staleCommandBufferCount = commandBufferObjectCount
-    commandPool = 0uL
+    commandPool = VkCommandPool.Null
     commandBufferObjectCount = 0
-    if staleCommandPool != 0uL && staleDevice != nint(0) {
+    if staleCommandPool != VkCommandPool.Null && staleDevice != VkDevice.Null {
       let destroyCommandPool = dispatch.vkDestroyCommandPool
       try { destroyCommandPool(staleDevice, staleCommandPool, nil) } catch (cleanup Exception) { }
       var bufferIndex int32 = 0
@@ -237,15 +237,15 @@ internal unsafe partial class VulkanWindowTarget {
     memoryAllocator = nil
     imageResources = nil
     pathResources = nil
-    instance = nint(0)
+    instance = VkInstance.Null
     instanceDispatch = VkInstanceDispatch{}
     instanceMaintenanceVariant = VulkanSwapchainMaintenanceVariant.None
     swapchainMaintenanceVariant = VulkanSwapchainMaintenanceVariant.None
     portabilitySubsetSupported = false
-    physicalDevice = nint(0)
-    device = nint(0)
+    physicalDevice = VkPhysicalDevice.Null
+    device = VkDevice.Null
     dispatch = VkDeviceDispatch{}
-    queue = nint(0)
+    queue = VkQueue.Null
     queueFamilyIndex = 0u
     deviceWaitIdleAddress = nint(0)
     memoryBudgetSupported = false
@@ -253,13 +253,13 @@ internal unsafe partial class VulkanWindowTarget {
     instanceDestroyAvailable = false
     deviceDestroyAvailable = false
     validation = nil
-    validationMessenger = 0uL
+    validationMessenger = VkDebugUtilsMessengerEXT.Null
     validationMessengerCreated = false
     timestampValidBits = 0u
     timestampPeriod = 0.0F
     timestampComputeAndGraphics = VkConstants.VK_FALSE
     deviceFacts = VulkanSharedDeviceFacts{}
-    surface = 0uL
+    surface = VkSurfaceKHR.Null
     surfaceCreated = false
     frameBegun = false
     renderingBegun = false
@@ -282,10 +282,10 @@ internal unsafe partial class VulkanWindowTarget {
     let staleInstance = instance
     let staleSurface = surface
     let staleSurfaceCreated = surfaceCreated
-    surface = 0uL
+    surface = VkSurfaceKHR.Null
     surfaceCreated = false
-    if staleSurfaceCreated && staleSurface != 0uL && staleInstance != nint(0) {
-      try { host.DestroyVulkanSurface(staleInstance, staleSurface) } catch (cleanup Exception) { }
+    if staleSurfaceCreated && staleSurface != VkSurfaceKHR.Null && staleInstance != VkInstance.Null {
+      try { host.DestroyVulkanSurface(staleInstance.Raw, staleSurface.Raw) } catch (cleanup Exception) { }
       if let accounting = windowObjectAccounting {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
@@ -329,7 +329,7 @@ internal unsafe partial class VulkanWindowTarget {
         allocator,
         clipMaskFormatSupport,
         windowObjectAccounting,
-        activeRuntime.Generation)
+        activeRuntime.Runtime.Generation)
       clipMaskAtlasAbandoned = false
       clipMaskRedrawPending = true
     }

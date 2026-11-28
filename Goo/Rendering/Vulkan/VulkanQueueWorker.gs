@@ -118,10 +118,10 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
 
   internal init(nativeQueue VkQueue, nativeDispatch VkDeviceDispatch,
     nativeGraphicsTimeline VkSemaphore) {
-      if nativeQueue == nint(0) {
+      if nativeQueue == VkQueue.Null {
         throw ArgumentException("nativeQueue")
       }
-      if nativeGraphicsTimeline == 0uL {
+      if nativeGraphicsTimeline == VkSemaphore.Null {
         throw ArgumentException("nativeGraphicsTimeline")
       }
       queue = nativeQueue

@@ -122,9 +122,9 @@ func RunShaderGeneratorSmoke() {
     let before = WindowReadbackTestFixture.DiagnosticCounters(opened)
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     let after = WindowReadbackTestFixture.DiagnosticCounters(opened)
-    let recorded = ShaderEffectDelta(after.recordCount, before.recordCount)
+    let recorded = ShaderEffectDelta(after[VulkanCounterId.RecordCount], before[VulkanCounterId.RecordCount])
     Require(recorded > 0uL
-        && ShaderEffectDelta(after.layerPoolPassCount, before.layerPoolPassCount) == 2uL * recorded,
+        && ShaderEffectDelta(after[VulkanCounterId.LayerPoolPassCount], before[VulkanCounterId.LayerPoolPassCount]) == 2uL * recorded,
       "Generator effect added a source layer beyond opacity and blend groups")
     WindowReadbackTestFixture.StabilizeNativeMetrics(opened)
     let metrics = WindowReadbackTestFixture.Metrics(opened)

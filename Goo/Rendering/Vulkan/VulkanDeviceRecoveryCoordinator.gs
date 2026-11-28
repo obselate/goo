@@ -129,12 +129,12 @@ internal class VulkanDeviceRecoveryCoordinator {
         guard let oldRuntime = first.RecoveryRuntime() else {
           throw InvalidOperationException("Vulkan shared runtime is unavailable during recovery")
         }
-        oldRuntime.MarkDeviceLost()
+        oldRuntime.Runtime.MarkDeviceLost()
         if VulkanStillImage.UploadPending {
           recoveryInProgress = false
           return true
         }
-        oldRuntime.QuiesceQueueAfterDeviceLoss()
+        oldRuntime.Runtime.QuiesceQueueAfterDeviceLoss()
         index = 0
         while index < targetCount {
           if let target = storage[index] {
@@ -160,7 +160,7 @@ internal class VulkanDeviceRecoveryCoordinator {
           }
           index = index + 1
         }
-        first.RecordDeviceRecovery(result, oldRuntime.Generation, targetCount)
+        first.RecordDeviceRecovery(result, oldRuntime.Runtime.Generation, targetCount)
         recoveryInProgress = false
         return true
       } catch (error Exception) {

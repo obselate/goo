@@ -17,8 +17,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     let linearSlot = DescriptorSlot(index, VulkanImageSamplerMode.Linear)
     if nearestSlot < 0 || nearestSlot >= descriptorCapacity
       || linearSlot < 0 || linearSlot >= descriptorCapacity
-      || descriptorSets[nearestSlot] == 0uL
-      || descriptorSets[linearSlot] == 0uL {
+      || descriptorSets[nearestSlot] == VkDescriptorSet.Null
+      || descriptorSets[linearSlot] == VkDescriptorSet.Null {
         throw InvalidOperationException("Vulkan image descriptor capacity reached")
       }
     if entries[index].State != VulkanImageResourceState.Empty {
@@ -43,7 +43,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         || binding.SamplerMode != samplerMode
         || binding.DescriptorToken != uint64(entry.ImageView)
         || binding.Slot < 0 || binding.Slot >= descriptorCapacity
-        || descriptorSets[binding.Slot] == 0uL {
+        || descriptorSets[binding.Slot] == VkDescriptorSet.Null {
           return VulkanImageDescriptorBinding{}
         }
       return binding
@@ -77,7 +77,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         || binding.SamplerMode != samplerMode
         || binding.DescriptorToken != uint64(imageView)
         || binding.Slot < 0 || binding.Slot >= descriptorCapacity
-        || descriptorSets[binding.Slot] == 0uL {
+        || descriptorSets[binding.Slot] == VkDescriptorSet.Null {
           throw InvalidOperationException("Vulkan image descriptor is stale")
         }
       var updated = binding
@@ -162,19 +162,19 @@ internal unsafe partial class VulkanImageResources : IDisposable {
 
   private func CurrentLiveObjectHandleCount() uint64 {
     var count uint64 = uint64(liveCount) * 2uL
-    if stagingBuffer != 0uL {
+    if stagingBuffer != VkBuffer.Null {
       count++
     }
     if descriptorPools.Count > 0 {
       count += uint64(descriptorPools.Count) + uint64(trackedDescriptorSetCount)
     }
-    if descriptorSetLayout != 0uL {
+    if descriptorSetLayout != VkDescriptorSetLayout.Null {
       count++
     }
-    if nearestSampler != 0uL {
+    if nearestSampler != VkSampler.Null {
       count++
     }
-    if linearSampler != 0uL {
+    if linearSampler != VkSampler.Null {
       count++
     }
     return count

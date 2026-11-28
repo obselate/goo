@@ -34,7 +34,7 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
                 case ExternalImageHandleKind.D3D12Resource: 128u
                 default: 0u
             }
-            if handleType == 0u || (runtime.Dispatch.ExternalMemoryKinds & handleType) == 0u {
+            if handleType == 0u || (runtime.Runtime.Dispatch.ExternalMemoryKinds & handleType) == 0u {
                 return ExternalImageResult(ExternalImageStatus.Unsupported, detail: "External memory handle type is unavailable")
             }
             if description.Format != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
@@ -52,7 +52,7 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             if (description.ImageUsage & uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT)) == 0u {
                 throw ArgumentException("External image usage must include sampled usage", "description")
             }
-            let query = runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
+            let query = runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
             var externalInfo = VkPhysicalDeviceExternalImageFormatInfo{ sType: 1000071000, handleType: handleType }
             var modifierInfo = VkPhysicalDeviceImageDrmFormatModifierInfoEXT{
                 sType: 1000158002, drmFormatModifier: description.DrmModifier,
@@ -65,7 +65,7 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             }
             var externalProperties = VkExternalImageFormatProperties{ sType: 1000071001 }
             var properties = VkImageFormatProperties2{ sType: 1000059003, pNext: *void(&externalProperties) }
-            let result = query(runtime.PhysicalDevice, &queryInfo, &properties)
+            let result = query(runtime.Runtime.PhysicalDevice, &queryInfo, &properties)
             if result != VkConstants.VK_SUCCESS || (externalProperties.externalMemoryProperties.externalMemoryFeatures & 4u) == 0u {
                 return ExternalImageResult(ExternalImageStatus.Unsupported, detail: "Driver cannot import this external image")
             }
@@ -97,14 +97,14 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             }
             var list = VkDrmFormatModifierPropertiesListEXT{ sType: 1000158000 }
             var properties = VkFormatProperties2{ sType: 1000059002, pNext: *void(&list) }
-            let query = runtime.InstanceDispatch.vkGetPhysicalDeviceFormatProperties2
-            query(runtime.PhysicalDevice, description.Format, &properties)
+            let query = runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceFormatProperties2
+            query(runtime.Runtime.PhysicalDevice, description.Format, &properties)
             if list.drmFormatModifierCount == 0u { return false }
             let size = System.Runtime.CompilerServices.Unsafe.SizeOf[VkDrmFormatModifierPropertiesEXT]()
             let storage = Marshal.AllocHGlobal(nint(list.drmFormatModifierCount) * nint(size))
             try {
                 list.pDrmFormatModifierProperties = *VkDrmFormatModifierPropertiesEXT(storage)
-                query(runtime.PhysicalDevice, description.Format, &properties)
+                query(runtime.Runtime.PhysicalDevice, description.Format, &properties)
                 for index in 0 ... int32(list.drmFormatModifierCount) {
                     let modifier = list.pDrmFormatModifierProperties[index]
                     if modifier.drmFormatModifier != description.DrmModifier { continue }
@@ -127,8 +127,8 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
     }
 
     private func Create(description VulkanExternalImageDescription, handleType uint32, dedicatedOnly bool) {
-        let dispatch = Runtime.Dispatch
-        let device = Runtime.Device
+        let dispatch = Runtime.Runtime.Dispatch
+        let device = Runtime.Runtime.Device
         var externalInfo = VkExternalMemoryImageCreateInfo{ sType: 1000072001, handleTypes: handleType }
         let planes *VkSubresourceLayout = stackalloc[4]VkSubresourceLayout
         var modifierInfo = VkImageDrmFormatModifierExplicitCreateInfoEXT{
@@ -218,25 +218,25 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
             sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, image: Image,
             viewType: VkConstants.VK_IMAGE_VIEW_TYPE_2D, format: Format,
             subresourceRange: VulkanTransitions.ColorSubresourceRange() }
-        let create = Runtime.Dispatch.vkCreateImageView
+        let create = Runtime.Runtime.Dispatch.vkCreateImageView
         var createdView VkImageView
-        let result = create(Runtime.Device, &info, nil, &createdView)
+        let result = create(Runtime.Runtime.Device, &info, nil, &createdView)
         View = createdView
         Check(result, "External image view creation failed")
     }
 
     internal func EnsureAlphaView(alpha ExternalImageAlphaMode) ExternalImageStatus {
-        if alpha != ExternalImageAlphaMode.Opaque || OpaqueView != 0uL { return ExternalImageStatus.Success }
-        if !Runtime.Dispatch.ImageViewFormatSwizzle { return ExternalImageStatus.UnsupportedFormat }
+        if alpha != ExternalImageAlphaMode.Opaque || OpaqueView != VkImageView.Null { return ExternalImageStatus.Success }
+        if !Runtime.Runtime.Dispatch.ImageViewFormatSwizzle { return ExternalImageStatus.UnsupportedFormat }
         var info = VkImageViewCreateInfo{
             sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, image: Image,
             viewType: VkConstants.VK_IMAGE_VIEW_TYPE_2D, format: Format,
             components: VkComponentMapping{ a: VkConstants.VK_COMPONENT_SWIZZLE_ONE },
             subresourceRange: VulkanTransitions.ColorSubresourceRange(),
         }
-        let create = Runtime.Dispatch.vkCreateImageView
+        let create = Runtime.Runtime.Dispatch.vkCreateImageView
         var createdView VkImageView
-        let result = create(Runtime.Device, &info, nil, &createdView)
+        let result = create(Runtime.Runtime.Device, &info, nil, &createdView)
         OpaqueView = createdView
         return if result == VkConstants.VK_SUCCESS { ExternalImageStatus.Success }
             else if result == VkConstants.VK_ERROR_DEVICE_LOST { ExternalImageStatus.DeviceLost }
@@ -244,27 +244,27 @@ internal unsafe sealed partial class VulkanExternalImage : IDisposable {
     }
 
     public func Dispose() {
-        let dispatch = Runtime.Dispatch
-        let device = Runtime.Device
-        if OpaqueView != 0uL {
+        let dispatch = Runtime.Runtime.Dispatch
+        let device = Runtime.Runtime.Device
+        if OpaqueView != VkImageView.Null {
             let destroy = dispatch.vkDestroyImageView
             destroy(device, OpaqueView, nil)
-            OpaqueView = 0uL
+            OpaqueView = VkImageView.Null
         }
-        if View != 0uL {
+        if View != VkImageView.Null {
             let destroy = dispatch.vkDestroyImageView
             destroy(device, View, nil)
-            View = 0uL
+            View = VkImageView.Null
         }
-        if Image != 0uL {
+        if Image != VkImage.Null {
             let destroy = dispatch.vkDestroyImage
             destroy(device, Image, nil)
-            Image = 0uL
+            Image = VkImage.Null
         }
-        if memory != 0uL {
+        if memory != VkDeviceMemory.Null {
             let free = dispatch.vkFreeMemory
             free(device, memory, nil)
-            memory = 0uL
+            memory = VkDeviceMemory.Null
         }
         storage?.Dispose()
         storage = nil

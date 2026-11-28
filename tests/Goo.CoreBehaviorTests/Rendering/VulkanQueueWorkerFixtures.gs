@@ -65,9 +65,9 @@ internal unsafe class VulkanQueueWorkerFixtures {
       vkQueueSubmit2: cast[unmanaged[Cdecl](VkQueue, uint32, *VkSubmitInfo2, VkFence) -> VkResult](nint(&Submit)),
       vkQueuePresentKHR: cast[unmanaged[Cdecl](VkQueue, *VkPresentInfoKHR) -> VkResult](nint(&Present)),
     }
-    using let submitWorker = VulkanQueueWorker(nint(1), dispatch, 1uL)
+    using let submitWorker = VulkanQueueWorker(VkQueue(nint(1)), dispatch, VkSemaphore(1uL))
     let submit = VulkanQueueMailbox(nil)
-    submit.PrepareSubmit(nint(0), 0uL, 0uL)
+    submit.PrepareSubmit(VkCommandBuffer.Null, VkSemaphore.Null, VkSemaphore.Null)
     VulkanQueueWorker.HoldSubmitForMailboxForTest(submit)
     submitReleased.Reset()
     var stopped = false
@@ -93,13 +93,13 @@ internal unsafe class VulkanQueueWorkerFixtures {
       return false
     }
 
-    using let presentWorker = VulkanQueueWorker(nint(1), dispatch, 1uL)
+    using let presentWorker = VulkanQueueWorker(VkQueue(nint(1)), dispatch, VkSemaphore(1uL))
     let present = VulkanQueueMailbox(nil)
     present.FailSubmit(VkConstants.VK_SUCCESS)
-    present.PreparePresent(0uL, 0u, 0uL, 0uL, false)
+    present.PreparePresent(VkSwapchainKHR.Null, 0u, VkSemaphore.Null, VkFence.Null, false)
     VulkanQueueWorker.HoldPresentForMailboxForTest(present)
     let behind = VulkanQueueMailbox(nil)
-    behind.PrepareSubmit(nint(0), 0uL, 0uL)
+    behind.PrepareSubmit(VkCommandBuffer.Null, VkSemaphore.Null, VkSemaphore.Null)
     try {
       if !present.BeginPresent() || !presentWorker.EnqueuePresent(present)
         || !VulkanQueueWorker.WaitForHeldQueueCallForTest(5000) { return false }
@@ -118,12 +118,12 @@ internal unsafe class VulkanQueueWorkerFixtures {
 
   internal func WakeFailureDrainsFollowingMailboxAndQuiesces() bool {
     let host = ThrowingQueueWakeHost()
-    using let worker = VulkanQueueWorker(nint(1), VkDeviceDispatch{}, 1uL)
+    using let worker = VulkanQueueWorker(VkQueue(nint(1)), VkDeviceDispatch{}, VkSemaphore(1uL))
     worker.MarkFaulted()
     let first = worker.CreateMailbox(host)
     let second = worker.CreateMailbox(host)
-    first.PrepareSubmit(nint(0), 0uL, 0uL)
-    second.PrepareSubmit(nint(0), 0uL, 0uL)
+    first.PrepareSubmit(VkCommandBuffer.Null, VkSemaphore.Null, VkSemaphore.Null)
+    second.PrepareSubmit(VkCommandBuffer.Null, VkSemaphore.Null, VkSemaphore.Null)
     if !first.BeginSubmit() || !second.BeginSubmit() { return false }
     if !worker.EnqueueSubmit(first, (serial uint64) -> {
       if serial == 0uL { throw InvalidOperationException("serial") }

@@ -13,15 +13,15 @@ internal unsafe class VulkanNativeHandleDestroyer {
       destroyPipeline unmanaged[Cdecl](VkDevice, VkPipeline, *VkAllocationCallbacks) -> void,
       objectAccounting VulkanObjectAccounting?,
       ref pipeline VkPipeline) {
-        if pipeline != 0uL {
+        if pipeline != VkPipeline.Null {
           destroyPipeline(device, pipeline, nil)
           if let recorder = FrameRecorder.Current {
             recorder.Resource(FrameResourceKind.Pipeline,
-              recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline, remove: true),
+              recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline.Raw, remove: true),
               VulkanDiagnosticEventIds.PipelineDestroy, "pipeline.destroy", device: uint64(device))
           }
           if let accounting = objectAccounting { accounting.Release() }
-          pipeline = 0uL
+          pipeline = VkPipeline.Null
         }
       }
 
@@ -30,10 +30,10 @@ internal unsafe class VulkanNativeHandleDestroyer {
       destroyPipelineLayout unmanaged[Cdecl](VkDevice, VkPipelineLayout, *VkAllocationCallbacks) -> void,
       objectAccounting VulkanObjectAccounting?,
       ref layout VkPipelineLayout) {
-        if layout != 0uL {
+        if layout != VkPipelineLayout.Null {
           destroyPipelineLayout(device, layout, nil)
           if let accounting = objectAccounting { accounting.Release() }
-          layout = 0uL
+          layout = VkPipelineLayout.Null
         }
       }
 
@@ -42,10 +42,10 @@ internal unsafe class VulkanNativeHandleDestroyer {
       destroyDescriptorSetLayout unmanaged[Cdecl](VkDevice, VkDescriptorSetLayout, *VkAllocationCallbacks) -> void,
       objectAccounting VulkanObjectAccounting?,
       ref layout VkDescriptorSetLayout) {
-        if layout != 0uL {
+        if layout != VkDescriptorSetLayout.Null {
           destroyDescriptorSetLayout(device, layout, nil)
           if let accounting = objectAccounting { accounting.Release() }
-          layout = 0uL
+          layout = VkDescriptorSetLayout.Null
         }
       }
 
@@ -54,15 +54,15 @@ internal unsafe class VulkanNativeHandleDestroyer {
       destroyShaderModule unmanaged[Cdecl](VkDevice, VkShaderModule, *VkAllocationCallbacks) -> void,
       objectAccounting VulkanObjectAccounting?,
       ref module VkShaderModule) {
-        if module != 0uL {
+        if module != VkShaderModule.Null {
           destroyShaderModule(device, module, nil)
           if let recorder = FrameRecorder.Current {
             recorder.Resource(FrameResourceKind.Shader,
-              recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module, remove: true),
+              recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module.Raw, remove: true),
               VulkanDiagnosticEventIds.PipelineDestroy, "shader.destroy", device: uint64(device))
           }
           if let accounting = objectAccounting { accounting.Release() }
-          module = 0uL
+          module = VkShaderModule.Null
         }
       }
   }
@@ -146,18 +146,18 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   }
   internal func ProfileResources(recorder FrameRecorder) {
     lock pipelineGate {
-      for pipeline in []uint64{solidPipeline.Handle, opaqueSolidPipeline.Handle, shadowPipeline.Handle,
+      for pipeline in []VkPipeline{solidPipeline.Handle, opaqueSolidPipeline.Handle, shadowPipeline.Handle,
         borderPipeline.Handle, linearPipeline.Handle, radialPipeline.Handle, sampledPipeline.Handle,
         blendPipeline.Handle, clipCompositePipeline.Handle, pathPipeline.Handle, textPipeline.Handle,
         textPaintPipeline.Handle} {
         recorder.Resource(FrameResourceKind.Pipeline,
-          recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
+          recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline.Raw),
           VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
       }
       for i in 0 ... shaderEffectPipelineCount {
         if let entry = shaderEffectPipelines[i] {
           recorder.Resource(FrameResourceKind.Pipeline,
-            recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), entry.Pipeline),
+            recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), entry.Pipeline.Raw),
             VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
         }
       }
@@ -203,25 +203,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     get -> ResolvePipeline(ref textPaintPipeline, textVertexModule,
       textPaintFragmentModule, textPipelineLayout, true, false)
   }
-  internal prop LiveObjectCount uint64{
-    get {
-      var count uint64 = 0uL
-      if solidPipeline.Handle != 0uL { count++ }
-      if opaqueSolidPipeline.Handle != 0uL { count++ }
-      if shadowPipeline.Handle != 0uL { count++ }
-      if borderPipeline.Handle != 0uL { count++ }
-      if linearPipeline.Handle != 0uL { count++ }
-      if radialPipeline.Handle != 0uL { count++ }
-      if sampledPipeline.Handle != 0uL { count++ }
-      if blendPipeline.Handle != 0uL { count++ }
-      if clipCompositePipeline.Handle != 0uL { count++ }
-      if pathPipeline.Handle != 0uL { count++ }
-      if textPipeline.Handle != 0uL { count++ }
-      if textPaintPipeline.Handle != 0uL { count++ }
-      count += uint64(shaderEffectReadyCount)
-      return count
-    }
-  }
 
   internal init(
     nativeDevice VkDevice,
@@ -246,7 +227,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     textFragmentModule VkShaderModule,
     textPaintFragmentModule VkShaderModule,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativePipelineCache == nil {
@@ -256,28 +237,28 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
         && targetFormat != VkConstants.VK_FORMAT_B8G8R8A8_UNORM{
           throw ArgumentException("Vulkan primitive pipeline requires a UNORM RGBA target", "targetFormat")
         }
-      if nativePipelineLayout == 0uL {
+      if nativePipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan primitive pipeline layout is null", "nativePipelineLayout")
       }
-      if nativePathPipelineLayout == 0uL {
+      if nativePathPipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan path pipeline layout is null", "nativePathPipelineLayout")
       }
-      if nativeTextPipelineLayout == 0uL {
+      if nativeTextPipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan text pipeline layout is null", "nativeTextPipelineLayout")
       }
-      if nativeBlendPipelineLayout == 0uL {
+      if nativeBlendPipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan blend pipeline layout is null", "nativeBlendPipelineLayout")
       }
-      if vertexModule == 0uL || solidModule == 0uL || borderModule == 0uL
-        || shadowModule == 0uL || linearModule == 0uL || radialModule == 0uL
-        || sampledModule == 0uL || blendModule == 0uL {
+      if vertexModule == VkShaderModule.Null || solidModule == VkShaderModule.Null || borderModule == VkShaderModule.Null
+        || shadowModule == VkShaderModule.Null || linearModule == VkShaderModule.Null || radialModule == VkShaderModule.Null
+        || sampledModule == VkShaderModule.Null || blendModule == VkShaderModule.Null {
           throw ArgumentException("Vulkan primitive shader module is null")
         }
-      if pathVertexModule == 0uL || pathFragmentModule == 0uL {
+      if pathVertexModule == VkShaderModule.Null || pathFragmentModule == VkShaderModule.Null {
         throw ArgumentException("Vulkan path shader module is null")
       }
-      if textVertexModule == 0uL || textFragmentModule == 0uL
-        || textPaintFragmentModule == 0uL {
+      if textVertexModule == VkShaderModule.Null || textFragmentModule == VkShaderModule.Null
+        || textPaintFragmentModule == VkShaderModule.Null {
           throw ArgumentException("Vulkan text shader module is null")
         }
       device = nativeDevice
@@ -337,12 +318,12 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private func ResolvePipeline(ref pipeline VulkanPipelineSlot,
     vertex VkShaderModule, fragment VkShaderModule, layout VkPipelineLayout,
     enableBlend bool, primitiveInput bool) VkPipeline {
-    let existing = Volatile.Read(in pipeline.Handle)
-    if existing != 0uL { return existing }
+    let existing = VkPipeline(Volatile.Read(in Unsafe.As[VkPipeline, uint64](ref pipeline.Handle)))
+    if !existing.IsNull { return existing }
     lock (pipelineGate) {
       while pipeline.Creating { Monitor.Wait(pipelineGate) }
       if disposed { throw ObjectDisposedException("VulkanSharedPrimitiveFormatState") }
-      if pipeline.Handle != 0uL { return pipeline.Handle }
+      if !pipeline.Handle.IsNull { return pipeline.Handle }
       pipeline.Creating = true
       activePipelineCreations++
     }
@@ -359,7 +340,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       return created
     } finally {
       lock (pipelineGate) {
-        Volatile.Write(ref pipeline.Handle, created)
+        Volatile.Write(ref Unsafe.As[VkPipeline, uint64](ref pipeline.Handle), created.Raw)
         pipeline.Creating = false
         activePipelineCreations--
         Monitor.PulseAll(pipelineGate)
@@ -387,7 +368,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       return created
     } finally {
       lock (pipelineGate) {
-        if created != 0uL {
+        if created != VkPipeline.Null {
           entry.Pipeline = created
           shaderEffectReadyCount++
         } else {
@@ -398,7 +379,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
         }
         activePipelineCreations--
         Monitor.PulseAll(pipelineGate)
-        if created != 0uL { shaderEffectPipelineAliases.Add(program, entry) }
+        if created != VkPipeline.Null { shaderEffectPipelineAliases.Add(program, entry) }
       }
     }
   }
@@ -423,7 +404,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           }
         }
         if let entry = matched {
-          if entry.Pipeline == 0uL {
+          if entry.Pipeline == VkPipeline.Null {
             Monitor.Wait(pipelineGate)
             continue
           }
@@ -493,11 +474,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     var shaderIndex int32 = 0
     while shaderIndex < shaderEffectPipelineCount {
       if let entry = shaderEffectPipelines[shaderIndex] {
-        if entry.Pipeline != 0uL {
+        if entry.Pipeline != VkPipeline.Null {
           destroyPipeline(device, entry.Pipeline, nil)
           if let recorder = FrameRecorder.Current {
             recorder.Resource(FrameResourceKind.Pipeline,
-              recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), entry.Pipeline, remove: true),
+              recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), entry.Pipeline.Raw, remove: true),
               VulkanDiagnosticEventIds.PipelineDestroy, "pipeline.destroy", device: uint64(device))
           }
           if let accounting = objectAccounting { accounting.Release() }
@@ -589,18 +570,18 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     if profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
     profileTraceId = recorder.TraceId
     profileBaseline = recorder.BaselineVersion
-    for module in []uint64{vertexModule, solidModule, shadowModule, borderModule, linearModule,
+    for module in []VkShaderModule{vertexModule, solidModule, shadowModule, borderModule, linearModule,
       radialModule, sampledModule, blendModule, pathVertexModule, pathFragmentModule,
       clipMaskVertexModule, clipMaskFragmentModule, textVertexModule, textFragmentModule, textPaintFragmentModule,
       strokeFragmentModule, strokeMaskModule, strokeMetricModule} {
       recorder.Resource(FrameResourceKind.Shader,
-        recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module),
+        recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module.Raw),
         VulkanDiagnosticEventIds.ResourceCreate, "shader.module", device: uint64(device), baseline: true)
     }
-    for pipeline in []uint64{clipMaskR8Pipeline, clipMaskRgba8Pipeline, strokeRgbaPipeline, strokeBgraPipeline,
+    for pipeline in []VkPipeline{clipMaskR8Pipeline, clipMaskRgba8Pipeline, strokeRgbaPipeline, strokeBgraPipeline,
       strokeMaskR8Pipeline, strokeMaskRgbaPipeline, strokeMetricPipeline} {
       recorder.Resource(FrameResourceKind.Pipeline,
-        recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
+        recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline.Raw),
         VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
     }
     for state in formatStates { state?.ProfileResources(recorder) }
@@ -625,58 +606,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     get -> ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline,
       VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
   }
-  internal prop LiveObjectCount uint64{
-    get {
-      var count uint64 = 0uL
-      if vertexModule != 0uL { count++ }
-      if solidModule != 0uL { count++ }
-      if shadowModule != 0uL { count++ }
-      if borderModule != 0uL { count++ }
-      if linearModule != 0uL { count++ }
-      if radialModule != 0uL { count++ }
-      if sampledModule != 0uL { count++ }
-      if blendModule != 0uL { count++ }
-      if pathVertexModule != 0uL { count++ }
-      if pathFragmentModule != 0uL { count++ }
-      if clipMaskVertexModule != 0uL { count++ }
-      if clipMaskFragmentModule != 0uL { count++ }
-      if textVertexModule != 0uL { count++ }
-      if effectDataDescriptorSetLayout != 0uL { count++ }
-      if textFragmentModule != 0uL { count++ }
-      if textPaintFragmentModule != 0uL { count++ }
-      if pipelineLayout != 0uL { count++ }
-      if blendPipelineLayout != 0uL { count++ }
-      if pathDescriptorSetLayout != 0uL { count++ }
-      if pathPipelineLayout != 0uL { count++ }
-      if textDescriptorSetLayout != 0uL { count++ }
-      if textPipelineLayout != 0uL { count++ }
-      if primitiveDescriptorSetLayout != 0uL { count++ }
-      if clipDescriptorSetLayout != 0uL { count++ }
-      if clipMaskPipelineLayout != 0uL { count++ }
-      if clipMaskR8Pipeline != 0uL { count++ }
-      if clipMaskRgba8Pipeline != 0uL { count++ }
-      if strokeFragmentModule != 0uL { count++ }
-      if strokeMaskModule != 0uL { count++ }
-      if strokeMetricModule != 0uL { count++ }
-      if strokeDescriptorLayout != 0uL { count++ }
-      if strokePipelineLayout != 0uL { count++ }
-      if strokeMaskPipelineLayout != 0uL { count++ }
-      if strokeMetricPipelineLayout != 0uL { count++ }
-      if strokeMetricPipeline != 0uL { count++ }
-      if strokeRgbaPipeline != 0uL { count++ }
-      if strokeBgraPipeline != 0uL { count++ }
-      if strokeMaskR8Pipeline != 0uL { count++ }
-      if strokeMaskRgbaPipeline != 0uL { count++ }
-      var index int32 = 0
-      while index < formatStates.Length {
-        if let state = formatStates[index] {
-          count += state.LiveObjectCount
-        }
-        index++
-      }
-      return count
-    }
-  }
 
   internal init(
     nativeDevice VkDevice,
@@ -685,7 +614,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     nativeImageResources VulkanImageResources,
     nativeGeneration uint64,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeImageResources == nil {
@@ -846,12 +775,12 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
 
   private func ResolveClipMaskPipeline(ref pipeline VkPipeline,
     targetFormat VkFormat) VkPipeline{
-      let existing = Volatile.Read(in pipeline)
-      if existing != 0uL { return existing }
+      let existing = VkPipeline(Volatile.Read(in Unsafe.As[VkPipeline, uint64](ref pipeline)))
+      if !existing.IsNull { return existing }
       lock (if targetFormat == VkConstants.VK_FORMAT_R8_UNORM { clipMaskR8Gate } else { clipMaskRgba8Gate }) {
         EnsureOpen()
-        if pipeline == 0uL {
-          Volatile.Write(ref pipeline, CreateClipMaskPipeline(targetFormat))
+        if pipeline.IsNull {
+          Volatile.Write(ref Unsafe.As[VkPipeline, uint64](ref pipeline), CreateClipMaskPipeline(targetFormat).Raw)
         }
         return pipeline
       }
@@ -859,10 +788,10 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
 
   private func CreatePipelineLayout() VkPipelineLayout {
     let descriptorLayout = imageResources.DescriptorSetLayout
-    if descriptorLayout == 0uL {
+    if descriptorLayout == VkDescriptorSetLayout.Null {
       throw InvalidOperationException("Vulkan sampled image descriptor layout is unavailable")
     }
-    if clipDescriptorSetLayout == 0uL || primitiveDescriptorSetLayout == 0uL {
+    if clipDescriptorSetLayout == VkDescriptorSetLayout.Null || primitiveDescriptorSetLayout == VkDescriptorSetLayout.Null {
       throw InvalidOperationException("Vulkan analytic descriptor layouts are unavailable")
     }
     let descriptorLayouts * VkDescriptorSetLayout = stackalloc[3]VkDescriptorSetLayout
@@ -882,8 +811,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
 
   private func CreateBlendPipelineLayout() VkPipelineLayout {
     let descriptorLayout = imageResources.DescriptorSetLayout
-    if descriptorLayout == 0uL || primitiveDescriptorSetLayout == 0uL
-      || clipDescriptorSetLayout == 0uL || effectDataDescriptorSetLayout == 0uL {
+    if descriptorLayout == VkDescriptorSetLayout.Null || primitiveDescriptorSetLayout == VkDescriptorSetLayout.Null
+      || clipDescriptorSetLayout == VkDescriptorSetLayout.Null || effectDataDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw InvalidOperationException("Vulkan blend descriptor layouts are unavailable")
       }
     let descriptorLayouts * VkDescriptorSetLayout = stackalloc[5]VkDescriptorSetLayout
@@ -937,7 +866,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   }
 
   private func CreatePathPipelineLayout() VkPipelineLayout {
-    if pathDescriptorSetLayout == 0uL || clipDescriptorSetLayout == 0uL {
+    if pathDescriptorSetLayout == VkDescriptorSetLayout.Null || clipDescriptorSetLayout == VkDescriptorSetLayout.Null {
       throw InvalidOperationException("Vulkan path descriptor layout is unavailable")
     }
     let descriptorLayouts * VkDescriptorSetLayout = stackalloc[2]VkDescriptorSetLayout
@@ -984,8 +913,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT))
 
   private func CreateTextPipelineLayout() VkPipelineLayout {
-    if textDescriptorSetLayout == 0uL || clipDescriptorSetLayout == 0uL
-      || primitiveDescriptorSetLayout == 0uL {
+    if textDescriptorSetLayout == VkDescriptorSetLayout.Null || clipDescriptorSetLayout == VkDescriptorSetLayout.Null
+      || primitiveDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw InvalidOperationException("Vulkan text descriptor layouts are unavailable")
       }
     let descriptorLayouts * VkDescriptorSetLayout = stackalloc[3]VkDescriptorSetLayout
@@ -1007,7 +936,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   }
 
   private func CreateClipMaskPipelineLayout() VkPipelineLayout {
-    if pathDescriptorSetLayout == 0uL {
+    if pathDescriptorSetLayout == VkDescriptorSetLayout.Null {
       throw InvalidOperationException("Vulkan clip mask path descriptor layout is unavailable")
     }
     var descriptorLayout VkDescriptorSetLayout = pathDescriptorSetLayout

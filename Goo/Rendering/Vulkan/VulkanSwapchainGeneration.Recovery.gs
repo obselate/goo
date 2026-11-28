@@ -12,9 +12,9 @@ internal unsafe partial class VulkanSwapchainGeneration {
     if let storage = staleImageSet {
       try { storage.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
     }
-    if swapchain != 0uL {
+    if swapchain != VkSwapchainKHR.Null {
       let staleSwapchain = swapchain
-      swapchain = 0uL
+      swapchain = VkSwapchainKHR.Null
       let destroySwapchain = dispatch.vkDestroySwapchainKHR
       try { destroySwapchain(device, staleSwapchain, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {

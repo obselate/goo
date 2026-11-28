@@ -32,16 +32,11 @@ internal unsafe partial class VulkanStartupReport {
     private var capture StartupStderrDrain?
     private var savedDescriptor int32 = -1
     private var savedHandle nint
-    private var originalDebug string?
-    private var debugOverridden bool
     private var savedHandleFlags uint32
     private var protectedHandle bool
     private var stderrInherits bool
 
     private func StartCapture() {
-        originalDebug = Environment.GetEnvironmentVariable("VK_LOADER_DEBUG")
-        SetLoaderDebug("error,warn,driver")
-        debugOverridden = true
         var readerDescriptor = -1
         var redirected = false
         try {
@@ -225,10 +220,6 @@ internal unsafe partial class VulkanStartupReport {
                 }
             )
         }
-        if debugOverridden {
-            SetLoaderDebug(originalDebug)
-            debugOverridden = false
-        }
     }
 
     private func DuplicateToStderr(source int32) int32 -> if OperatingSystem.IsWindows() {
@@ -374,25 +365,6 @@ internal unsafe partial class VulkanStartupReport {
                 UnixClose(descriptor)
             }
         }
-
-        private func SetLoaderDebug(value string?) {
-            Environment.SetEnvironmentVariable("VK_LOADER_DEBUG", value)
-            if !OperatingSystem.IsWindows() {
-                if let setting = value {
-                    UnixSetEnv("VK_LOADER_DEBUG", setting, 1)
-                } else {
-                    UnixUnsetEnv("VK_LOADER_DEBUG")
-                }
-            }
-        }
-
-        @DllImport("libc", EntryPoint: "setenv", CharSet: CharSet.Ansi) private func UnixSetEnv(
-            name string,
-            value string,
-            overwrite int32
-        ) int32;
-
-        @DllImport("libc", EntryPoint: "unsetenv", CharSet: CharSet.Ansi) private func UnixUnsetEnv(name string) int32;
 
         @DllImport("libdl.so.2", EntryPoint: "dladdr") private func LinuxDlAddr(
             address nint,

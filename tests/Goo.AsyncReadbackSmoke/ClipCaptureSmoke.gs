@@ -324,7 +324,7 @@ func RunHiddenDeviceRecoverySmoke() {
       let oldRuntime = hiddenTarget.RecoveryRuntime() else {
       throw InvalidOperationException("Hidden window runtime is unavailable")
     }
-    let oldGeneration = oldRuntime.Generation
+    let oldGeneration = oldRuntime.Runtime.Generation
     Require(hiddenWindow.Hide() == WindowOperationResult.Accepted
         && !hiddenWindow.IsVisible, "Recovery window did not hide")
     AwaitHiddenResources(hiddenWindow)
@@ -339,15 +339,15 @@ func RunHiddenDeviceRecoverySmoke() {
     }
     Require(pending.IsCompleted
         && pending.GetAwaiter().GetResult().Status == OffscreenRenderStatus.DeviceLost
-        && oldRuntime.DeviceLost, "Hidden window did not detect the injected device loss")
+        && oldRuntime.Runtime.DeviceLost, "Hidden window did not detect the injected device loss")
     newWindow.Open()
     WindowReadbackTestFixture.ForceRender(newWindow, 0.0)
     guard let newTarget = WindowReadbackTestFixture.CaptureTarget(newWindow),
       let recoveredRuntime = newTarget.RecoveryRuntime() else {
       throw InvalidOperationException("New window runtime is unavailable")
     }
-    Require(recoveredRuntime.Generation > oldGeneration
-        && hiddenTarget.RecoveryRuntime()?.Generation == recoveredRuntime.Generation,
+    Require(recoveredRuntime.Runtime.Generation > oldGeneration
+        && hiddenTarget.RecoveryRuntime()?.Runtime.Generation == recoveredRuntime.Runtime.Generation,
       "New and hidden windows did not acquire the recovered device")
     Require(!hiddenWindow.IsVisible, "Recovery showed the hidden window")
     RoundedResizeRequireFirstFrame(ClipCaptureReadback(newWindow,
@@ -415,20 +415,20 @@ func RunPendingDeviceRecoverySmoke() {
     VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
     WindowReadbackTestFixture.ForceRenderNonblocking(owner, 0.0)
     let lossDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
-    while !oldRuntime.DeviceLost && Stopwatch.GetTimestamp() < lossDeadline {
+    while !oldRuntime.Runtime.DeviceLost && Stopwatch.GetTimestamp() < lossDeadline {
       WindowReadbackTestFixture.PollQueueCompletion(owner)
       Thread.Yield()
     }
-    Require(oldRuntime.DeviceLost, "Pending recovery did not detect the injected device loss")
+    Require(oldRuntime.Runtime.DeviceLost, "Pending recovery did not detect the injected device loss")
     WindowReadbackTestFixture.ForceRenderNonblocking(owner, 0.0)
-    Require(ownerTarget.RecoveryRuntime()?.Generation == oldRuntime.Generation && !child.IsVisible,
+    Require(ownerTarget.RecoveryRuntime()?.Runtime.Generation == oldRuntime.Runtime.Generation && !child.IsVisible,
       "Recovery discarded an in-flight startup task")
     release.Set()
     VulkanWindowTarget.SecondaryStartupForTest = nil
     WindowReadbackTestFixture.ForceRender(owner, 0.0, 10.0, true)
     let recovered = ownerTarget.RecoveryRuntime()!!
-    Require(recovered.Generation > oldRuntime.Generation
-        && childTarget.RecoveryRuntime()?.Generation == recovered.Generation && !child.IsVisible,
+    Require(recovered.Runtime.Generation > oldRuntime.Runtime.Generation
+        && childTarget.RecoveryRuntime()?.Runtime.Generation == recovered.Runtime.Generation && !child.IsVisible,
       "Recovery did not preserve the unshown child on the recovered device")
     WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
     Require(child.IsVisible && !childTarget.StartupPending,
@@ -481,7 +481,7 @@ func RunZeroExtentDeviceRecoverySmoke() {
     target.SetZeroSurfaceExtentForTest(false)
     WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0, true)
     let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
-    let oldGeneration = ownerTarget.RecoveryRuntime()!!.Generation
+    let oldGeneration = ownerTarget.RecoveryRuntime()!!.Runtime.Generation
     VulkanWindowTarget.RecoveryStartupForTest = (rebuilding VulkanWindowTarget) -> {
       if rebuilding == target {
         rebuilding.SetZeroSurfaceExtentForTest(true)
@@ -490,8 +490,8 @@ func RunZeroExtentDeviceRecoverySmoke() {
     }
     VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
     WindowReadbackTestFixture.ForceRender(owner, 0.0, 10.0, true)
-    Require(ownerTarget.RecoveryRuntime()!!.Generation > oldGeneration
-        && target.RecoveryRuntime()?.Generation == ownerTarget.RecoveryRuntime()?.Generation
+    Require(ownerTarget.RecoveryRuntime()!!.Runtime.Generation > oldGeneration
+        && target.RecoveryRuntime()?.Runtime.Generation == ownerTarget.RecoveryRuntime()?.Runtime.Generation
         && child.IsOpen && int32(target.CurrentPresentMode) == -1,
       "Zero extent window prevented device recovery or created a swapchain")
     VulkanWindowTarget.RecoveryStartupForTest = nil
@@ -564,10 +564,10 @@ func RunRenderBudgetPressureSmoke() {
     let pixels = int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight)
     target.ResetRenderResourcesForTest(pixels * 12L)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
-    let siblingPasses = target.DiagnosticCountersSnapshotForTest().layerPoolPassCount
+    let siblingPasses = target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolPassCount]
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     Require(target.LayerResolutionShiftForTest() == 0
-        && target.DiagnosticCountersSnapshotForTest().layerPoolPassCount >= siblingPasses + 4uL,
+        && target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolPassCount] >= siblingPasses + 4uL,
       "Sibling layers that fit concurrently were drawn without layers")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     root.UseNested()
@@ -575,7 +575,7 @@ func RunRenderBudgetPressureSmoke() {
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    let exactBytes = target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes
+    let exactBytes = target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolResidentBytes]
     Require(exactBytes > 0uL && target.LayerResolutionShiftForTest() == 0,
       "Full-resolution layer budget measurement was unavailable")
     root.UseNested(false)
@@ -586,7 +586,8 @@ func RunRenderBudgetPressureSmoke() {
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     let seeded = target.DiagnosticCountersSnapshotForTest()
-    Require(target.LayerResolutionShiftForTest() == 0 && seeded.layerPoolResidentBytes > exactBytes,
+    Require(target.LayerResolutionShiftForTest() == 0
+        && seeded[VulkanCounterId.LayerPoolResidentBytes] > exactBytes,
       "Layer capacity budget seed did not retain a larger target")
     root.UseNested()
     Require(WindowReadbackTestFixture.Resize(window, 1024, 600,
@@ -595,24 +596,24 @@ func RunRenderBudgetPressureSmoke() {
     Require(WindowReadbackTestFixture.Resize(window, 1024, 600,
       metrics.FramebufferWidth, metrics.FramebufferHeight),
       "Layer capacity budget idempotent resize failed")
-    target.SetMemoryHeadroomForTest(int64(exactBytes) - int64(seeded.layerPoolResidentBytes))
+    target.SetMemoryHeadroomForTest(int64(exactBytes) - int64(seeded[VulkanCounterId.LayerPoolResidentBytes]))
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     let capacity = target.DiagnosticCountersSnapshotForTest()
     Require(target.LayerResolutionShiftForTest() == 0
-        && capacity.layerPoolResidentBytes <= exactBytes
-        && capacity.memoryEvictionCount > seeded.memoryEvictionCount,
+        && capacity[VulkanCounterId.LayerPoolResidentBytes] <= exactBytes
+        && capacity[VulkanCounterId.MemoryEvictionCount] > seeded[VulkanCounterId.MemoryEvictionCount],
       "Optional layer capacity reduced full-resolution rendering or bypassed exact-extent recovery")
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     target.ResetRenderResourcesForTest(pixels * 5L)
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    Require(target.DiagnosticCountersSnapshotForTest().layerPoolPressureFailureCount > 0uL
+    Require(target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolPressureFailureCount] > 0uL
         && target.ClipAtlasStatsForTest().PressureFailureCount > 0uL,
       "Render budget scene did not exceed both budgets")
     Require(target.LayerResolutionShiftForTest() > 0, "Render budget frame did not reduce layer resolution")
-    Require(target.DiagnosticCountersSnapshotForTest().layerPoolResolutionShift
+    Require(target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolResolutionShift]
         == uint64(target.LayerResolutionShiftForTest()),
       "Render budget frame did not report the layer resolution shift")
     let pressureGeneration = target.ClipAtlasStatsForTest().Generation

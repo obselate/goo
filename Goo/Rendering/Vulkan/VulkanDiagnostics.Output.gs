@@ -1,14 +1,251 @@
 package Goo
 
+import System
 import System.IO
 import System.Text
 import System.Text.Json
 
+internal data struct VulkanCounterField(Id VulkanCounterId, JsonName string) { }
+
 internal unsafe partial class VulkanDiagnostics {
+  shared {
+    private let FatalCounterFields []VulkanCounterField = []VulkanCounterField{
+      VulkanCounterField(VulkanCounterId.RebuildCount, "rebuildCount"),
+      VulkanCounterField(VulkanCounterId.LayoutCount, "layoutCount"),
+      VulkanCounterField(VulkanCounterId.PlanCompileCount, "planCompileCount"),
+      VulkanCounterField(VulkanCounterId.UploadCount, "uploadCount"),
+      VulkanCounterField(VulkanCounterId.RecordCount, "recordCount"),
+      VulkanCounterField(VulkanCounterId.SubmitCount, "submitCount"),
+      VulkanCounterField(VulkanCounterId.PresentCount, "presentCount"),
+      VulkanCounterField(VulkanCounterId.ReadbackCount, "readbackCount"),
+      VulkanCounterField(VulkanCounterId.ManagedAllocatedBytes, "managedAllocatedBytes"),
+      VulkanCounterField(VulkanCounterId.VulkanObjectCount, "vulkanObjectCount"),
+      VulkanCounterField(VulkanCounterId.VulkanObjectAllocationCount, "vulkanObjectAllocationCount"),
+      VulkanCounterField(VulkanCounterId.VulkanDeviceMemoryAllocationCount, "vulkanDeviceMemoryAllocationCount"),
+      VulkanCounterField(VulkanCounterId.VulkanDeviceMemoryBytes, "vulkanDeviceMemoryBytes"),
+      VulkanCounterField(VulkanCounterId.CacheBytes, "cacheBytes"),
+      VulkanCounterField(VulkanCounterId.ImageResidentBytes, "imageResidentBytes"),
+      VulkanCounterField(VulkanCounterId.ImageLiveObjectCount, "imageLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.ImagePeakResidentBytes, "imagePeakResidentBytes"),
+      VulkanCounterField(VulkanCounterId.ImagePeakLiveObjectCount, "imagePeakLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasCount, "textAtlasCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasResidentBytes, "textAtlasResidentBytes"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPeakCount, "textAtlasPeakCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPeakResidentBytes, "textAtlasPeakResidentBytes"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPeakLiveObjectCount, "textAtlasPeakLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasRecordedUploadBytes, "textAtlasRecordedUploadBytes"),
+      VulkanCounterField(VulkanCounterId.TextAtlasEvictionCount, "textAtlasEvictionCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasRetirementCount, "textAtlasRetirementCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasByteBudget, "pathAtlasByteBudget"),
+      VulkanCounterField(VulkanCounterId.PathAtlasResidentWords, "pathAtlasResidentWords"),
+      VulkanCounterField(VulkanCounterId.PathAtlasFreeWords, "pathAtlasFreeWords"),
+      VulkanCounterField(VulkanCounterId.PathAtlasPathCount, "pathAtlasPathCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasActiveReferenceCount, "pathAtlasActiveReferenceCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasLiveObjectCount, "pathAtlasLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasEvictionCount, "pathAtlasEvictionCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasRetiredWords, "pathAtlasRetiredWords"),
+      VulkanCounterField(VulkanCounterId.PathAtlasReuseCount, "pathAtlasReuseCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasPressureEventCount, "pathAtlasPressureEventCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasPressureFailureCount, "pathAtlasPressureFailureCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameWrittenBytes, "clipFrameWrittenBytes"),
+      VulkanCounterField(VulkanCounterId.ClipFrameSkippedBytes, "clipFrameSkippedBytes"),
+      VulkanCounterField(VulkanCounterId.ClipFrameMappedWrites, "clipFrameMappedWrites"),
+      VulkanCounterField(VulkanCounterId.ClipFrameFlushes, "clipFrameFlushes"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetainedReuse, "clipFrameRetainedReuse"),
+      VulkanCounterField(VulkanCounterId.ClipFrameSlotIndex, "clipFrameSlotIndex"),
+      VulkanCounterField(VulkanCounterId.ClipFrameDrawCount, "clipFrameDrawCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameMaskCount, "clipFrameMaskCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameChainCount, "clipFrameChainCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameLayerCount, "clipFrameLayerCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameByteCount, "clipFrameByteCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameCapacity, "clipFrameCapacity"),
+      VulkanCounterField(VulkanCounterId.ClipFrameBufferGeneration, "clipFrameBufferGeneration"),
+      VulkanCounterField(VulkanCounterId.ClipFrameLastUseSerial, "clipFrameLastUseSerial"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetentionEligible, "clipFrameRetentionEligible"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetained, "clipFrameRetained"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetentionValid, "clipFrameRetentionValid"),
+      VulkanCounterField(VulkanCounterId.LayerPoolResidentBytes, "layerPoolResidentBytes"),
+      VulkanCounterField(VulkanCounterId.LayerPoolTargetCount, "layerPoolTargetCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolLeasedCount, "layerPoolLeasedCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolResolutionShift, "layerPoolResolutionShift"),
+      VulkanCounterField(VulkanCounterId.LayerPoolCreateCount, "layerPoolCreateCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolReuseCount, "layerPoolReuseCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolEvictionCount, "layerPoolEvictionCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolPressureEventCount, "layerPoolPressureEventCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolPressureFailureCount, "layerPoolPressureFailureCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolFailureCount, "layerPoolFailureCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolPassCount, "layerPoolPassCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolCompositeCount, "layerPoolCompositeCount"),
+      VulkanCounterField(VulkanCounterId.ImageEvictionCount, "imageEvictionCount"),
+      VulkanCounterField(VulkanCounterId.ImageRetirementCount, "imageRetirementCount"),
+      VulkanCounterField(VulkanCounterId.AllocatorBytes, "allocatorBytes"),
+      VulkanCounterField(VulkanCounterId.DirtyChunkCount, "dirtyChunkCount"),
+      VulkanCounterField(VulkanCounterId.ReusedChunkCount, "reusedChunkCount"),
+      VulkanCounterField(VulkanCounterId.UploadBytes, "uploadBytes"),
+      VulkanCounterField(VulkanCounterId.DrawCount, "drawCount"),
+      VulkanCounterField(VulkanCounterId.PipelineChangeCount, "pipelineChangeCount"),
+      VulkanCounterField(VulkanCounterId.DescriptorChangeCount, "descriptorChangeCount"),
+      VulkanCounterField(VulkanCounterId.PassCount, "passCount"),
+      VulkanCounterField(VulkanCounterId.BarrierCount, "barrierCount"),
+      VulkanCounterField(VulkanCounterId.DamageCount, "damageCount"),
+      VulkanCounterField(VulkanCounterId.DamageArea, "damageArea"),
+      VulkanCounterField(VulkanCounterId.SurfaceRecoveryCount, "surfaceRecoveryCount"),
+      VulkanCounterField(VulkanCounterId.DeviceRecoveryCount, "deviceRecoveryCount"),
+      VulkanCounterField(VulkanCounterId.ValidationErrorCount, "validationErrorCount"),
+      VulkanCounterField(VulkanCounterId.ResultCount, "resultCount"),
+      VulkanCounterField(VulkanCounterId.ResultFailureCount, "resultFailureCount"),
+    }
+
+    private let ClipMaskAtlasFields []VulkanCounterField = []VulkanCounterField{
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasByteBudget, "clipMaskAtlasByteBudget"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasResidentBytes, "clipMaskAtlasResidentBytes"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasRegionCount, "clipMaskAtlasRegionCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasFreePlacementCount, "clipMaskAtlasFreePlacementCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasActiveLayerCount, "clipMaskAtlasActiveLayerCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasMaximumLayerCount, "clipMaskAtlasMaximumLayerCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasRetiredGenerationCount, "clipMaskAtlasRetiredGenerationCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasEvictionCount, "clipMaskAtlasEvictionCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasPressureEventCount, "clipMaskAtlasPressureEventCount"),
+      VulkanCounterField(VulkanCounterId.ClipMaskAtlasPressureFailureCount, "clipMaskAtlasPressureFailureCount"),
+    }
+
+    private let ImageUploadFields []VulkanCounterField = []VulkanCounterField{
+      VulkanCounterField(VulkanCounterId.ImageUploadChunkCount, "imageUploadChunkCount"),
+      VulkanCounterField(VulkanCounterId.ImageUploadDeferredCount, "imageUploadDeferredCount"),
+      VulkanCounterField(VulkanCounterId.ImageUploadCompletedCount, "imageUploadCompletedCount"),
+      VulkanCounterField(VulkanCounterId.ImagePressureFailureCount, "imagePressureFailureCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPressureFailureCount, "textAtlasPressureFailureCount"),
+    }
+
+    private let SnapshotCounterFields []VulkanCounterField = []VulkanCounterField{
+      VulkanCounterField(VulkanCounterId.RebuildCount, "rebuildCount"),
+      VulkanCounterField(VulkanCounterId.LayoutCount, "layoutCount"),
+      VulkanCounterField(VulkanCounterId.PlanCompileCount, "planCompileCount"),
+      VulkanCounterField(VulkanCounterId.UploadCount, "uploadCount"),
+      VulkanCounterField(VulkanCounterId.RecordCount, "recordCount"),
+      VulkanCounterField(VulkanCounterId.SubmitCount, "submitCount"),
+      VulkanCounterField(VulkanCounterId.PresentCount, "presentCount"),
+      VulkanCounterField(VulkanCounterId.ReadbackCount, "readbackCount"),
+      VulkanCounterField(VulkanCounterId.ManagedAllocatedBytes, "managedAllocatedBytes"),
+      VulkanCounterField(VulkanCounterId.HeapBudgetAvailable, "heapBudgetAvailable"),
+      VulkanCounterField(VulkanCounterId.HeapBudgetSampleCurrent, "heapBudgetSampleCurrent"),
+      VulkanCounterField(VulkanCounterId.HeapBudget, "heapBudget"),
+      VulkanCounterField(VulkanCounterId.DriverHeapUsage, "driverHeapUsage"),
+      VulkanCounterField(VulkanCounterId.HeapHeadroom, "heapHeadroom"),
+      VulkanCounterField(VulkanCounterId.MemoryEvictionCount, "memoryEvictionCount"),
+      VulkanCounterField(VulkanCounterId.MemoryAllocationRetryCount, "memoryAllocationRetryCount"),
+      VulkanCounterField(VulkanCounterId.MemoryPressureCount, "memoryPressureCount"),
+      VulkanCounterField(VulkanCounterId.VulkanObjectCount, "vulkanObjectCount"),
+      VulkanCounterField(VulkanCounterId.VulkanObjectAllocationCount, "vulkanObjectAllocationCount"),
+      VulkanCounterField(VulkanCounterId.VulkanDeviceMemoryAllocationCount, "vulkanDeviceMemoryAllocationCount"),
+      VulkanCounterField(VulkanCounterId.VulkanDeviceMemoryBytes, "vulkanDeviceMemoryBytes"),
+      VulkanCounterField(VulkanCounterId.CacheBytes, "cacheBytes"),
+      VulkanCounterField(VulkanCounterId.ImageResidentBytes, "imageResidentBytes"),
+      VulkanCounterField(VulkanCounterId.ImageLiveObjectCount, "imageLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.ImagePeakResidentBytes, "imagePeakResidentBytes"),
+      VulkanCounterField(VulkanCounterId.ImagePeakLiveObjectCount, "imagePeakLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasCount, "textAtlasCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasResidentBytes, "textAtlasResidentBytes"),
+      VulkanCounterField(VulkanCounterId.TextAtlasLiveObjectCount, "textAtlasLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPeakCount, "textAtlasPeakCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPeakResidentBytes, "textAtlasPeakResidentBytes"),
+      VulkanCounterField(VulkanCounterId.TextAtlasPeakLiveObjectCount, "textAtlasPeakLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasRecordedUploadBytes, "textAtlasRecordedUploadBytes"),
+      VulkanCounterField(VulkanCounterId.TextAtlasEvictionCount, "textAtlasEvictionCount"),
+      VulkanCounterField(VulkanCounterId.TextAtlasRetirementCount, "textAtlasRetirementCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasByteBudget, "pathAtlasByteBudget"),
+      VulkanCounterField(VulkanCounterId.PathAtlasResidentWords, "pathAtlasResidentWords"),
+      VulkanCounterField(VulkanCounterId.PathAtlasFreeWords, "pathAtlasFreeWords"),
+      VulkanCounterField(VulkanCounterId.PathAtlasPathCount, "pathAtlasPathCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasActiveReferenceCount, "pathAtlasActiveReferenceCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasLiveObjectCount, "pathAtlasLiveObjectCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasEvictionCount, "pathAtlasEvictionCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasRetiredWords, "pathAtlasRetiredWords"),
+      VulkanCounterField(VulkanCounterId.PathAtlasReuseCount, "pathAtlasReuseCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasPressureEventCount, "pathAtlasPressureEventCount"),
+      VulkanCounterField(VulkanCounterId.PathAtlasPressureFailureCount, "pathAtlasPressureFailureCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameWrittenBytes, "clipFrameWrittenBytes"),
+      VulkanCounterField(VulkanCounterId.ClipFrameSkippedBytes, "clipFrameSkippedBytes"),
+      VulkanCounterField(VulkanCounterId.ClipFrameMappedWrites, "clipFrameMappedWrites"),
+      VulkanCounterField(VulkanCounterId.ClipFrameFlushes, "clipFrameFlushes"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetainedReuse, "clipFrameRetainedReuse"),
+      VulkanCounterField(VulkanCounterId.ClipFrameSlotIndex, "clipFrameSlotIndex"),
+      VulkanCounterField(VulkanCounterId.ClipFrameDrawCount, "clipFrameDrawCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameMaskCount, "clipFrameMaskCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameChainCount, "clipFrameChainCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameLayerCount, "clipFrameLayerCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameByteCount, "clipFrameByteCount"),
+      VulkanCounterField(VulkanCounterId.ClipFrameCapacity, "clipFrameCapacity"),
+      VulkanCounterField(VulkanCounterId.ClipFrameBufferGeneration, "clipFrameBufferGeneration"),
+      VulkanCounterField(VulkanCounterId.ClipFrameLastUseSerial, "clipFrameLastUseSerial"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetentionEligible, "clipFrameRetentionEligible"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetained, "clipFrameRetained"),
+      VulkanCounterField(VulkanCounterId.ClipFrameRetentionValid, "clipFrameRetentionValid"),
+      VulkanCounterField(VulkanCounterId.TextFrameWrittenBytes, "textFrameWrittenBytes"),
+      VulkanCounterField(VulkanCounterId.TextFrameSkippedBytes, "textFrameSkippedBytes"),
+      VulkanCounterField(VulkanCounterId.TextFrameDirtySegmentCount, "textFrameDirtySegmentCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameUploadRangeCount, "textFrameUploadRangeCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameFullUploadCount, "textFrameFullUploadCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameMappedWrites, "textFrameMappedWrites"),
+      VulkanCounterField(VulkanCounterId.TextFrameFlushes, "textFrameFlushes"),
+      VulkanCounterField(VulkanCounterId.TextFrameRetainedReuse, "textFrameRetainedReuse"),
+      VulkanCounterField(VulkanCounterId.TextFrameSlotIndex, "textFrameSlotIndex"),
+      VulkanCounterField(VulkanCounterId.TextFrameSegmentCount, "textFrameSegmentCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameRunCount, "textFrameRunCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameRecordCount, "textFrameRecordCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameByteCount, "textFrameByteCount"),
+      VulkanCounterField(VulkanCounterId.TextFrameCapacity, "textFrameCapacity"),
+      VulkanCounterField(VulkanCounterId.TextFrameBufferGeneration, "textFrameBufferGeneration"),
+      VulkanCounterField(VulkanCounterId.TextFrameTopologyKey, "textFrameTopologyKey"),
+      VulkanCounterField(VulkanCounterId.TextFrameLastUseSerial, "textFrameLastUseSerial"),
+      VulkanCounterField(VulkanCounterId.TextFramePrepared, "textFramePrepared"),
+      VulkanCounterField(VulkanCounterId.TextLayoutCacheBytes, "textLayoutCacheBytes"),
+      VulkanCounterField(VulkanCounterId.TextLayoutCacheEntries, "textLayoutCacheEntries"),
+      VulkanCounterField(VulkanCounterId.TextLayoutCacheHits, "textLayoutCacheHits"),
+      VulkanCounterField(VulkanCounterId.TextLayoutCacheMisses, "textLayoutCacheMisses"),
+      VulkanCounterField(VulkanCounterId.TextLayoutCacheEvictions, "textLayoutCacheEvictions"),
+      VulkanCounterField(VulkanCounterId.TextRunShapeCacheBytes, "textRunShapeCacheBytes"),
+      VulkanCounterField(VulkanCounterId.TextRunShapeCacheEntries, "textRunShapeCacheEntries"),
+      VulkanCounterField(VulkanCounterId.TextRunShapeCacheHits, "textRunShapeCacheHits"),
+      VulkanCounterField(VulkanCounterId.TextRunShapeCacheMisses, "textRunShapeCacheMisses"),
+      VulkanCounterField(VulkanCounterId.TextRunShapeCacheEvictions, "textRunShapeCacheEvictions"),
+      VulkanCounterField(VulkanCounterId.LayerPoolResidentBytes, "layerPoolResidentBytes"),
+      VulkanCounterField(VulkanCounterId.LayerPoolTargetCount, "layerPoolTargetCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolLeasedCount, "layerPoolLeasedCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolCreateCount, "layerPoolCreateCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolReuseCount, "layerPoolReuseCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolEvictionCount, "layerPoolEvictionCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolPressureEventCount, "layerPoolPressureEventCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolPressureFailureCount, "layerPoolPressureFailureCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolFailureCount, "layerPoolFailureCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolPassCount, "layerPoolPassCount"),
+      VulkanCounterField(VulkanCounterId.LayerPoolCompositeCount, "layerPoolCompositeCount"),
+      VulkanCounterField(VulkanCounterId.ImageEvictionCount, "imageEvictionCount"),
+      VulkanCounterField(VulkanCounterId.ImageRetirementCount, "imageRetirementCount"),
+      VulkanCounterField(VulkanCounterId.AllocatorBytes, "allocatorBytes"),
+      VulkanCounterField(VulkanCounterId.DirtyChunkCount, "dirtyChunkCount"),
+      VulkanCounterField(VulkanCounterId.ReusedChunkCount, "reusedChunkCount"),
+      VulkanCounterField(VulkanCounterId.UploadBytes, "uploadBytes"),
+      VulkanCounterField(VulkanCounterId.DrawCount, "drawCount"),
+      VulkanCounterField(VulkanCounterId.PipelineChangeCount, "pipelineChangeCount"),
+      VulkanCounterField(VulkanCounterId.DescriptorChangeCount, "descriptorChangeCount"),
+      VulkanCounterField(VulkanCounterId.PassCount, "passCount"),
+      VulkanCounterField(VulkanCounterId.BarrierCount, "barrierCount"),
+      VulkanCounterField(VulkanCounterId.DamageCount, "damageCount"),
+      VulkanCounterField(VulkanCounterId.DamageArea, "damageArea"),
+      VulkanCounterField(VulkanCounterId.SurfaceRecoveryCount, "surfaceRecoveryCount"),
+      VulkanCounterField(VulkanCounterId.DeviceRecoveryCount, "deviceRecoveryCount"),
+      VulkanCounterField(VulkanCounterId.ValidationErrorCount, "validationErrorCount"),
+      VulkanCounterField(VulkanCounterId.ResultCount, "resultCount"),
+      VulkanCounterField(VulkanCounterId.ResultFailureCount, "resultFailureCount"),
+    }
+  }
+
   internal func WriteDevice(writer TextWriter, name string = "", order string = "", rejected string = "", fallback string = "") string {
     let selection = if name == "" { "" } else {
       ",\"name\":\"" + JsonEncodedText.Encode(name).ToString()
-        + "\",\"order\":\"" + order + "\",\"rejected\":\"" + JsonEncodedText.Encode(rejected).ToString()
+        + "\",\"order\":\"" + JsonEncodedText.Encode(order).ToString()
+        + "\",\"rejected\":\"" + JsonEncodedText.Encode(rejected).ToString()
         + "\",\"fallback\":\"" + JsonEncodedText.Encode(fallback).ToString() + "\""
     }
     let deviceName = Hex(fatalDeviceName, 0, uint32(FatalNameCapacity))
@@ -23,16 +260,27 @@ internal unsafe partial class VulkanDiagnostics {
   }
 
   private func Hex(buffer [] ? uint8, offset int32, length uint32) string {
-    let text = StringBuilder()
-    if let bytes = buffer {
-      var index uint32 = 0u
-      while index < length {
-        text.Append(bytes[offset + int32(index)].ToString("x2"))
-        index++
+    guard let bytes = buffer else {
+      return ""
+    }
+    let count = int32(length)
+    return if count <= 0 { "" } else { Convert.ToHexStringLower(bytes, offset, count) }
+  }
+
+  private func AppendCounterFields(builder StringBuilder, snapshot VulkanDiagnosticCounterSnapshot,
+    fields []VulkanCounterField, nullableBudget bool) {
+      let budgetAvailable = snapshot[VulkanCounterId.HeapBudgetAvailable]
+      for field in fields {
+        builder.Append(",\"")
+        builder.Append(field.JsonName)
+        builder.Append("\":")
+        if nullableBudget && (field.Id == VulkanCounterId.HeapBudget || field.Id == VulkanCounterId.DriverHeapUsage) {
+          builder.Append(OptionalBudgetValue(uint32(budgetAvailable), snapshot[field.Id]))
+        } else {
+          builder.Append(snapshot[field.Id])
+        }
       }
     }
-    return text.ToString()
-  }
 
   internal func FlushNdjson(writer TextWriter) {
     if !IsSealed {
@@ -65,12 +313,8 @@ internal unsafe partial class VulkanDiagnostics {
         var index = start
         while index < total {
           let record = records[int32(index % int64(records.Length))]
-          let text = StringBuilder()
-          var byteIndex int32 = 0
-          while byteIndex < int32(record.messageLength) && byteIndex < ValidationTextCapacity {
-            text.Append(bytes[int32(record.messageOffset) + byteIndex].ToString("x2"))
-            byteIndex++
-          }
+          let byteCount = Math.Min(int32(record.messageLength), ValidationTextCapacity)
+          let text = Hex(bytes, int32(record.messageOffset), uint32(Math.Max(0, byteCount)))
           writer.WriteLine("{\"kind\":\"validation\",\"severity\":${record.severity},\"types\":${record.types},\"messageId\":${record.messageId},\"messageHash\":${record.messageHash},\"messageLength\":${record.messageLength},\"messageTruncated\":${record.messageTruncated},\"messageHex\":\"${text}\"}")
           index++
         }
@@ -80,16 +324,11 @@ internal unsafe partial class VulkanDiagnostics {
     if Fatal.captured {
       let snapshot = fatalCounters
       let physicalApiVersion = fatalPhysicalApiVersion
-      writer.WriteLine("{\"kind\":\"fatal\",\"code\":${fatalCode},\"value\":${fatalValue},\"traceAtCapture\":${fatalTraceWrite},\"validationAtCapture\":${fatalValidationWrite},\"resultAtCapture\":${fatalResultWrite},\"instanceApiVersion\":${fatalInstanceApiVersion},\"physicalApiVersion\":${physicalApiVersion},\"driverVersion\":${fatalDriverVersion},\"vendorId\":${fatalVendorId},\"deviceId\":${fatalDeviceId},\"deviceType\":${fatalDeviceType},\"timelineSemaphore\":${fatalTimelineSemaphore},\"synchronization2\":${fatalSynchronization2},\"dynamicRendering\":${fatalDynamicRendering},\"debugUtilsAvailable\":${fatalDebugUtilsAvailable},\"instanceExtensionCount\":${fatalInstanceExtensionCount},\"deviceExtensionCount\":${fatalDeviceExtensionCount},\"extensionCount\":${fatalExtensionCount},\"extensionDropped\":${fatalExtensionDropped},\"window\":${fatalWindow},\"surface\":${fatalSurface},\"swapchain\":${fatalSwapchain},\"frame\":${fatalFrame},\"generation\":${fatalGeneration},\"heapBudgetAvailable\":${fatalHeapBudgetAvailable},\"heapBudgetSampleCurrent\":${fatalHeapBudgetSampleCurrent},\"heapBudget\":${OptionalBudgetValue(fatalHeapBudgetAvailable, fatalHeapBudget)},\"driverHeapUsage\":${OptionalBudgetValue(fatalHeapBudgetAvailable, fatalDriverHeapUsage)},\"heapAllocated\":${fatalHeapAllocated},\"retiredBytes\":${fatalRetiredBytes},\"liveObjects\":${fatalLiveObjects},\"lastSubmission\":${fatalLastSubmission},\"lastQueue\":${fatalLastQueue},\"lastFence\":${fatalLastFence},\"lastResultEvent\":${fatalLastResultEvent},\"lastResult\":${fatalLastResult},\"deviceNameHex\":\"${deviceName}\",\"rebuildCount\":${snapshot.rebuildCount},\"layoutCount\":${snapshot.layoutCount},\"planCompileCount\":${snapshot.planCompileCount},\"uploadCount\":${snapshot.uploadCount},\"recordCount\":${snapshot.recordCount},\"submitCount\":${snapshot.submitCount},\"presentCount\":${snapshot.presentCount},\"readbackCount\":${snapshot.readbackCount},\"managedAllocatedBytes\":${snapshot.managedAllocatedBytes},\"vulkanObjectCount\":${snapshot.vulkanObjectCount},\"vulkanObjectAllocationCount\":${snapshot.vulkanObjectAllocationCount},\"vulkanDeviceMemoryAllocationCount\":${snapshot.vulkanDeviceMemoryAllocationCount},\"vulkanDeviceMemoryBytes\":${snapshot.vulkanDeviceMemoryBytes},\"cacheBytes\":${snapshot.cacheBytes},\"imageResidentBytes\":${snapshot.imageResidentBytes},\"imageLiveObjectCount\":${snapshot.imageLiveObjectCount},\"imagePeakResidentBytes\":${snapshot.imagePeakResidentBytes},\"imagePeakLiveObjectCount\":${snapshot.imagePeakLiveObjectCount},\"textAtlasCount\":${snapshot.textAtlasCount},\"textAtlasResidentBytes\":${snapshot.textAtlasResidentBytes},\"textAtlasPeakCount\":${snapshot.textAtlasPeakCount},\"textAtlasPeakResidentBytes\":${snapshot.textAtlasPeakResidentBytes},\"textAtlasPeakLiveObjectCount\":${snapshot.textAtlasPeakLiveObjectCount},\"textAtlasRecordedUploadBytes\":${snapshot.textAtlasRecordedUploadBytes},\"textAtlasEvictionCount\":${snapshot.textAtlasEvictionCount},\"textAtlasRetirementCount\":${snapshot.textAtlasRetirementCount},\"pathAtlasByteBudget\":${snapshot.pathAtlasByteBudget},\"pathAtlasResidentWords\":${snapshot.pathAtlasResidentWords},\"pathAtlasFreeWords\":${snapshot.pathAtlasFreeWords},\"pathAtlasPathCount\":${snapshot.pathAtlasPathCount},\"pathAtlasActiveReferenceCount\":${snapshot.pathAtlasActiveReferenceCount},\"pathAtlasLiveObjectCount\":${snapshot.pathAtlasLiveObjectCount},\"pathAtlasEvictionCount\":${snapshot.pathAtlasEvictionCount},\"pathAtlasRetiredWords\":${snapshot.pathAtlasRetiredWords},\"pathAtlasReuseCount\":${snapshot.pathAtlasReuseCount},\"pathAtlasPressureEventCount\":${snapshot.pathAtlasPressureEventCount},\"pathAtlasPressureFailureCount\":${snapshot.pathAtlasPressureFailureCount},\"clipFrameWrittenBytes\":${snapshot.clipFrameWrittenBytes},\"clipFrameSkippedBytes\":${snapshot.clipFrameSkippedBytes},\"clipFrameMappedWrites\":${snapshot.clipFrameMappedWrites},\"clipFrameFlushes\":${snapshot.clipFrameFlushes},\"clipFrameRetainedReuse\":${snapshot.clipFrameRetainedReuse},\"clipFrameSlotIndex\":${snapshot.clipFrameSlotIndex},\"clipFrameDrawCount\":${snapshot.clipFrameDrawCount},\"clipFrameMaskCount\":${snapshot.clipFrameMaskCount},\"clipFrameChainCount\":${snapshot.clipFrameChainCount},\"clipFrameLayerCount\":${snapshot.clipFrameLayerCount},\"clipFrameByteCount\":${snapshot.clipFrameByteCount},\"clipFrameCapacity\":${snapshot.clipFrameCapacity},\"clipFrameBufferGeneration\":${snapshot.clipFrameBufferGeneration},\"clipFrameLastUseSerial\":${snapshot.clipFrameLastUseSerial},\"clipFrameRetentionEligible\":${snapshot.clipFrameRetentionEligible},\"clipFrameRetained\":${snapshot.clipFrameRetained},\"clipFrameRetentionValid\":${snapshot.clipFrameRetentionValid},\"layerPoolResidentBytes\":${snapshot.layerPoolResidentBytes},\"layerPoolTargetCount\":${snapshot.layerPoolTargetCount},\"layerPoolLeasedCount\":${snapshot.layerPoolLeasedCount},\"layerPoolResolutionShift\":${snapshot.layerPoolResolutionShift},\"layerPoolCreateCount\":${snapshot.layerPoolCreateCount},\"layerPoolReuseCount\":${snapshot.layerPoolReuseCount},\"layerPoolEvictionCount\":${snapshot.layerPoolEvictionCount},\"layerPoolPressureEventCount\":${snapshot.layerPoolPressureEventCount},\"layerPoolPressureFailureCount\":${snapshot.layerPoolPressureFailureCount},\"layerPoolFailureCount\":${snapshot.layerPoolFailureCount},\"layerPoolPassCount\":${snapshot.layerPoolPassCount},\"layerPoolCompositeCount\":${snapshot.layerPoolCompositeCount},\"imageEvictionCount\":${snapshot.imageEvictionCount},\"imageRetirementCount\":${snapshot.imageRetirementCount},\"allocatorBytes\":${snapshot.allocatorBytes},\"dirtyChunkCount\":${snapshot.dirtyChunkCount},\"reusedChunkCount\":${snapshot.reusedChunkCount},\"uploadBytes\":${snapshot.uploadBytes},\"drawCount\":${snapshot.drawCount},\"pipelineChangeCount\":${snapshot.pipelineChangeCount},\"descriptorChangeCount\":${snapshot.descriptorChangeCount},\"passCount\":${snapshot.passCount},\"barrierCount\":${snapshot.barrierCount},\"damageCount\":${snapshot.damageCount},\"damageArea\":${snapshot.damageArea},\"surfaceRecoveryCount\":${snapshot.surfaceRecoveryCount},\"deviceRecoveryCount\":${snapshot.deviceRecoveryCount},\"validationErrorCount\":${snapshot.validationErrorCount},\"resultCount\":${snapshot.resultCount},\"resultFailureCount\":${snapshot.resultFailureCount}}")
-      if let records = fatalExtensions {
-        var index int32 = 0
-        while index < fatalExtensionCount {
-          let record = records[index]
-          let name = Hex(fatalExtensionText, int32(record.offset), record.length)
-          writer.WriteLine("{\"kind\":\"fatal_extension\",\"scope\":${record.extensionKind},\"hash\":${record.hash},\"length\":${record.length},\"truncated\":${record.truncated},\"nameHex\":\"${name}\"}")
-          index++
-        }
-      }
+      let fatalBuilder = StringBuilder(2048)
+      fatalBuilder.Append("{\"kind\":\"fatal\",\"code\":${fatalCode},\"value\":${fatalValue},\"traceAtCapture\":${fatalTraceWrite},\"validationAtCapture\":${fatalValidationWrite},\"resultAtCapture\":${fatalResultWrite},\"instanceApiVersion\":${fatalInstanceApiVersion},\"physicalApiVersion\":${physicalApiVersion},\"driverVersion\":${fatalDriverVersion},\"vendorId\":${fatalVendorId},\"deviceId\":${fatalDeviceId},\"deviceType\":${fatalDeviceType},\"timelineSemaphore\":${fatalTimelineSemaphore},\"synchronization2\":${fatalSynchronization2},\"dynamicRendering\":${fatalDynamicRendering},\"debugUtilsAvailable\":${fatalDebugUtilsAvailable},\"instanceExtensionCount\":${fatalInstanceExtensionCount},\"deviceExtensionCount\":${fatalDeviceExtensionCount},\"window\":${fatalWindow},\"surface\":${fatalSurface},\"swapchain\":${fatalSwapchain},\"frame\":${fatalFrame},\"generation\":${fatalGeneration},\"heapBudgetAvailable\":${fatalHeapBudgetAvailable},\"heapBudgetSampleCurrent\":${fatalHeapBudgetSampleCurrent},\"heapBudget\":${OptionalBudgetValue(fatalHeapBudgetAvailable, fatalHeapBudget)},\"driverHeapUsage\":${OptionalBudgetValue(fatalHeapBudgetAvailable, fatalDriverHeapUsage)},\"heapAllocated\":${fatalHeapAllocated},\"retiredBytes\":${fatalRetiredBytes},\"liveObjects\":${fatalLiveObjects},\"lastSubmission\":${fatalLastSubmission},\"lastQueue\":${fatalLastQueue},\"lastFence\":${fatalLastFence},\"lastResultEvent\":${fatalLastResultEvent},\"lastResult\":${fatalLastResult},\"deviceNameHex\":\"${deviceName}\"")
+      AppendCounterFields(fatalBuilder, snapshot, FatalCounterFields, false)
+      fatalBuilder.Append('}')
+      writer.WriteLine(fatalBuilder.ToString())
     }
     if liveFirstPresent.ticks != 0uL {
       FlushLiveSnapshot(writer, liveFirstPresent)
@@ -98,8 +337,22 @@ internal unsafe partial class VulkanDiagnostics {
       FlushLiveSnapshot(writer, livePreTeardown)
     }
     let snapshot = counters.Snapshot
-    writer.WriteLine("{\"kind\":\"clip_mask_atlas\",\"clipMaskAtlasByteBudget\":${snapshot.clipMaskAtlasByteBudget},\"clipMaskAtlasResidentBytes\":${snapshot.clipMaskAtlasResidentBytes},\"clipMaskAtlasRegionCount\":${snapshot.clipMaskAtlasRegionCount},\"clipMaskAtlasFreePlacementCount\":${snapshot.clipMaskAtlasFreePlacementCount},\"clipMaskAtlasActiveLayerCount\":${snapshot.clipMaskAtlasActiveLayerCount},\"clipMaskAtlasMaximumLayerCount\":${snapshot.clipMaskAtlasMaximumLayerCount},\"clipMaskAtlasRetiredGenerationCount\":${snapshot.clipMaskAtlasRetiredGenerationCount},\"clipMaskAtlasEvictionCount\":${snapshot.clipMaskAtlasEvictionCount},\"clipMaskAtlasPressureEventCount\":${snapshot.clipMaskAtlasPressureEventCount},\"clipMaskAtlasPressureFailureCount\":${snapshot.clipMaskAtlasPressureFailureCount}}")
-    writer.WriteLine("{\"kind\":\"image_upload\",\"imageUploadChunkCount\":${snapshot.imageUploadChunkCount},\"imageUploadDeferredCount\":${snapshot.imageUploadDeferredCount},\"imageUploadCompletedCount\":${snapshot.imageUploadCompletedCount},\"imagePressureFailureCount\":${snapshot.imagePressureFailureCount},\"textAtlasPressureFailureCount\":${snapshot.textAtlasPressureFailureCount}}")
-    writer.WriteLine("{\"kind\":\"counters\",\"rebuildCount\":${snapshot.rebuildCount},\"layoutCount\":${snapshot.layoutCount},\"planCompileCount\":${snapshot.planCompileCount},\"uploadCount\":${snapshot.uploadCount},\"recordCount\":${snapshot.recordCount},\"submitCount\":${snapshot.submitCount},\"presentCount\":${snapshot.presentCount},\"readbackCount\":${snapshot.readbackCount},\"managedAllocatedBytes\":${snapshot.managedAllocatedBytes},\"heapBudgetAvailable\":${snapshot.heapBudgetAvailable},\"heapBudgetSampleCurrent\":${snapshot.heapBudgetSampleCurrent},\"heapBudget\":${OptionalBudgetValue(snapshot.heapBudgetAvailable, snapshot.heapBudget)},\"driverHeapUsage\":${OptionalBudgetValue(snapshot.heapBudgetAvailable, snapshot.driverHeapUsage)},\"heapHeadroom\":${snapshot.heapHeadroom},\"memoryEvictionCount\":${snapshot.memoryEvictionCount},\"memoryAllocationRetryCount\":${snapshot.memoryAllocationRetryCount},\"memoryPressureCount\":${snapshot.memoryPressureCount},\"vulkanObjectCount\":${snapshot.vulkanObjectCount},\"vulkanObjectAllocationCount\":${snapshot.vulkanObjectAllocationCount},\"vulkanDeviceMemoryAllocationCount\":${snapshot.vulkanDeviceMemoryAllocationCount},\"vulkanDeviceMemoryBytes\":${snapshot.vulkanDeviceMemoryBytes},\"cacheBytes\":${snapshot.cacheBytes},\"imageResidentBytes\":${snapshot.imageResidentBytes},\"imageLiveObjectCount\":${snapshot.imageLiveObjectCount},\"imagePeakResidentBytes\":${snapshot.imagePeakResidentBytes},\"imagePeakLiveObjectCount\":${snapshot.imagePeakLiveObjectCount},\"textAtlasCount\":${snapshot.textAtlasCount},\"textAtlasResidentBytes\":${snapshot.textAtlasResidentBytes},\"textAtlasLiveObjectCount\":${snapshot.textAtlasLiveObjectCount},\"textAtlasPeakCount\":${snapshot.textAtlasPeakCount},\"textAtlasPeakResidentBytes\":${snapshot.textAtlasPeakResidentBytes},\"textAtlasPeakLiveObjectCount\":${snapshot.textAtlasPeakLiveObjectCount},\"textAtlasRecordedUploadBytes\":${snapshot.textAtlasRecordedUploadBytes},\"textAtlasEvictionCount\":${snapshot.textAtlasEvictionCount},\"textAtlasRetirementCount\":${snapshot.textAtlasRetirementCount},\"pathAtlasByteBudget\":${snapshot.pathAtlasByteBudget},\"pathAtlasResidentWords\":${snapshot.pathAtlasResidentWords},\"pathAtlasFreeWords\":${snapshot.pathAtlasFreeWords},\"pathAtlasPathCount\":${snapshot.pathAtlasPathCount},\"pathAtlasActiveReferenceCount\":${snapshot.pathAtlasActiveReferenceCount},\"pathAtlasLiveObjectCount\":${snapshot.pathAtlasLiveObjectCount},\"pathAtlasEvictionCount\":${snapshot.pathAtlasEvictionCount},\"pathAtlasRetiredWords\":${snapshot.pathAtlasRetiredWords},\"pathAtlasReuseCount\":${snapshot.pathAtlasReuseCount},\"pathAtlasPressureEventCount\":${snapshot.pathAtlasPressureEventCount},\"pathAtlasPressureFailureCount\":${snapshot.pathAtlasPressureFailureCount},\"clipFrameWrittenBytes\":${snapshot.clipFrameWrittenBytes},\"clipFrameSkippedBytes\":${snapshot.clipFrameSkippedBytes},\"clipFrameMappedWrites\":${snapshot.clipFrameMappedWrites},\"clipFrameFlushes\":${snapshot.clipFrameFlushes},\"clipFrameRetainedReuse\":${snapshot.clipFrameRetainedReuse},\"clipFrameSlotIndex\":${snapshot.clipFrameSlotIndex},\"clipFrameDrawCount\":${snapshot.clipFrameDrawCount},\"clipFrameMaskCount\":${snapshot.clipFrameMaskCount},\"clipFrameChainCount\":${snapshot.clipFrameChainCount},\"clipFrameLayerCount\":${snapshot.clipFrameLayerCount},\"clipFrameByteCount\":${snapshot.clipFrameByteCount},\"clipFrameCapacity\":${snapshot.clipFrameCapacity},\"clipFrameBufferGeneration\":${snapshot.clipFrameBufferGeneration},\"clipFrameLastUseSerial\":${snapshot.clipFrameLastUseSerial},\"clipFrameRetentionEligible\":${snapshot.clipFrameRetentionEligible},\"clipFrameRetained\":${snapshot.clipFrameRetained},\"clipFrameRetentionValid\":${snapshot.clipFrameRetentionValid},\"textFrameWrittenBytes\":${snapshot.textFrameWrittenBytes},\"textFrameSkippedBytes\":${snapshot.textFrameSkippedBytes},\"textFrameDirtySegmentCount\":${snapshot.textFrameDirtySegmentCount},\"textFrameUploadRangeCount\":${snapshot.textFrameUploadRangeCount},\"textFrameFullUploadCount\":${snapshot.textFrameFullUploadCount},\"textFrameMappedWrites\":${snapshot.textFrameMappedWrites},\"textFrameFlushes\":${snapshot.textFrameFlushes},\"textFrameRetainedReuse\":${snapshot.textFrameRetainedReuse},\"textFrameSlotIndex\":${snapshot.textFrameSlotIndex},\"textFrameSegmentCount\":${snapshot.textFrameSegmentCount},\"textFrameRunCount\":${snapshot.textFrameRunCount},\"textFrameRecordCount\":${snapshot.textFrameRecordCount},\"textFrameByteCount\":${snapshot.textFrameByteCount},\"textFrameCapacity\":${snapshot.textFrameCapacity},\"textFrameBufferGeneration\":${snapshot.textFrameBufferGeneration},\"textFrameTopologyKey\":${snapshot.textFrameTopologyKey},\"textFrameLastUseSerial\":${snapshot.textFrameLastUseSerial},\"textFramePrepared\":${snapshot.textFramePrepared},\"textLayoutCacheBytes\":${snapshot.textLayoutCacheBytes},\"textLayoutCacheEntries\":${snapshot.textLayoutCacheEntries},\"textLayoutCacheHits\":${snapshot.textLayoutCacheHits},\"textLayoutCacheMisses\":${snapshot.textLayoutCacheMisses},\"textLayoutCacheEvictions\":${snapshot.textLayoutCacheEvictions},\"textRunShapeCacheBytes\":${snapshot.textRunShapeCacheBytes},\"textRunShapeCacheEntries\":${snapshot.textRunShapeCacheEntries},\"textRunShapeCacheHits\":${snapshot.textRunShapeCacheHits},\"textRunShapeCacheMisses\":${snapshot.textRunShapeCacheMisses},\"textRunShapeCacheEvictions\":${snapshot.textRunShapeCacheEvictions},\"layerPoolResidentBytes\":${snapshot.layerPoolResidentBytes},\"layerPoolTargetCount\":${snapshot.layerPoolTargetCount},\"layerPoolLeasedCount\":${snapshot.layerPoolLeasedCount},\"layerPoolCreateCount\":${snapshot.layerPoolCreateCount},\"layerPoolReuseCount\":${snapshot.layerPoolReuseCount},\"layerPoolEvictionCount\":${snapshot.layerPoolEvictionCount},\"layerPoolPressureEventCount\":${snapshot.layerPoolPressureEventCount},\"layerPoolPressureFailureCount\":${snapshot.layerPoolPressureFailureCount},\"layerPoolFailureCount\":${snapshot.layerPoolFailureCount},\"layerPoolPassCount\":${snapshot.layerPoolPassCount},\"layerPoolCompositeCount\":${snapshot.layerPoolCompositeCount},\"imageEvictionCount\":${snapshot.imageEvictionCount},\"imageRetirementCount\":${snapshot.imageRetirementCount},\"allocatorBytes\":${snapshot.allocatorBytes},\"dirtyChunkCount\":${snapshot.dirtyChunkCount},\"reusedChunkCount\":${snapshot.reusedChunkCount},\"uploadBytes\":${snapshot.uploadBytes},\"drawCount\":${snapshot.drawCount},\"pipelineChangeCount\":${snapshot.pipelineChangeCount},\"descriptorChangeCount\":${snapshot.descriptorChangeCount},\"passCount\":${snapshot.passCount},\"barrierCount\":${snapshot.barrierCount},\"damageCount\":${snapshot.damageCount},\"damageArea\":${snapshot.damageArea},\"surfaceRecoveryCount\":${snapshot.surfaceRecoveryCount},\"deviceRecoveryCount\":${snapshot.deviceRecoveryCount},\"validationErrorCount\":${snapshot.validationErrorCount},\"resultCount\":${snapshot.resultCount},\"resultFailureCount\":${snapshot.resultFailureCount},\"traceDropped\":${traceDropped},\"resultDropped\":${resultDropped},\"validationDropped\":${validationDropped},\"validationErrors\":${validationErrors},\"fatalCode\":${fatalCode},\"fatalValue\":${fatalValue}}")
+    let clipBuilder = StringBuilder(512)
+    clipBuilder.Append("{\"kind\":\"clip_mask_atlas\"")
+    AppendCounterFields(clipBuilder, snapshot, ClipMaskAtlasFields, false)
+    clipBuilder.Append('}')
+    writer.WriteLine(clipBuilder.ToString())
+
+    let uploadBuilder = StringBuilder(256)
+    uploadBuilder.Append("{\"kind\":\"image_upload\"")
+    AppendCounterFields(uploadBuilder, snapshot, ImageUploadFields, false)
+    uploadBuilder.Append('}')
+    writer.WriteLine(uploadBuilder.ToString())
+
+    let countersBuilder = StringBuilder(3072)
+    countersBuilder.Append("{\"kind\":\"counters\"")
+    AppendCounterFields(countersBuilder, snapshot, SnapshotCounterFields, true)
+    countersBuilder.Append(",\"traceDropped\":${traceDropped},\"resultDropped\":${resultDropped},\"validationDropped\":${validationDropped},\"validationErrors\":${validationErrors},\"fatalCode\":${fatalCode},\"fatalValue\":${fatalValue}}")
+    writer.WriteLine(countersBuilder.ToString())
   }
 }

@@ -83,9 +83,9 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   [TimestampFrameSlotCount * TimestampStageCount * TimestampScopesPerStage]VulkanDiagnosticTimestampRange
   private let timestampStages []VulkanDiagnosticTimestampStageState =
   [TimestampFrameSlotCount * TimestampStageCount]VulkanDiagnosticTimestampStageState
-  private var timestampDevice VkDevice = nint(0)
+  private var timestampDevice VkDevice = VkDevice.Null
   private var timestampDispatch VkDeviceDispatch = VkDeviceDispatch{}
-  private var timestampPool VkQueryPool = 0uL
+  private var timestampPool VkQueryPool = VkQueryPool.Null
   private var timestampPoolCreated bool
   private var timestampSupported bool
   private var timestampComputeAndGraphics bool
@@ -141,7 +141,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       if timestampPoolCreated {
         return if nativeDevice == timestampDevice { VkConstants.VK_SUCCESS } else { VkConstants.VK_ERROR_INITIALIZATION_FAILED }
       }
-      if sharedLease == nil || sharedLease.Device != nativeDevice {
+      if sharedLease == nil || sharedLease.Runtime.Device != nativeDevice {
         return VkConstants.VK_ERROR_INITIALIZATION_FAILED
       }
 
@@ -152,7 +152,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       timestampPeriod = period
       timestampComputeAndGraphics = computeAndGraphics != VkConstants.VK_FALSE
       timestampMask = VulkanTimestamp.BuildMask(validBits)
-      timestampSupported = nativeDevice != nint(0) && validBits != 0u && validBits <= 64u
+      timestampSupported = nativeDevice != VkDevice.Null && validBits != 0u && validBits <= 64u
         && period > 0.0F && VulkanGpuExperiments.Selected != VulkanGpuExperiment.NoGpuTimestamps
       timestampLastResult = VkConstants.VK_SUCCESS
       ResetTimestampRangeState()
@@ -178,8 +178,8 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       let result = createQueryPool(timestampDevice, &createInfo, nil, &createdPool)
       timestampPool = createdPool
       timestampLastResult = result
-      if result != VkConstants.VK_SUCCESS || timestampPool == 0uL {
-        timestampPool = 0uL
+      if result != VkConstants.VK_SUCCESS || timestampPool == VkQueryPool.Null {
+        timestampPool = VkQueryPool.Null
         timestampPoolCreated = false
         timestampSupported = false
         timestampComputeAndGraphics = false
@@ -197,7 +197,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       } catch (error Exception) {
         let destroyQueryPool = timestampDispatch.vkDestroyQueryPool
         destroyQueryPool(timestampDevice, timestampPool, nil)
-        timestampPool = 0uL
+        timestampPool = VkQueryPool.Null
         timestampPoolCreated = false
         rethrow
       }
@@ -214,7 +214,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if !TimestampPoolComplete() {
       return
     }
-    if timestampPool == 0uL || timestampDispatch.vkDestroyQueryPool == nil {
+    if timestampPool == VkQueryPool.Null || timestampDispatch.vkDestroyQueryPool == nil {
       return
     }
     let destroyQueryPool = timestampDispatch.vkDestroyQueryPool
@@ -222,11 +222,11 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if let accounting = objectAccounting {
       accounting.Release()
     }
-    timestampPool = 0uL
+    timestampPool = VkQueryPool.Null
     timestampPoolCreated = false
     timestampSupported = false
     timestampComputeAndGraphics = false
-    timestampDevice = nint(0)
+    timestampDevice = VkDevice.Null
     timestampDispatch = VkDeviceDispatch{}
     timestampLease = nil
     timestampLastResult = VkConstants.VK_SUCCESS
@@ -238,21 +238,21 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       timestampLease = nil
       return true
     }
-    if timestampPool == 0uL {
+    if timestampPool == VkQueryPool.Null {
       timestampPoolCreated = false
       timestampSupported = false
       timestampComputeAndGraphics = false
       timestampValidBits = 0u
       timestampMask = 0uL
       timestampPeriod = 0.0F
-      timestampDevice = nint(0)
+      timestampDevice = VkDevice.Null
       timestampDispatch = VkDeviceDispatch{}
       timestampLease = nil
       timestampLastResult = VkConstants.VK_ERROR_DEVICE_LOST
       ResetTimestampRangeState()
       return true
     }
-    if timestampDevice == nint(0) || timestampDispatch.vkDestroyQueryPool == nil {
+    if timestampDevice == VkDevice.Null || timestampDispatch.vkDestroyQueryPool == nil {
       return false
     }
     let destroyQueryPool = timestampDispatch.vkDestroyQueryPool
@@ -260,14 +260,14 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if let accounting = objectAccounting {
       accounting.Release()
     }
-    timestampPool = 0uL
+    timestampPool = VkQueryPool.Null
     timestampPoolCreated = false
     timestampSupported = false
     timestampComputeAndGraphics = false
     timestampValidBits = 0u
     timestampMask = 0uL
     timestampPeriod = 0.0F
-    timestampDevice = nint(0)
+    timestampDevice = VkDevice.Null
     timestampDispatch = VkDeviceDispatch{}
     timestampLease = nil
     timestampLastResult = VkConstants.VK_ERROR_DEVICE_LOST
@@ -276,14 +276,14 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   }
 
   internal func AbandonTimestampQueryPool() {
-    timestampPool = 0uL
+    timestampPool = VkQueryPool.Null
     timestampPoolCreated = false
     timestampSupported = false
     timestampComputeAndGraphics = false
     timestampValidBits = 0u
     timestampMask = 0uL
     timestampPeriod = 0.0F
-    timestampDevice = nint(0)
+    timestampDevice = VkDevice.Null
     timestampDispatch = VkDeviceDispatch{}
     timestampLease = nil
     timestampLastResult = VkConstants.VK_ERROR_DEVICE_LOST
@@ -312,12 +312,12 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       }
       slot++
     }
-    return if requiredCompletionSerial == 0uL { true } else { lease.PollGraphicsSubmission(requiredCompletionSerial) == VkConstants.VK_SUCCESS }
+    return if requiredCompletionSerial == 0uL { true } else { lease.Runtime.PollGraphicsSubmission(requiredCompletionSerial) == VkConstants.VK_SUCCESS }
   }
 
   internal func ResetTimestampQueries(commandBuffer VkCommandBuffer, slot int32,
     context VulkanDiagnosticTimestampContext) bool{
-      if !ValidTimestampSlot(slot) || commandBuffer == nint(0) {
+      if !ValidTimestampSlot(slot) || commandBuffer == VkCommandBuffer.Null {
         MarkTimestampSlotUnavailable(slot)
         return false
       }
@@ -354,7 +354,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     stage VulkanDiagnosticTimestampStage, pipelineStage VkPipelineStageFlags2,
     context VulkanDiagnosticTimestampContext) int32{
       if !ValidTimestampSlot(slot) || !ValidTimestampStage(stage)
-        || commandBuffer == nint(0) || !timestampPoolCreated || !timestampSupported
+        || commandBuffer == VkCommandBuffer.Null || !timestampPoolCreated || !timestampSupported
         || timestampDispatch.vkCmdWriteTimestamp2 == nil {
           MarkTimestampStageUnavailable(slot, stage)
           return -1
@@ -412,7 +412,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   internal func EndTimestampScope(commandBuffer VkCommandBuffer,
     handle int32, pipelineStage VkPipelineStageFlags2,
     context VulkanDiagnosticTimestampContext) bool{
-      if !ValidTimestampHandle(handle) || commandBuffer == nint(0)
+      if !ValidTimestampHandle(handle) || commandBuffer == VkCommandBuffer.Null
         || !timestampPoolCreated || !timestampSupported
         || timestampDispatch.vkCmdWriteTimestamp2 == nil {
           return false
@@ -559,7 +559,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if completionSerial == 0uL {
       return VkConstants.VK_NOT_READY
     }
-    let completionResult = lease.PollGraphicsSubmission(completionSerial)
+    let completionResult = lease.Runtime.PollGraphicsSubmission(completionSerial)
     if completionResult != VkConstants.VK_SUCCESS {
       if completionResult != VkConstants.VK_NOT_READY {
         timestampLastResult = completionResult

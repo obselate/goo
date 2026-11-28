@@ -93,8 +93,8 @@ internal unsafe partial class VulkanWindowTarget {
     internal func OpenExternalSession(window Window) ExternalImageSessionResult {
         if disposed { return ExternalImageSessionResult(ExternalImageStatus.Closed) }
         guard let active = runtime else { return ExternalImageSessionResult(ExternalImageStatus.Busy) }
-        if active.DeviceLost { return ExternalImageSessionResult(ExternalImageStatus.DeviceLost) }
-        if active.Dispatch.ExternalMemoryKinds == 0u && !active.Dispatch.MetalObjects {
+        if active.Runtime.DeviceLost { return ExternalImageSessionResult(ExternalImageStatus.DeviceLost) }
+        if active.Runtime.Dispatch.ExternalMemoryKinds == 0u && !active.Runtime.Dispatch.MetalObjects {
             return ExternalImageSessionResult(ExternalImageStatus.Unsupported, detail: "External image extension is unavailable")
         }
         if let sessions = externalSessions {

@@ -74,7 +74,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
     private func ResolveStrokePipeline(ref pipeline VkPipeline, format VkFormat, mask bool) VkPipeline {
         lock (strokePipelineGate) {
             EnsurePathStrokes()
-            if pipeline == 0uL {
+            if pipeline == VkPipeline.Null {
                 pipeline = VulkanPipelineFactory.CreateGraphics(
                     device,
                     dispatch,
@@ -102,7 +102,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
     private func EnsurePathStrokes() {
         lock (strokePipelineGate) {
             EnsureOpen()
-            if strokeMetricPipeline != 0uL {
+            if strokeMetricPipeline != VkPipeline.Null {
                 return
             }
             try {
@@ -188,10 +188,10 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
             layout: strokeMetricPipelineLayout,
             basePipelineIndex: -1,
         }
-        var pipeline VkPipeline = 0uL
+        var pipeline VkPipeline = VkPipeline.Null
         try {
             let result = pipelineCache.CreateComputePipeline(&info, &pipeline)
-            if result != VkConstants.VK_SUCCESS || pipeline == 0uL {
+            if result != VkConstants.VK_SUCCESS || pipeline == VkPipeline.Null {
                 throw InvalidOperationException("vkCreateComputePipelines failed: " + result.ToString())
             }
             if let accounting = objectAccounting {
@@ -199,7 +199,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
             }
             strokeMetricPipeline = pipeline
         } catch (error Exception) {
-            if pipeline != 0uL {
+            if pipeline != VkPipeline.Null {
                 let destroy = dispatch.vkDestroyPipeline
                 destroy(device, pipeline, nil)
             }

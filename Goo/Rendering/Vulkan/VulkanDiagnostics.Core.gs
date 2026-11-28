@@ -11,7 +11,6 @@ internal unsafe partial class VulkanDiagnostics {
   private const ValidationCapacity int32 = 64
   private const ValidationTextCapacity int32 = 512
   private const FatalNameCapacity int32 = 256
-  private const FatalExtensionCapacity int32 = 32
   private const WriterOpen int32 = 0
   private const WriterFreezing int32 = 1
   private const WriterFrozen int32 = 2
@@ -23,8 +22,6 @@ internal unsafe partial class VulkanDiagnostics {
   private let validation [] ? VulkanDiagnosticValidationRecord
   private let validationText [] ? uint8
   private let fatalDeviceName [] ? uint8
-  private let fatalExtensions [] ? VulkanDiagnosticFatalExtensionRecord
-  private let fatalExtensionText [] ? uint8
   private let counters VulkanDiagnosticCounters
   private let textAtlasContributionGate object
   private let textAtlasContributions List[VulkanDiagnosticTextAtlasContribution]
@@ -57,8 +54,6 @@ internal unsafe partial class VulkanDiagnostics {
   private var fatalDebugUtilsAvailable uint32
   private var fatalInstanceExtensionCount uint32
   private var fatalDeviceExtensionCount uint32
-  private var fatalExtensionCount int32
-  private var fatalExtensionDropped int32
   private var fatalWindow uint64
   private var fatalSurface uint64
   private var fatalSwapchain uint64
@@ -146,8 +141,6 @@ internal unsafe partial class VulkanDiagnostics {
         debugUtilsAvailable: fatalDebugUtilsAvailable,
         instanceExtensionCount: fatalInstanceExtensionCount,
         deviceExtensionCount: fatalDeviceExtensionCount,
-        extensionCount: uint32(fatalExtensionCount),
-        extensionDropped: uint32(fatalExtensionDropped),
         window: fatalWindow,
         surface: fatalSurface,
         swapchain: fatalSwapchain,
@@ -176,8 +169,6 @@ internal unsafe partial class VulkanDiagnostics {
     validation = [ValidationCapacity]VulkanDiagnosticValidationRecord
     validationText = [ValidationCapacity * ValidationTextCapacity]uint8
     fatalDeviceName = [FatalNameCapacity]uint8
-    fatalExtensions = [FatalExtensionCapacity]VulkanDiagnosticFatalExtensionRecord
-    fatalExtensionText = [FatalExtensionCapacity * FatalNameCapacity]uint8
     counters = VulkanDiagnosticCounters()
     textAtlasContributionGate = Object()
     textAtlasContributions = List[VulkanDiagnosticTextAtlasContribution]()
@@ -327,7 +318,7 @@ internal unsafe partial class VulkanDiagnostics {
     }
     try {
       if managed != 0uL {
-        counters.SetManagedAllocatedBytes(managed)
+        counters.Set(VulkanCounterId.ManagedAllocatedBytes, managed)
       }
       let snapshot = counters.Snapshot
       let liveTicks = if ticks != 0uL { ticks } else { uint64(Stopwatch.GetTimestamp()) }
@@ -337,13 +328,13 @@ internal unsafe partial class VulkanDiagnostics {
         managedAllocatedBytes: managed,
         privateBytes: privateBytes,
         workingSetBytes: workingSet,
-        vulkanObjectCount: snapshot.vulkanObjectCount,
-        vulkanDeviceMemoryBytes: snapshot.vulkanDeviceMemoryBytes,
-        heapAllocated: snapshot.vulkanDeviceMemoryBytes,
-        driverHeapUsage: snapshot.driverHeapUsage,
-        heapBudget: snapshot.heapBudget,
-        allocatorBytes: snapshot.allocatorBytes,
-        cacheBytes: snapshot.cacheBytes,
+        vulkanObjectCount: snapshot[VulkanCounterId.VulkanObjectCount],
+        vulkanDeviceMemoryBytes: snapshot[VulkanCounterId.VulkanDeviceMemoryBytes],
+        heapAllocated: snapshot[VulkanCounterId.VulkanDeviceMemoryBytes],
+        driverHeapUsage: snapshot[VulkanCounterId.DriverHeapUsage],
+        heapBudget: snapshot[VulkanCounterId.HeapBudget],
+        allocatorBytes: snapshot[VulkanCounterId.AllocatorBytes],
+        cacheBytes: snapshot[VulkanCounterId.CacheBytes],
       }
       if firstPresent {
         liveFirstPresent = live
@@ -481,10 +472,10 @@ internal unsafe partial class VulkanDiagnostics {
         fatalHeapAllocated = heapAllocated
         fatalRetiredBytes = retiredBytes
         fatalLiveObjects = liveObjects
-        counters.SetHeapBudgetAvailable(heapBudgetAvailable)
-        counters.SetHeapBudgetSampleCurrent(heapBudgetSampleCurrent)
-        counters.SetHeapBudget(heapBudget)
-        counters.SetDriverHeapUsage(driverHeapUsage)
+        counters.Set(VulkanCounterId.HeapBudgetAvailable, uint64(heapBudgetAvailable))
+        counters.Set(VulkanCounterId.HeapBudgetSampleCurrent, uint64(heapBudgetSampleCurrent))
+        counters.Set(VulkanCounterId.HeapBudget, heapBudget)
+        counters.Set(VulkanCounterId.DriverHeapUsage, driverHeapUsage)
       } finally {
         ExitWriter()
       }
@@ -544,7 +535,7 @@ internal unsafe partial class VulkanDiagnostics {
             let isError = (severity & uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)) != 0u
             if isError {
               Interlocked.Increment(ref validationErrors)
-              counters.AddValidationError(1uL)
+              counters.Add(VulkanCounterId.ValidationErrorCount, 1uL)
             }
             RecordCore(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
               VulkanDiagnosticEventIds.ValidationMessage, VulkanDiagnosticCategories.Validation,
@@ -582,155 +573,75 @@ internal unsafe partial class VulkanDiagnostics {
     Volatile.Write(ref writerState, WriterFrozen)
   }
 
-  internal func AddRebuild(value uint64) {
+  internal func AddCounter(id VulkanCounterId, delta uint64 = 1uL) {
     if !EnterWriter() { return }
-    try { counters.AddRebuild(value) } finally { ExitWriter() }
-  }
-  internal func AddLayout(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayout(value) } finally { ExitWriter() }
-  }
-  internal func AddPlanCompile(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddPlanCompile(value) } finally { ExitWriter() }
-  }
-  internal func AddUpload(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddUpload(value) } finally { ExitWriter() }
-  }
-  internal func AddRecord(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddRecord(value) } finally { ExitWriter() }
-  }
-  internal func AddSubmit(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddSubmit(value) } finally { ExitWriter() }
-  }
-  internal func AddPresent(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddPresent(value) } finally { ExitWriter() }
-  }
-  internal func AddReadback(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddReadback(value) } finally { ExitWriter() }
-  }
-  internal func AddManagedAllocatedBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddManagedAllocatedBytes(value) } finally { ExitWriter() }
-  }
-  internal func AddVulkanObjectAllocation(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddVulkanObjectAllocation(value) } finally { ExitWriter() }
-  }
-  internal func AddVulkanDeviceMemoryAllocation(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddVulkanDeviceMemoryAllocation(value) } finally { ExitWriter() }
-  }
-  internal func AddUploadBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddUploadBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetImageResidentBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetImageResidentBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetImageLiveObjectCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetImageLiveObjectCount(value) } finally { ExitWriter() }
-  }
-  internal func SetImagePeakResidentBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetImagePeakResidentBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetImagePeakLiveObjectCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetImagePeakLiveObjectCount(value) } finally { ExitWriter() }
+    try { counters.Add(id, delta) } finally { ExitWriter() }
   }
 
-  internal func AddImageUploadChunk(value uint64) {
+  internal func SetCounter(id VulkanCounterId, value uint64) {
     if !EnterWriter() { return }
-    try { counters.AddImageUploadChunk(value) } finally { ExitWriter() }
+    try { counters.Set(id, value) } finally { ExitWriter() }
   }
 
-  internal func AddImageUploadDeferred(value uint64) {
+  internal func SetPeakCounter(id VulkanCounterId, value uint64) {
     if !EnterWriter() { return }
-    try { counters.AddImageUploadDeferred(value) } finally { ExitWriter() }
+    try { counters.SetPeak(id, value) } finally { ExitWriter() }
   }
 
-  internal func AddImageUploadCompleted(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddImageUploadCompleted(value) } finally { ExitWriter() }
-  }
-
-  internal func AddImagePressureFailure(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddImagePressureFailure(value) } finally { ExitWriter() }
-  }
-  internal func AddTextAtlasPressureFailure(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddTextAtlasPressureFailure(value) } finally { ExitWriter() }
-  }
   internal func SetMemoryPolicy(headroom uint64, evictions uint64, retries uint64, pressure uint64) {
     if !EnterWriter() { return }
     try { counters.SetMemoryPolicy(headroom, evictions, retries, pressure) } finally { ExitWriter() }
   }
-  internal func SetTextAtlasCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasCount(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasResidentBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasResidentBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasLiveObjectCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasLiveObjectCount(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasPeakCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasPeakCount(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasPeakResidentBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasPeakResidentBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetTextAtlasPeakLiveObjectCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetTextAtlasPeakLiveObjectCount(value) } finally { ExitWriter() }
-  }
+
   internal func SetPathAtlasStats(stats VulkanPathResourcesStats, liveObjectCount uint64) {
     if !EnterWriter() { return }
     try { counters.SetPathAtlasStats(stats, liveObjectCount) } finally { ExitWriter() }
   }
+
   internal func SetClipMaskAtlasStats(stats VulkanClipMaskAtlasStats) {
     if !EnterWriter() { return }
     try { counters.SetClipMaskAtlasStats(stats) } finally { ExitWriter() }
   }
+
   internal func ClearClipMaskAtlasCurrentState() {
     if !EnterWriter() { return }
     try { counters.ClearClipMaskAtlasCurrentState() } finally { ExitWriter() }
   }
+
   internal func SetClipMaskFrameStats(stats VulkanClipMaskFrameStats,
     totals VulkanClipMaskFrameTotals) {
       if !EnterWriter() { return }
       try { counters.SetClipMaskFrameStats(stats, totals) } finally { ExitWriter() }
     }
+
   internal func SetTextFrameStats(stats VulkanTextFrameStats) {
     if !EnterWriter() { return }
     try { counters.SetTextFrameStats(stats) } finally { ExitWriter() }
   }
+
   internal func SetTextCacheStats(layoutStats TextCacheStats, runStats TextCacheStats) {
     if !EnterWriter() { return }
     try { counters.SetTextCacheStats(layoutStats, runStats) } finally { ExitWriter() }
   }
+
   internal func ClearPathAtlasCurrentState() {
     if !EnterWriter() { return }
     try { counters.ClearPathAtlasCurrentState() } finally { ExitWriter() }
   }
-  internal func AddTextAtlasRecordedUploadBytes(value uint64) {
+
+  internal func AddDamage(count uint64, area uint64) {
     if !EnterWriter() { return }
-    try { counters.AddTextAtlasRecordedUploadBytes(value) } finally { ExitWriter() }
+    try { counters.AddDamage(count, area) } finally { ExitWriter() }
   }
+
+  internal func SetLayerPoolStats(residentBytes uint64,
+    targetCount uint64, leasedCount uint64, resolutionShift uint64) {
+      if !EnterWriter() { return }
+      try {
+        counters.SetLayerPoolStats(residentBytes, targetCount, leasedCount, resolutionShift)
+      } finally { ExitWriter() }
+    }
+
   internal func RegisterTextAtlasContribution() uint64 {
     if IsSealed {
       return 0uL
@@ -771,9 +682,9 @@ internal unsafe partial class VulkanDiagnostics {
               ResidentBytes: residentBytes,
               LiveObjectCount: liveObjectCount,
             }
-            counters.SetTextAtlasCount(nextAtlasCount)
-            counters.SetTextAtlasResidentBytes(nextResidentBytes)
-            counters.SetTextAtlasLiveObjectCount(nextLiveObjectCount)
+            counters.Set(VulkanCounterId.TextAtlasCount, nextAtlasCount)
+            counters.Set(VulkanCounterId.TextAtlasResidentBytes, nextResidentBytes)
+            counters.Set(VulkanCounterId.TextAtlasLiveObjectCount, nextLiveObjectCount)
             return
           }
           index = index + 1
@@ -800,9 +711,9 @@ internal unsafe partial class VulkanDiagnostics {
           textAtlasContributionResidentBytes = nextResidentBytes
           textAtlasContributionLiveObjectCount = nextLiveObjectCount
           textAtlasContributions.RemoveAt(index)
-          counters.SetTextAtlasCount(nextAtlasCount)
-          counters.SetTextAtlasResidentBytes(nextResidentBytes)
-          counters.SetTextAtlasLiveObjectCount(nextLiveObjectCount)
+          counters.Set(VulkanCounterId.TextAtlasCount, nextAtlasCount)
+          counters.Set(VulkanCounterId.TextAtlasResidentBytes, nextResidentBytes)
+          counters.Set(VulkanCounterId.TextAtlasLiveObjectCount, nextLiveObjectCount)
           return
         }
         index = index + 1
@@ -825,150 +736,4 @@ internal unsafe partial class VulkanDiagnostics {
       }
       return total - delta
     }
-  internal func AddTextAtlasEviction(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddTextAtlasEviction(value) } finally { ExitWriter() }
-  }
-  internal func AddTextAtlasRetirement(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddTextAtlasRetirement(value) } finally { ExitWriter() }
-  }
-  internal func AddImageEviction(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddImageEviction(value) } finally { ExitWriter() }
-  }
-  internal func AddImageRetirement(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddImageRetirement(value) } finally { ExitWriter() }
-  }
-  internal func AddDraw(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddDraw(value) } finally { ExitWriter() }
-  }
-  internal func AddPipelineChange(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddPipelineChange(value) } finally { ExitWriter() }
-  }
-  internal func AddDescriptorChange(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddDescriptorChange(value) } finally { ExitWriter() }
-  }
-  internal func AddPass(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddPass(value) } finally { ExitWriter() }
-  }
-  internal func AddBarrier(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddBarrier(value) } finally { ExitWriter() }
-  }
-  internal func AddDamage(count uint64, area uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddDamage(count, area) } finally { ExitWriter() }
-  }
-  internal func AddSurfaceRecovery(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddSurfaceRecovery(value) } finally { ExitWriter() }
-  }
-  internal func AddDeviceRecovery(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddDeviceRecovery(value) } finally { ExitWriter() }
-  }
-  internal func SetLayerPoolStats(residentBytes uint64,
-    targetCount uint64, leasedCount uint64, resolutionShift uint64) {
-      if !EnterWriter() { return }
-      try {
-        counters.SetLayerPoolResidentBytes(residentBytes)
-        counters.SetLayerPoolTargetCount(targetCount)
-        counters.SetLayerPoolLeasedCount(leasedCount)
-        counters.SetLayerPoolResolutionShift(resolutionShift)
-      } finally { ExitWriter() }
-    }
-  internal func AddLayerPoolCreate(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolCreate(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolReuse(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolReuse(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolCommandReuse(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolCommandReuse(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolEviction(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolEviction(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolPressure(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolPressure(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolPressureFailure(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolPressureFailure(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolFailure(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolFailure(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolPass(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolPass(value) } finally { ExitWriter() }
-  }
-  internal func AddLayerPoolComposite(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddLayerPoolComposite(value) } finally { ExitWriter() }
-  }
-  internal func SetManagedAllocatedBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetManagedAllocatedBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetVulkanObjectCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetVulkanObjectCount(value) } finally { ExitWriter() }
-  }
-  internal func SetVulkanObjectAllocationCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetVulkanObjectAllocationCount(value) } finally { ExitWriter() }
-  }
-  internal func SetVulkanDeviceMemoryAllocationCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetVulkanDeviceMemoryAllocationCount(value) } finally { ExitWriter() }
-  }
-  internal func SetVulkanDeviceMemoryBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetVulkanDeviceMemoryBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetCacheBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetCacheBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetAllocatorBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetAllocatorBytes(value) } finally { ExitWriter() }
-  }
-  internal func SetDirtyChunkCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetDirtyChunkCount(value) } finally { ExitWriter() }
-  }
-  internal func SetReusedChunkCount(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.SetReusedChunkCount(value) } finally { ExitWriter() }
-  }
-  internal func AddVulkanObjects(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddVulkanObjects(value) } finally { ExitWriter() }
-  }
-  internal func RemoveVulkanObjects(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.RemoveVulkanObjects(value) } finally { ExitWriter() }
-  }
-  internal func AddVulkanDeviceMemoryBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.AddVulkanDeviceMemoryBytes(value) } finally { ExitWriter() }
-  }
-  internal func RemoveVulkanDeviceMemoryBytes(value uint64) {
-    if !EnterWriter() { return }
-    try { counters.RemoveVulkanDeviceMemoryBytes(value) } finally { ExitWriter() }
-  }
 }

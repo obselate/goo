@@ -9,7 +9,7 @@ internal unsafe partial class VulkanPathAtlas {
     try { DestroyStagingBuffer() } catch (cleanup Exception) { }
     try { DestroyDescriptorResources() } catch (cleanup Exception) { }
     try { DestroyAtlasBuffer() } catch (cleanup Exception) { }
-    uploadCommandBuffer = nint(0)
+    uploadCommandBuffer = VkCommandBuffer.Null
     uploadFence = 0uL
     uploadPending = false
     uploadRecorded = false

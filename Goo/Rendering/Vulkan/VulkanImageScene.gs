@@ -215,7 +215,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     binding ImageSourceBindingToken, external ExternalFrameLease, fit ImageFit,
     opacity float32, transformIndex int32, pixelsPerUnit float64) bool {
       if external.Terminal || external.Source.Session.IsClosed
-        || external.Image.Native.Runtime.Generation != generation { return false }
+        || external.Image.Native.Runtime.Runtime.Generation != generation { return false }
       if !external.Ready {
         pendingImages = true
         return false

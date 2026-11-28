@@ -49,7 +49,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var clipMaskAtlasAbandoned bool
   private var clipMaskFrameStats VulkanClipMaskFrameStats
   private var clipMaskFrameTotals VulkanClipMaskFrameTotals
-  private var instance VkInstance = nint(0)
+  private var instance VkInstance = VkInstance.Null
   private var instanceDispatch VkInstanceDispatch = VkInstanceDispatch{}
   private var getProcAddress nint = nint(0)
   private var instanceMaintenanceVariant VulkanSwapchainMaintenanceVariant
@@ -57,25 +57,25 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var portabilitySubsetSupported bool
   private var memoryBudgetSupported bool
   private var clipMaskFormatSupport VulkanClipMaskFormatSupport
-  private var physicalDevice VkPhysicalDevice = nint(0)
-  private var device VkDevice = nint(0)
+  private var physicalDevice VkPhysicalDevice = VkPhysicalDevice.Null
+  private var device VkDevice = VkDevice.Null
   private var dispatch VkDeviceDispatch = VkDeviceDispatch{}
   private var instanceDestroyAvailable bool
   private var deviceDestroyAvailable bool
   private var debugUtilsEnabled bool
-  private var validationMessenger VkDebugUtilsMessengerEXT = 0uL
+  private var validationMessenger VkDebugUtilsMessengerEXT = VkDebugUtilsMessengerEXT.Null
   private var validationMessengerCreated bool
   private var timestampValidBits uint32
   private var timestampPeriod float32
   private var timestampComputeAndGraphics VkBool32 = VkConstants.VK_FALSE
   private var deviceFacts VulkanSharedDeviceFacts
-  private var queue VkQueue = nint(0)
+  private var queue VkQueue = VkQueue.Null
   private var queueFamilyIndex uint32 = 0u
-  private var surface VkSurfaceKHR = 0uL
+  private var surface VkSurfaceKHR = VkSurfaceKHR.Null
   private var surfaceCreated bool
   private var vulkanLoaded bool
   private var deviceWaitIdleAddress nint = nint(0)
-  private var commandPool VkCommandPool = 0uL
+  private var commandPool VkCommandPool = VkCommandPool.Null
   private var commandBufferObjectCount int32
   private var frameSlots VulkanFrameSlotRing
   private var generation VulkanSwapchainGeneration? = nil
@@ -150,7 +150,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
 
   internal prop RenderingDevice RenderingDeviceInfo{
     get {
-      if disposed || runtime == nil || runtime?.DeviceLost == true { return default(RenderingDeviceInfo) }
+      if disposed || runtime == nil || runtime?.Runtime.DeviceLost == true { return default(RenderingDeviceInfo) }
       let kind = switch deviceFacts.DeviceType {
         case VkConstants.VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: RenderingDeviceKind.IntegratedGpu
         case VkConstants.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: RenderingDeviceKind.DiscreteGpu
@@ -165,7 +165,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   public prop NeedsRender bool{
     get {
       if let activeRuntime = runtime {
-        if activeRuntime.DeviceLost {
+        if activeRuntime.Runtime.DeviceLost {
           return true
         }
       }
@@ -181,7 +181,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   public prop MemoryPressureWaiting bool{ get -> pressureWaiting }
   public prop QueueWorkPending bool{ get -> queueStage != QueueStageIdle || pageCompletion != nil || queuedPage != nil }
   public prop RetirementWorkPending bool{
-    get -> !disposed && runtime?.DeviceLost != true
+    get -> !disposed && runtime?.Runtime.DeviceLost != true
       && (hideReleasePending || retiredSwapchains.Count != 0)
   }
 
@@ -199,12 +199,12 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       return false
     }
     if let activeRuntime = runtime {
-      if activeRuntime.DeviceLost || activeRuntime.Terminal {
+      if activeRuntime.Runtime.DeviceLost || activeRuntime.Runtime.Terminal {
         return true
       }
       if let mailbox = queueMailbox {
-        if activeRuntime.QueueWorker.NotifyWhenIdle(mailbox) { return false }
-      } else if activeRuntime.QueueWorker.HasOutstandingWork {
+        if activeRuntime.Runtime.QueueWorker.NotifyWhenIdle(mailbox) { return false }
+      } else if activeRuntime.Runtime.QueueWorker.HasOutstandingWork {
         return false
       }
     }
@@ -213,7 +213,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       let result = slot.PollForCompletion()
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
       if result == VkConstants.VK_ERROR_DEVICE_LOST {
-        runtime?.MarkDeviceLost()
+        runtime?.Runtime.MarkDeviceLost()
       } else if result != VkConstants.VK_SUCCESS {
         ready = false
       } else {
@@ -224,7 +224,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       let result = slot.PollForCompletion()
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
       if result == VkConstants.VK_ERROR_DEVICE_LOST {
-        runtime?.MarkDeviceLost()
+        runtime?.Runtime.MarkDeviceLost()
       } else if result != VkConstants.VK_SUCCESS {
         ready = false
       } else {
@@ -235,7 +235,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       let result = current.PollForPresentCompletion(presentationRetirement)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
       if result == VkConstants.VK_ERROR_DEVICE_LOST {
-        runtime?.MarkDeviceLost()
+        runtime?.Runtime.MarkDeviceLost()
       } else if result != VkConstants.VK_SUCCESS {
         ready = false
       }
@@ -245,7 +245,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       let result = retiredSwapchains.Generation(retiredIndex).PollForPresentCompletion(presentationRetirement)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
       if result == VkConstants.VK_ERROR_DEVICE_LOST {
-        runtime?.MarkDeviceLost()
+        runtime?.Runtime.MarkDeviceLost()
       } else if result != VkConstants.VK_SUCCESS {
         ready = false
       }
@@ -255,7 +255,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     if let request = readbackRequest {
       let result = request.PollTargetCompletionForClose()
       if result == VkConstants.VK_ERROR_DEVICE_LOST {
-        runtime?.MarkDeviceLost()
+        runtime?.Runtime.MarkDeviceLost()
       } else if result == VkConstants.VK_NOT_READY || result == VkConstants.VK_TIMEOUT {
         ready = false
       } else if result != VkConstants.VK_SUCCESS {
@@ -274,20 +274,6 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     guard let mailbox = queueMailbox else { return }
     VulkanSharedRuntime.HoldQueuePresentForMailboxForTest(mailbox)
   }
-
-  internal func SetPresentationLatencySink(
-    sink Action[VulkanPresentationLatencySample]?) {
-      if sink == nil {
-        presentationRetirement.ClearPresentationLatency()
-        return
-      }
-      presentationRetirement.SetPresentationLatencySink(sink)
-    }
-
-  internal func BeginPresentationLatency(
-    token uint64, kind int32, startTimestamp int64) {
-      presentationRetirement.BeginPresentationLatency(token, kind, startTimestamp)
-    }
 
   internal prop PresentFenceSupported bool{
     get {

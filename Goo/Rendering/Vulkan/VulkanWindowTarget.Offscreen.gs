@@ -43,11 +43,11 @@ internal unsafe partial class VulkanWindowTarget {
       guard let active = runtime else {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.NotReady })
       }
-      if active.DeviceLost || active.Terminal {
+      if active.Runtime.DeviceLost || active.Runtime.Terminal {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.DeviceLost })
       }
       let completion = TaskCompletionSource[OffscreenRenderResult](TaskCreationOptions.RunContinuationsAsynchronously)
-      if frameBegun || queueStage != QueueStageIdle || active.QueueWorker.HasOutstandingWork {
+      if frameBegun || queueStage != QueueStageIdle || active.Runtime.QueueWorker.HasOutstandingWork {
         queuedPageResult = completion
         queuedPage = () -> BeginPage(root, options, cancellation, ownerClosed, reusable, renderWindow, completion)
         host.Wake()
@@ -68,7 +68,7 @@ internal unsafe partial class VulkanWindowTarget {
         completion.TrySetResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.NotReady })
         return
       }
-      if active.DeviceLost || active.Terminal {
+      if active.Runtime.DeviceLost || active.Runtime.Terminal {
         completion.TrySetResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.DeviceLost })
         return
       }
@@ -106,19 +106,19 @@ internal unsafe partial class VulkanWindowTarget {
         let atlasBytes = ResolveTextAtlasByteSize(maxAtlasBytes)
         let atlasMaxBytes = ResolveTextAtlasMaxByteSize(maxAtlasBytes, atlasBytes)
         let atlases = VulkanTextAtlasSet(device, dispatch, allocator, atlasBytes,
-          properties.limits.maxTexelBufferElements, active.PrimitiveState.TextDescriptorSetLayout,
-          objectAccounting, nil, active.Generation, atlasMaxBytes)
+          properties.limits.maxTexelBufferElements, active.Runtime.PrimitiveState.TextDescriptorSetLayout,
+          objectAccounting, nil, active.Runtime.Generation, atlasMaxBytes)
         pageAtlases = atlases
         let colorAtlas = VulkanColorGlyphAtlas(device, dispatch, allocator,
-          active.ImageResources, active.ImageIdentityRegistry, active.Generation,
+          active.Runtime.ImageResources, active.Runtime.ImageIdentityRegistry, active.Runtime.Generation,
           objectAccounting, nil)
         pageColorAtlas = colorAtlas
         let clips = VulkanClipMaskAtlas(device, dispatch, allocator, options.PixelWidth, options.PixelHeight,
-          clipMaskFormatSupport, uint64(options.MaxBytes), active.Generation, objectAccounting)
+          clipMaskFormatSupport, uint64(options.MaxBytes), active.Runtime.Generation, objectAccounting)
         pageClips = clips
         pageText = VulkanTextScene(atlases, colorAtlas)
-        pageImages = VulkanImageScene(active.ImageIdentityRegistry, active.ImageResources, active.Generation)
-        pagePaths = VulkanPathScene(active.PathResources)
+        pageImages = VulkanImageScene(active.Runtime.ImageIdentityRegistry, active.Runtime.ImageResources, active.Runtime.Generation)
+        pagePaths = VulkanPathScene(active.Runtime.PathResources)
         let compiler = VulkanSceneCompiler()
         pageCompiler = compiler
         compiler.SetTextScene(pageText)
@@ -133,13 +133,13 @@ internal unsafe partial class VulkanWindowTarget {
         var leaseTransferred bool
         try {
           target = VulkanOffscreenTarget(device, dispatch, queue, allocator, EnsureReadbackDispatch(),
-            extent, pixels * 4uL, active.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
-            active.ImageResources, active.Generation, active.MaxStorageBufferRange, active.ResourcePolicy,
-            active.PrimitiveState, active.PathResources.Atlas, active.PathResources, clips, atlases,
-            objectAccounting, nil, nil, active.QueueWorker.CreateMailbox(nil), lease, colorAtlas)
+            extent, pixels * 4uL, active.Runtime.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
+            active.Runtime.ImageResources, active.Runtime.Generation, active.Runtime.MaxStorageBufferRange, active.Runtime.ResourcePolicy,
+            active.Runtime.PrimitiveState, active.Runtime.PathResources.Atlas, active.Runtime.PathResources, clips, atlases,
+            objectAccounting, nil, nil, active.Runtime.QueueWorker.CreateMailbox(nil), lease, colorAtlas)
           target.EnableResourceUploads()
           leaseTransferred = true
-          pageReadback = VulkanReadbackFactory.Create(target, lease, active.Generation)
+          pageReadback = VulkanReadbackFactory.Create(target, lease, active.Runtime.Generation)
         } finally {
           if !leaseTransferred {
             target?.Dispose()
@@ -150,7 +150,7 @@ internal unsafe partial class VulkanWindowTarget {
       } catch (_ VulkanOperationBudgetException) {
         FinishPage(OffscreenRenderStatus.BudgetExceeded)
       } catch (error InvalidOperationException) {
-        FinishPage(if active.DeviceLost { OffscreenRenderStatus.DeviceLost } else { OffscreenRenderStatus.Failed },
+        FinishPage(if active.Runtime.DeviceLost { OffscreenRenderStatus.DeviceLost } else { OffscreenRenderStatus.Failed },
           error.Message)
       } catch (error Exception) {
         FinishPage(OffscreenRenderStatus.Failed, error.Message)
@@ -169,7 +169,7 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     var completed uint64
-    let queried = active.GetCompletedGraphicsSubmissionSerial(out completed)
+    let queried = active.Runtime.GetCompletedGraphicsSubmissionSerial(out completed)
     if queried != VkConstants.VK_SUCCESS {
       FinishPage(OffscreenRenderStatus.DeviceLost)
       return
@@ -225,7 +225,7 @@ internal unsafe partial class VulkanWindowTarget {
     } catch (_ VulkanOperationBudgetException) {
       FinishPage(OffscreenRenderStatus.BudgetExceeded)
     } catch (error InvalidOperationException) {
-      FinishPage(if runtime?.DeviceLost == true {
+      FinishPage(if runtime?.Runtime.DeviceLost == true {
         OffscreenRenderStatus.DeviceLost
       } else { OffscreenRenderStatus.Failed }, error.Message)
     } catch (error Exception) {
@@ -239,7 +239,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func StartQueuedPage() {
     if queuedPage != nil { CancelDeferredInitialFrame() }
     if queuedPage == nil || frameBegun || queueStage != QueueStageIdle
-      || runtime?.QueueWorker.HasOutstandingWork == true { return }
+      || runtime?.Runtime.QueueWorker.HasOutstandingWork == true { return }
     let start = queuedPage
     queuedPage = nil
     queuedPageResult = nil

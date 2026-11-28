@@ -148,20 +148,20 @@ internal partial class VulkanSceneCompiler {
 }
 
 internal partial class VulkanSceneCompiler {
-    internal prop RetainedTextHitCount uint64 {
-        get -> retainedText.Hit
-    }
-    internal prop RetainedTextRebuildCount uint64 {
-        get -> retainedText.Rebuild
-    }
-    internal prop RetainedTextFallbackCount uint64 {
-        get -> retainedText.Fallback
-    }
-    internal prop RetainedTextInvalidationCount uint64 {
-        get -> retainedText.Invalidation
-    }
-    internal prop RetainedTextTotalCount uint64 {
-        get -> retainedText.Total
+    private var retainedTextHitCount uint64
+    private var retainedTextRebuildCount uint64
+    private var retainedTextFallbackCount uint64
+    private var retainedTextInvalidationCount uint64
+
+    internal prop RetainedTextHitCount uint64 { get -> retainedTextHitCount }
+    internal prop RetainedTextRebuildCount uint64 { get -> retainedTextRebuildCount }
+    internal prop RetainedTextFallbackCount uint64 { get -> retainedTextFallbackCount }
+    internal prop RetainedTextInvalidationCount uint64 { get -> retainedTextInvalidationCount }
+
+    internal func IncrementRetainedTextCounter(ref value uint64) {
+        if value != uint64.MaxValue {
+            value++
+        }
     }
 
     internal func CaptureRetainedTextSnapshot(owner VulkanSceneOwnerId, chunkIndex int32) bool -> Capture(
@@ -175,7 +175,7 @@ internal partial class VulkanSceneCompiler {
             return
         }
         owner.ClearRetainedText()
-        IncrementSaturated(ref retainedText.Invalidation)
+        IncrementRetainedTextCounter(ref retainedTextInvalidationCount)
     }
 
     private func RetainedTextEligible(
@@ -340,7 +340,7 @@ internal partial class VulkanSceneCompiler {
             InvalidateRetainedText(owner)
             return false
         }
-        IncrementSaturated(ref retainedText.Hit)
+        IncrementRetainedTextCounter(ref retainedTextHitCount)
         return true
     }
 

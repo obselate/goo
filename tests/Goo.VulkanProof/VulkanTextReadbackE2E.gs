@@ -355,7 +355,7 @@ internal unsafe func RunDeferredTextRangeReadback() {
     if !scene.ResourceDeferred || scene.RedrawRequired || compiler.Frame.CachedTextSegmentCount != 0 {
       throw InvalidOperationException("Text outside the pending upload did not defer")
     }
-    if !atlas.AbortUpload(nint(0)) {
+    if !atlas.AbortUpload(VkCommandBuffer.Null) {
       throw InvalidOperationException("Deferred text upload did not abort")
     }
     scene.BeginCompile(0uL, 1.0F)

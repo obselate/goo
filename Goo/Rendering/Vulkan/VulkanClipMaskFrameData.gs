@@ -75,7 +75,7 @@ internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
   }
 
   internal func CanReuse(drawCount int32, byteCount VkDeviceSize) bool -> RetentionValid
-    && Buffers.Buffer != 0uL
+    && Buffers.Buffer != VkBuffer.Null
     && Buffers.Allocation != nil
     && RetainedDrawCount == drawCount
     && RetainedByteCount == byteCount
@@ -161,24 +161,13 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       }
     }
   }
-  internal prop LiveObjectCount uint64{
-    get {
-      var count = descriptors.LiveObjectCount
-      var index int32 = 0
-      while index < slots.Length {
-        count += slots[index].Buffers.LiveObjectCount
-        index++
-      }
-      return count
-    }
-  }
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     nativeAllocator VulkanMemoryAllocator, nativeAtlas VulkanClipMaskAtlas,
     nativeDescriptorSetLayout VkDescriptorSetLayout,
     nativeMaxStorageBufferRange VkDeviceSize,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeAllocator == nil {
@@ -187,7 +176,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       if nativeAtlas == nil {
         throw ArgumentNullException("nativeAtlas")
       }
-      if nativeDescriptorSetLayout == 0uL {
+      if nativeDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw ArgumentException("Vulkan clip descriptor set layout is null", "nativeDescriptorSetLayout")
       }
       if nativeMaxStorageBufferRange == 0uL {
@@ -367,7 +356,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
   internal func Bind(commandBuffer VkCommandBuffer, pipelineLayout VkPipelineLayout,
     setIndex uint32) {
       EnsureOpen()
-      if commandBuffer == nint(0) || pipelineLayout == 0uL {
+      if commandBuffer == VkCommandBuffer.Null || pipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan clip descriptor binding arguments are invalid")
       }
       if preparedSlot < 0 {

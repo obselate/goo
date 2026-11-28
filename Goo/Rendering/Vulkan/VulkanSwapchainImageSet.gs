@@ -38,10 +38,10 @@ internal unsafe class VulkanSwapchainImageSet {
     format VkFormat,
     enablePresentFence bool,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if swapchain == 0uL {
+      if swapchain == VkSwapchainKHR.Null {
         throw ArgumentException("Vulkan swapchain is null", "swapchain")
       }
       if imageCount <= 0 {
@@ -89,7 +89,7 @@ internal unsafe class VulkanSwapchainImageSet {
 
   internal func PendingPresentFence(index uint32) VkFence {
     EnsureIndex(index)
-    return if let present = presentState { present.Fences[int32(index)] } else { 0uL }
+    return if let present = presentState { present.Fences[int32(index)] } else { VkFence.Null }
   }
 
   internal func AppliedSceneVersion(index uint32) uint64 {
@@ -165,7 +165,7 @@ internal unsafe class VulkanSwapchainImageSet {
 
   internal func TryPreparePresent(index uint32, out fence VkFence,
     out completedPresentId uint64) VkResult{
-      fence = 0uL
+      fence = VkFence.Null
       let completion = TryCompletePendingPresent(index, out completedPresentId)
       if completion != VkConstants.VK_SUCCESS || presentState == nil {
         return completion
@@ -430,16 +430,16 @@ internal unsafe class VulkanSwapchainImageSet {
     let destroySemaphore = dispatch.vkDestroySemaphore
     var index int32 = 0
     while index < renderSemaphores.Length {
-      if renderSemaphores[index] != 0uL {
+      if renderSemaphores[index] != VkSemaphore.Null {
         let semaphore = renderSemaphores[index]
         if bestEffort {
-          renderSemaphores[index] = 0uL
+          renderSemaphores[index] = VkSemaphore.Null
           try { destroySemaphore(device, semaphore, nil) } catch (cleanup Exception) { }
           ReleaseAccounting(true)
         } else {
           destroySemaphore(device, semaphore, nil)
           ReleaseAccounting(false)
-          renderSemaphores[index] = 0uL
+          renderSemaphores[index] = VkSemaphore.Null
         }
       }
       index = index + 1
@@ -449,16 +449,16 @@ internal unsafe class VulkanSwapchainImageSet {
       let destroyFence = dispatch.vkDestroyFence
       index = 0
       while index < fences.Length {
-        if fences[index] != 0uL {
+        if fences[index] != VkFence.Null {
           let fence = fences[index]
           if bestEffort {
-            fences[index] = 0uL
+            fences[index] = VkFence.Null
             try { destroyFence(device, fence, nil) } catch (cleanup Exception) { }
             ReleaseAccounting(true)
           } else {
             destroyFence(device, fence, nil)
             ReleaseAccounting(false)
-            fences[index] = 0uL
+            fences[index] = VkFence.Null
           }
         }
         index = index + 1
@@ -467,16 +467,16 @@ internal unsafe class VulkanSwapchainImageSet {
     let destroyImageView = dispatch.vkDestroyImageView
     index = 0
     while index < imageViews.Length {
-      if imageViews[index] != 0uL {
+      if imageViews[index] != VkImageView.Null {
         let view = imageViews[index]
         if bestEffort {
-          imageViews[index] = 0uL
+          imageViews[index] = VkImageView.Null
           try { destroyImageView(device, view, nil) } catch (cleanup Exception) { }
           ReleaseAccounting(true)
         } else {
           destroyImageView(device, view, nil)
           ReleaseAccounting(false)
-          imageViews[index] = 0uL
+          imageViews[index] = VkImageView.Null
         }
       }
       index = index + 1

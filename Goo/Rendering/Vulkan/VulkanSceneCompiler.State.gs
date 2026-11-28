@@ -229,10 +229,6 @@ internal partial class VulkanSceneCompiler {
       lastResult.UnsupportedDetailCount = unsupportedDetailCount
       lastResult.UnsupportedDetailDropped = unsupportedDetailDropped
       lastResult.BackgroundDrawn = backgroundDrawn
-      lastResult.RetainedLeaf = retainedLeaf
-      lastResult.RetainedBorder = retainedBorder
-      lastResult.RetainedParentBox = retainedParentBox
-      lastResult.RetainedText = retainedText
       lastResult.ExactTextClipCandidateCount = exactTextClipCandidateCount
       lastResult.ExactTextClipCullCount = exactTextClipCullCount
       lastResult.CachedTextPaintCullCount = cachedTextPaintCullCount

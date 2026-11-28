@@ -145,10 +145,10 @@ internal partial class VulkanWindowTarget {
       || slot.PrepareSubmit() != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Initial replay submission preparation failed")
     }
-    mailbox.PrepareSubmit(slot.CommandBuffer, slot.SubmitWaitSemaphore, 0uL)
+    mailbox.PrepareSubmit(slot.CommandBuffer, slot.SubmitWaitSemaphore, VkSemaphore.Null)
     mailbox.AddExternalWait(initialReplayGateForTest, 1uL, this)
     if !mailbox.BeginSubmit()
-      || !active.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
+      || !active.Runtime.EnqueueGraphicsSubmission(mailbox, validateGraphicsSubmission) {
       throw InvalidOperationException("Initial replay submission was not queued")
     }
     initialImageUploadFrame = true
@@ -158,7 +158,7 @@ internal partial class VulkanWindowTarget {
   }
 
   internal func ReleaseInitialReplaySubmissionForTest() {
-    if initialReplayGateForTest == 0uL { return }
+    if initialReplayGateForTest == VkSemaphore.Null { return }
     let signal = ResolveDeviceProc("vkSignalSemaphore") as
       (unmanaged[Cdecl](VkDevice, *VkQueueWakeSemaphoreSignalInfo) -> VkResult)?
     if signal == nil { throw InvalidOperationException("Initial replay gate signal is unavailable") }
@@ -170,12 +170,12 @@ internal partial class VulkanWindowTarget {
     }
     if let mailbox = queueMailbox {
       if mailbox.SubmitSerial != 0uL {
-        runtime?.WaitGraphicsSubmission(mailbox.SubmitSerial, VkConstants.VK_WHOLE_SIZE)
+        runtime?.Runtime.WaitGraphicsSubmission(mailbox.SubmitSerial, VkConstants.VK_WHOLE_SIZE)
       }
     }
     let destroy = dispatch.vkDestroySemaphore
     destroy(device, initialReplayGateForTest, nil)
-    initialReplayGateForTest = 0uL
+    initialReplayGateForTest = VkSemaphore.Null
   }
 
   shared {
@@ -213,7 +213,7 @@ internal partial class VulkanWindowTarget {
       let create = nativeSwapchainCreateForTest
       if swapchainCreateAttemptsForTest == 2 || swapchainCreateAttemptsForTest == 3 {
         let oldSwapchain = info[0].oldSwapchain
-        swapchainOldHandleValidForTest &= (oldSwapchain != 0uL) == (swapchainCreateAttemptsForTest == 2)
+        swapchainOldHandleValidForTest &= (oldSwapchain != VkSwapchainKHR.Null) == (swapchainCreateAttemptsForTest == 2)
         if swapchainCreateAttemptsForTest == 2 {
           var created VkSwapchainKHR
           let result = create(device, info, callbacks, &created)
@@ -221,7 +221,7 @@ internal partial class VulkanWindowTarget {
           let destroy = nativeSwapchainDestroyForTest
           destroy(device, created, callbacks)
         }
-        *output = 0uL
+        *output = VkSwapchainKHR.Null
         return if swapchainCreateAttemptsForTest == 2 {
           VkConstants.VK_ERROR_OUT_OF_DATE_KHR
         } else { VkConstants.VK_SUCCESS }
@@ -239,7 +239,7 @@ internal partial class VulkanWindowTarget {
         cast[unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *VkSurfaceCapabilitiesKHR) -> VkResult](nint(&GetZeroSurfaceExtentForTest))
     } else {
       instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR = nativeSurfaceCapabilitiesForTest
-      zeroExtentSurfaceForTest = 0uL
+      zeroExtentSurfaceForTest = VkSurfaceKHR.Null
     }
   }
 
@@ -278,7 +278,7 @@ internal partial class VulkanWindowTarget {
             throw InvalidOperationException("Failed swapchain creation did not preserve a retryable window")
           }
         } else {
-          if !frameBegun || generation?.Handle == 0uL || recreatePending {
+          if !frameBegun || generation == nil || generation!!.Handle.IsNull || recreatePending {
             throw InvalidOperationException("Swapchain recreation did not recover after compacting GC")
           }
           if AbandonAcquiredFrameForTest() != VkConstants.VK_SUCCESS {
@@ -389,12 +389,12 @@ internal partial class VulkanWindowTarget {
     allocator.SetHeadroomForTest(nil)
     clipMaskAtlas = VulkanClipMaskAtlas(device, dispatch, allocator,
       current.Extent.width, current.Extent.height, clipMaskFormatSupport,
-      0uL, activeRuntime.Generation, windowObjectAccounting, diagnostics)
+      0uL, activeRuntime.Runtime.Generation, windowObjectAccounting, diagnostics)
     RecreateSwapchain(framebufferWidth, framebufferHeight)
     layerPool?.Dispose()
     layerPool = VulkanOffscreenLayerPool(device, dispatch, allocator,
       resources.DescriptorSetLayout, current.Format, windowObjectAccounting,
-      8, activeRuntime.Facts.MaxImageDimension2D, diagnostics)
+      8, activeRuntime.Runtime.Facts.MaxImageDimension2D, diagnostics)
     primitiveRenderer!!.SetLayerPool(layerPool)
     allocator.SetHeadroomForTest(headroom)
   }
@@ -507,12 +507,12 @@ internal partial class VulkanWindowTarget {
       return VulkanGraphicsTimelineTestSnapshot{}
     }
     var completed uint64
-    let completedResult = activeRuntime.GetCompletedGraphicsSubmissionSerial(out completed)
+    let completedResult = activeRuntime.Runtime.GetCompletedGraphicsSubmissionSerial(out completed)
     return VulkanGraphicsTimelineTestSnapshot{
-      Available: activeRuntime.GraphicsTimeline != 0uL,
-      Timeline: uint64(activeRuntime.GraphicsTimeline),
-      RuntimeGeneration: activeRuntime.Generation,
-      LastEnqueuedSerial: activeRuntime.QueueWorker.LastEnqueuedGraphicsSubmissionSerial,
+      Available: activeRuntime.Runtime.GraphicsTimeline != VkSemaphore.Null,
+      Timeline: uint64(activeRuntime.Runtime.GraphicsTimeline),
+      RuntimeGeneration: activeRuntime.Runtime.Generation,
+      LastEnqueuedSerial: activeRuntime.Runtime.QueueWorker.LastEnqueuedGraphicsSubmissionSerial,
       CompletedSerial: completed,
       CompletedResult: completedResult,
       PendingWindowSerial: pendingGlobalSubmissionSerial,
@@ -525,14 +525,14 @@ internal partial class VulkanWindowTarget {
     guard let activeRuntime = runtime else {
       return VkConstants.VK_NOT_READY
     }
-    return activeRuntime.PollGraphicsSubmission(serial)
+    return activeRuntime.Runtime.PollGraphicsSubmission(serial)
   }
 
   internal func WaitGraphicsSubmissionForTest(serial uint64, timeout uint64) VkResult {
     guard let activeRuntime = runtime else {
       return VkConstants.VK_NOT_READY
     }
-    return activeRuntime.WaitGraphicsSubmission(serial, timeout)
+    return activeRuntime.Runtime.WaitGraphicsSubmission(serial, timeout)
   }
 
   internal func GraphicsTimelineValidationRollbackForTest()
@@ -540,16 +540,16 @@ internal partial class VulkanWindowTarget {
     guard let activeRuntime = runtime else {
       return VulkanGraphicsTimelineValidationTestSnapshot{}
     }
-    let worker = activeRuntime.QueueWorker
+    let worker = activeRuntime.Runtime.QueueWorker
     let mailbox = worker.CreateMailbox(nil)
     let serialBefore = worker.LastEnqueuedGraphicsSubmissionSerial
     var threw = false
-    mailbox.PrepareSubmit(nint(0), 0uL, 0uL)
+    mailbox.PrepareSubmit(VkCommandBuffer.Null, VkSemaphore.Null, VkSemaphore.Null)
     if !mailbox.BeginSubmit() {
       throw InvalidOperationException("Timeline validation mailbox was not idle")
     }
     try {
-      activeRuntime.EnqueueGraphicsSubmission(mailbox, serial -> {
+      activeRuntime.Runtime.EnqueueGraphicsSubmission(mailbox, serial -> {
         throw InvalidOperationException("timeline validation probe")
       })
     } catch (error InvalidOperationException) {
@@ -579,7 +579,7 @@ internal partial class VulkanWindowTarget {
       ClearActiveFrame()
     } else {
       if result != VkConstants.VK_ERROR_DEVICE_LOST {
-        runtime?.MarkTeardownFailed(result)
+        runtime?.Runtime.MarkTeardownFailed(result)
       }
       HandleFrameFailure(result, VulkanDiagnosticEventIds.PresentWait)
     }
@@ -642,7 +642,7 @@ internal partial class VulkanWindowTarget {
       32768uL * if clipMaskFormatSupport.R8UnormSampledImage
         && clipMaskFormatSupport.R8UnormColorAttachment
         && clipMaskFormatSupport.R8UnormLinearFilter { 1uL } else { 4uL },
-      activeRuntime.Generation,
+      activeRuntime.Runtime.Generation,
       nil)
     try {
       atlas.BeginUsageBatch()
@@ -1652,7 +1652,7 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
       var uniquePipelineCount int32
       for effect in effects {
         let pipeline = ResolveShaderEffectPipeline(effect)
-        if firstPipeline == 0uL {
+        if firstPipeline == VkPipeline.Null {
           firstPipeline = pipeline
           uniquePipelineCount = 1
         } else if pipeline != firstPipeline {
@@ -1674,7 +1674,7 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
       return VulkanShaderEffectPipelineIdentityTestSnapshot{
         EntryCount: shaderEffectPipelineCount,
         UniquePipelineCount: uniquePipelineCount,
-        FirstPipeline: firstPipeline,
+        FirstPipeline: firstPipeline.Raw,
         AllHandlesEqual: allHandlesEqual,
         SameObjectStable: sameObjectStable,
       }
@@ -1691,7 +1691,7 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
       let before = shaderEffectPipelineCount
       let firstPipeline = ResolveShaderEffectPipeline(ShaderEffect(first))
       let secondPipeline = ResolveShaderEffectPipeline(ShaderEffect(second))
-      return firstPipeline != 0uL && secondPipeline != 0uL
+      return firstPipeline != VkPipeline.Null && secondPipeline != VkPipeline.Null
         && firstPipeline != secondPipeline
         && shaderEffectPipelineCount == before + 1
     }
@@ -1716,7 +1716,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
   primitivePipelines.PipelineIdentityForTest(effects, warmEffect)
 
   internal func ResolveShaderEffectPipelineForTest(effect ShaderEffect) uint64 ->
-  primitivePipelines.ResolveShaderEffectPipeline(effect)
+  primitivePipelines.ResolveShaderEffectPipeline(effect).Raw
 
   internal func VerifyShaderEffectDigestCollisionForTest(
     first ShaderEffectProgram, second ShaderEffectProgram) bool ->
@@ -1768,7 +1768,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   internal func WaitForPipelinePreparationForTest() {
-    runtime?.PrimitiveState.WaitForPipelinePreparationForTest()
+    runtime?.Runtime.PrimitiveState.WaitForPipelinePreparationForTest()
   }
 
   internal prop ShaderEffectPipelineEntryCountForTest int32{

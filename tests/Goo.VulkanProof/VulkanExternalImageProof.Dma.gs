@@ -17,7 +17,7 @@ internal unsafe partial class VulkanExternalImageProof {
                 }
                 Require(opened.Status == ExternalImageStatus.Success, "DMA-BUF session did not open")
                 using let session = opened.Session!!
-                if (session.Runtime.Dispatch.ExternalMemoryKinds & 0x200u) == 0u
+                if (session.Runtime.Runtime.Dispatch.ExternalMemoryKinds & 0x200u) == 0u
                     || !ExportSupported(session.Runtime, true) || !SemaphoreSupported(session.Runtime, true) {
                     Console.WriteLine("DMA-BUF import: Unsupported (modifier, memory or sync-FD support)")
                     return false

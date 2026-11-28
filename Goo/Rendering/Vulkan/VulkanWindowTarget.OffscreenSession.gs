@@ -20,7 +20,7 @@ internal unsafe partial class VulkanWindowTarget {
     guard let active = runtime else {
       return OffscreenRenderSessionResult{ Status: OffscreenRenderStatus.NotReady }
     }
-    if active.DeviceLost || active.Terminal {
+    if active.Runtime.DeviceLost || active.Runtime.Terminal {
       return OffscreenRenderSessionResult{ Status: OffscreenRenderStatus.DeviceLost }
     }
     var shared VulkanSharedLease?
@@ -35,7 +35,7 @@ internal unsafe partial class VulkanWindowTarget {
     } catch (error Exception) {
       shared?.Release()
       return OffscreenRenderSessionResult{
-        Status: active.DeviceLost ? OffscreenRenderStatus.DeviceLost : OffscreenRenderStatus.Failed,
+        Status: active.Runtime.DeviceLost ? OffscreenRenderStatus.DeviceLost : OffscreenRenderStatus.Failed,
         Error: error.Message }
     }
   }

@@ -82,7 +82,7 @@ internal partial class VulkanWindowTarget {
   internal prop TextSceneForProof VulkanTextScene? { get -> textScene }
   internal prop PathResourcesForProof VulkanPathResources? { get -> pathResources }
   internal prop MemoryAllocatorForProof VulkanMemoryAllocator? { get -> memoryAllocator }
-  internal prop ResourceGenerationForProof uint64{ get -> runtime?.Generation ?? 0uL }
+  internal prop ResourceGenerationForProof uint64{ get -> runtime?.Runtime.Generation ?? 0uL }
 
   internal func CompletedSubmissionSerialForProof() uint64 ->
   CompletedGlobalSubmissionSerial()
@@ -110,7 +110,7 @@ internal partial class VulkanWindowTarget {
     guard let activeRuntime = runtime else {
       throw InvalidOperationException("Vulkan shared runtime is unavailable")
     }
-    if activeRuntime.DeviceLost || activeRuntime.Terminal {
+    if activeRuntime.Runtime.DeviceLost || activeRuntime.Runtime.Terminal {
       throw InvalidOperationException("Vulkan shared runtime is unavailable")
     }
     guard let currentGeneration = generation else {
@@ -142,13 +142,13 @@ internal partial class VulkanWindowTarget {
         EnsureReadbackDispatch(),
         currentGeneration.Extent,
         plan.ByteSize,
-        activeRuntime.GraphicsFamilyIndex,
+        activeRuntime.Runtime.GraphicsFamilyIndex,
         VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
         currentImages,
-        activeRuntime.Generation,
-        activeRuntime.MaxStorageBufferRange,
-        activeRuntime.ResourcePolicy,
-        activeRuntime.PrimitiveState,
+        activeRuntime.Runtime.Generation,
+        activeRuntime.Runtime.MaxStorageBufferRange,
+        activeRuntime.Runtime.ResourcePolicy,
+        activeRuntime.Runtime.PrimitiveState,
         currentPaths.Atlas,
         currentPaths,
         currentClipAtlas,
@@ -156,7 +156,7 @@ internal partial class VulkanWindowTarget {
         objectAccounting,
         diagnostics,
         timestampState,
-        activeRuntime.QueueWorker.CreateMailbox(nil),
+        activeRuntime.Runtime.QueueWorker.CreateMailbox(nil),
         readbackLease)
     } catch (error Exception) {
       try { readbackLease.Release() } catch (cleanup Exception) { }
@@ -164,7 +164,7 @@ internal partial class VulkanWindowTarget {
     }
     let activeTarget = createdTarget
     let request = VulkanReadbackFactory.Create(activeTarget, readbackLease,
-      activeRuntime.Generation)
+      activeRuntime.Runtime.Generation)
     try {
       return VulkanProductionReadbackCapture(request, region)
     } catch (error Exception) {
@@ -216,12 +216,12 @@ internal unsafe partial class VulkanImageResources {
       }
       let slot = DescriptorSlot(index, VulkanImageSamplerMode.Linear)
       let descriptor = descriptorSets[slot]
-      if descriptor == 0uL {
+      if descriptor == VkDescriptorSet.Null {
         throw InvalidOperationException("Vulkan image proof descriptor is unavailable")
       }
       let before = Stats
       var rejected bool
-      descriptorSets[slot] = 0uL
+      descriptorSets[slot] = VkDescriptorSet.Null
       try {
         Collect(completedFence)
       } catch (error InvalidOperationException) {

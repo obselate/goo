@@ -15,61 +15,16 @@ internal partial class VulkanSceneCompiler {
   private var partialRedrawSafe bool
   private var retainedUnsupportedContent bool
   private var damageJournal VulkanSceneDamageJournal? = nil
-  private var retainedLeaf VulkanRetentionCounters
-  private var retainedBorder VulkanRetentionCounters
-  private var retainedParentBox VulkanRetentionCounters
-  private var retainedText VulkanRetentionCounters
   private var damageClosureBounds ConservativeBounds
   private var damageClosureFirstDraw int32
   private let effectCaptures List[SceneEffectCapture] = List[SceneEffectCapture]()
   private let grownChunkBounds List[ConservativeBounds] = List[ConservativeBounds]()
 
-  internal prop RetainedLeafHitCount uint64{ get -> retainedLeaf.Hit }
-  internal prop RetainedLeafRebuildCount uint64{ get -> retainedLeaf.Rebuild }
-  internal prop RetainedLeafFallbackCount uint64{ get -> retainedLeaf.Fallback }
-  internal prop RetainedLeafInvalidationCount uint64{ get -> retainedLeaf.Invalidation }
-  internal prop RetainedLeafTotalCount uint64{ get -> retainedLeaf.Total }
-  internal prop RetainedBorderHitCount uint64{ get -> retainedBorder.Hit }
-  internal prop RetainedBorderRebuildCount uint64{ get -> retainedBorder.Rebuild }
-  internal prop RetainedBorderFallbackCount uint64{ get -> retainedBorder.Fallback }
-  internal prop RetainedBorderInvalidationCount uint64{
-    get -> retainedBorder.Invalidation
-  }
-  internal prop RetainedBorderTotalCount uint64{ get -> retainedBorder.Total }
-  internal prop RetainedParentBoxHitCount uint64{ get -> retainedParentBox.Hit }
-  internal prop RetainedParentBoxRebuildCount uint64{
-    get -> retainedParentBox.Rebuild
-  }
-  internal prop RetainedParentBoxFallbackCount uint64{
-    get -> retainedParentBox.Fallback
-  }
-  internal prop RetainedParentBoxInvalidationCount uint64{
-    get -> retainedParentBox.Invalidation
-  }
-  internal prop RetainedParentBoxTotalCount uint64{ get -> retainedParentBox.Total }
-
-  private func IncrementSaturated(ref value uint64) {
-    if value != uint64.MaxValue {
-      value = value + 1uL
-    }
-  }
-
   private func InvalidateRetainedBox(owner VulkanSceneOwnerId) {
     if !owner.RetainedLeafValid {
       return
     }
-    let isLeaf = owner.RetainedBoxIsLeaf
-    let kind = owner.RetainedLeafKind
     owner.ClearRetainedLeaf()
-    if isLeaf {
-      if kind == SceneDrawKind.PerEdgeBorder {
-        IncrementSaturated(ref retainedBorder.Invalidation)
-      } else {
-        IncrementSaturated(ref retainedLeaf.Invalidation)
-      }
-    } else {
-      IncrementSaturated(ref retainedParentBox.Invalidation)
-    }
   }
 
   private func RetainedLeafContextDefault(
@@ -240,11 +195,6 @@ internal partial class VulkanSceneCompiler {
           }
         frame.AppendRetainedSolidLeaf(ownerId, frameVersion, bounds, record, true)
         owner.RetainedBoxIsLeaf = isLeaf
-        if isLeaf {
-          IncrementSaturated(ref retainedLeaf.Hit)
-        } else {
-          IncrementSaturated(ref retainedParentBox.Hit)
-        }
         return true
       }
       if owner.RetainedLeafKind == SceneDrawKind.RoundedBox {
@@ -268,11 +218,6 @@ internal partial class VulkanSceneCompiler {
           }
         frame.AppendRetainedRoundedLeaf(ownerId, frameVersion, bounds, record, true)
         owner.RetainedBoxIsLeaf = isLeaf
-        if isLeaf {
-          IncrementSaturated(ref retainedLeaf.Hit)
-        } else {
-          IncrementSaturated(ref retainedParentBox.Hit)
-        }
         return true
       }
       return false
@@ -320,7 +265,6 @@ internal partial class VulkanSceneCompiler {
       }
       frame.AppendRetainedBorderLeaf(ownerId, frameVersion, bounds, record, true)
       owner.RetainedBoxIsLeaf = true
-      IncrementSaturated(ref retainedBorder.Hit)
       return true
     }
 
@@ -370,11 +314,6 @@ internal partial class VulkanSceneCompiler {
         }
       owner.RetainedLeafValid = true
       owner.RetainedBoxIsLeaf = isLeaf
-      if isLeaf {
-        IncrementSaturated(ref retainedLeaf.Rebuild)
-      } else {
-        IncrementSaturated(ref retainedParentBox.Rebuild)
-      }
       emittedNodeCount = emittedNodeCount + 1
     }
 
@@ -392,7 +331,6 @@ internal partial class VulkanSceneCompiler {
       owner.RetainedLeafBorder = record
       owner.RetainedLeafValid = true
       owner.RetainedBoxIsLeaf = true
-      IncrementSaturated(ref retainedBorder.Rebuild)
       emittedNodeCount = emittedNodeCount + 1
     }
 

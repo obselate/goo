@@ -20,7 +20,7 @@ internal unsafe sealed class VulkanMemoryBudgetState {
 
   internal init(nativePhysicalDevice VkPhysicalDevice, nativeInstanceDispatch VkInstanceDispatch,
     nativeHeapCount uint32, nativeExtensionAvailable bool) {
-      if nativePhysicalDevice == nint(0) {
+      if nativePhysicalDevice == VkPhysicalDevice.Null {
         throw ArgumentException("nativePhysicalDevice")
       }
       if nativeHeapCount == 0u || nativeHeapCount > uint32(MaximumHeapCount) {

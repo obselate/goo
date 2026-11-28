@@ -25,7 +25,7 @@ internal unsafe partial class VulkanWindowTarget {
     pendingGlobalSubmissionSerial = 0uL
     pendingSubmitStart = 0uL
     pendingPresentStart = 0uL
-    pendingPresentFence = 0uL
+    pendingPresentFence = VkFence.Null
     frameSlots.Advance()
   }
 
@@ -34,7 +34,7 @@ internal unsafe partial class VulkanWindowTarget {
     AbortUnsubmittedTextUpload()
     try { AbortUnsubmittedImageUploads() } catch (cleanup Exception) { }
     AbortUnsubmittedPathUpload()
-    if runtime?.DeviceLost != true && runtime?.Terminal != true { AbandonRecordedFrameForRetry() }
+    if runtime?.Runtime.DeviceLost != true && runtime?.Runtime.Terminal != true { AbandonRecordedFrameForRetry() }
     CloseDiagnosticFrame(false)
     ClearActiveFrame()
   }
@@ -132,7 +132,7 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     if abandonResult != VkConstants.VK_ERROR_DEVICE_LOST {
-      runtime?.MarkTeardownFailed(abandonResult)
+      runtime?.Runtime.MarkTeardownFailed(abandonResult)
     }
     HandleFrameFailure(abandonResult, VulkanDiagnosticEventIds.PresentWait)
     throw InvalidOperationException(
@@ -153,15 +153,13 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
-      presentationRetirement.ClearPresentationLatency()
       frameFailureRetryable = false
-      runtime?.MarkDeviceLost()
+      runtime?.Runtime.MarkDeviceLost()
       recoveryPending = true
       forceFullRedraw = true
       return
     }
     frameFailureRetryable = false
-    presentationRetirement.ClearPresentationLatency()
     CaptureDiagnosticFatal(int32(result), eventId)
     throw InvalidOperationException("Vulkan frame operation failed: " + result.ToString())
   }

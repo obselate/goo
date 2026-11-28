@@ -15,14 +15,14 @@ internal unsafe partial class VulkanWindowTarget {
     guard let activeRuntime = runtime else {
       return false
     }
-    if activeRuntime.Terminal {
+    if activeRuntime.Runtime.Terminal {
       return false
     }
-    if activeRuntime.DeviceLost {
+    if activeRuntime.Runtime.DeviceLost {
       if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {
         return false
       }
-      if runtime?.DeviceLost == true { return true }
+      if runtime?.Runtime.DeviceLost == true { return true }
     }
     if !recreatePending && !surfaceLost && width == requestedWidth && height == requestedHeight {
       return true
@@ -63,25 +63,24 @@ internal unsafe partial class VulkanWindowTarget {
     if disposed {
       return
     }
-    presentationRetirement.ClearPresentationLatency()
     if QueueWorkPending || !DrainStartup() {
       return
     }
     InvalidateLastPresentedImageState()
     let lostRuntime = runtime
     if let activeRuntime = lostRuntime {
-      if activeRuntime.Terminal {
+      if activeRuntime.Runtime.Terminal {
         disposed = true
         VulkanDeviceRecoveryCoordinator.Unregister(this)
         RemoveTextAtlasDiagnosticContribution()
         RecordDiagnosticResult(
           VulkanDiagnosticEventIds.PresentWait,
-          activeRuntime.TerminalIdleResult)
+          activeRuntime.Runtime.TerminalIdleResult)
         RecordDiagnosticEvent(
           VulkanDiagnosticEventIds.WindowDestroy,
           VulkanDiagnosticCategories.Window,
           1uL,
-          int32(activeRuntime.TerminalIdleResult),
+          int32(activeRuntime.Runtime.TerminalIdleResult),
           0uL,
           0uL)
         VulkanWindowTarget.RetainTerminalTarget(this)
@@ -92,14 +91,14 @@ internal unsafe partial class VulkanWindowTarget {
         }
         return
       }
-      if activeRuntime.DeviceLost {
+      if activeRuntime.Runtime.DeviceLost {
         AbandonReadbackAfterDeviceLoss()
       }
     }
     disposed = true
     VulkanDeviceRecoveryCoordinator.Unregister(this)
     if let activeRuntime = lostRuntime {
-      if activeRuntime.DeviceLost && VulkanDeviceRecoveryCoordinator.Count > 0 {
+      if activeRuntime.Runtime.DeviceLost && VulkanDeviceRecoveryCoordinator.Count > 0 {
         AbandonAfterDeviceLossForClose()
         return
       }
@@ -108,13 +107,13 @@ internal unsafe partial class VulkanWindowTarget {
     CaptureDiagnosticResources()
     CaptureDiagnosticLiveMemory(VulkanDiagnosticEventIds.LiveMemory)
     let liveTargetsRemain = VulkanDeviceRecoveryCoordinator.Count > 0
-    var deviceIdleCompleted = device == nint(0)
+    var deviceIdleCompleted = device == VkDevice.Null
     var idleResult VkResult = if deviceIdleCompleted {
       VkConstants.VK_SUCCESS
     } else {
       VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
-    if device != nint(0) {
+    if device != VkDevice.Null {
       if liveTargetsRemain {
         idleResult = WaitForOwnedWorkCompletion()
       }
@@ -124,7 +123,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
     RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, idleResult)
-    let ownedWorkCompleted = device == nint(0) || idleResult == VkConstants.VK_SUCCESS
+    let ownedWorkCompleted = device == VkDevice.Null || idleResult == VkConstants.VK_SUCCESS
     if ownedWorkCompleted {
       if !DrainReadbackForClose(deviceIdleCompleted) {
         disposed = false
@@ -134,7 +133,7 @@ internal unsafe partial class VulkanWindowTarget {
     } else {
       var deviceLoss = idleResult == VkConstants.VK_ERROR_DEVICE_LOST
       if let activeRuntime = runtime {
-        deviceLoss = deviceLoss || activeRuntime.DeviceLost
+        deviceLoss = deviceLoss || activeRuntime.Runtime.DeviceLost
       }
       if deviceLoss {
         AbandonReadbackAfterDeviceLoss()
@@ -144,12 +143,12 @@ internal unsafe partial class VulkanWindowTarget {
         throw InvalidOperationException("Vulkan window work did not complete during close")
       }
     }
-    CloseExternalSessions(if runtime?.DeviceLost == true { ExternalImageStatus.DeviceLost } else { ExternalImageStatus.Closed })
+    CloseExternalSessions(if runtime?.Runtime.DeviceLost == true { ExternalImageStatus.DeviceLost } else { ExternalImageStatus.Closed })
     CaptureDiagnosticValidationBoundary()
     if !ownedWorkCompleted {
       RemoveTextAtlasDiagnosticContribution()
       if let activeRuntime = runtime {
-        activeRuntime.MarkTeardownFailed(idleResult)
+        activeRuntime.Runtime.MarkTeardownFailed(idleResult)
       } else {
         VulkanSharedRuntime.MarkGlobalTerminalFailure(idleResult)
       }
@@ -168,32 +167,32 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     let timestampPoolDestroyed = DestroyWindowResources()
-    if surfaceCreated && instance != nint(0) {
-      try { host.DestroyVulkanSurface(instance, surface) } catch (cleanup Exception) { }
+    if surfaceCreated && instance != VkInstance.Null {
+      try { host.DestroyVulkanSurface(instance.Raw, surface.Raw) } catch (cleanup Exception) { }
       if let accounting = windowObjectAccounting {
         accounting.Release()
       }
-      surface = 0uL
+      surface = VkSurfaceKHR.Null
       surfaceCreated = false
     }
     if runtime == nil {
       try { DestroyValidationMessenger() } catch (cleanup Exception) { }
     }
-    if runtime == nil && device != nint(0) && deviceDestroyAvailable {
+    if runtime == nil && device != VkDevice.Null && deviceDestroyAvailable {
       let destroyDevice = dispatch.vkDestroyDevice
       destroyDevice(device, nil)
       if let accounting = sharedObjectAccounting {
         accounting.Release()
       }
-      device = nint(0)
+      device = VkDevice.Null
     }
-    if runtime == nil && instance != nint(0) && instanceDestroyAvailable {
+    if runtime == nil && instance != VkInstance.Null && instanceDestroyAvailable {
       let destroyInstance = instanceDispatch.vkDestroyInstance
       destroyInstance(instance, nil)
       if let accounting = sharedObjectAccounting {
         accounting.Release()
       }
-      instance = nint(0)
+      instance = VkInstance.Null
     }
     var flushDiagnostics = runtime == nil
     if let activeRuntime = runtime {
@@ -205,16 +204,16 @@ internal unsafe partial class VulkanWindowTarget {
           activeRuntime.Release()
         }
       } catch (cleanup Exception) { }
-      if !releasedLastLease && activeRuntime.Terminal {
+      if !releasedLastLease && activeRuntime.Runtime.Terminal {
         RemoveTextAtlasDiagnosticContribution()
         RecordDiagnosticResult(
           VulkanDiagnosticEventIds.PresentWait,
-          activeRuntime.TerminalIdleResult)
+          activeRuntime.Runtime.TerminalIdleResult)
         RecordDiagnosticEvent(
           VulkanDiagnosticEventIds.WindowDestroy,
           VulkanDiagnosticCategories.Window,
           1uL,
-          int32(activeRuntime.TerminalIdleResult),
+          int32(activeRuntime.Runtime.TerminalIdleResult),
           0uL,
           0uL)
         VulkanWindowTarget.RetainTerminalTarget(this)
@@ -233,8 +232,8 @@ internal unsafe partial class VulkanWindowTarget {
       AbandonDiagnosticTimestampPool()
     }
     RemoveTextAtlasDiagnosticContribution()
-    instance = nint(0)
-    device = nint(0)
+    instance = VkInstance.Null
+    device = VkDevice.Null
     CaptureDiagnosticResources()
     memoryAllocator = nil
     if vulkanLoaded {
@@ -335,7 +334,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     DisposeRetiredSwapchains()
     frameSlots.Dispose()
-    if commandPool != 0uL && device != nint(0) {
+    if commandPool != VkCommandPool.Null && device != VkDevice.Null {
       let destroyCommandPool = dispatch.vkDestroyCommandPool
       destroyCommandPool(device, commandPool, nil)
       var bufferIndex int32 = 0
@@ -349,7 +348,7 @@ internal unsafe partial class VulkanWindowTarget {
       if let accounting = windowObjectAccounting {
         accounting.Release()
       }
-      commandPool = 0uL
+      commandPool = VkCommandPool.Null
     }
     return timestampPoolDestroyed
   }

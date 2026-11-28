@@ -113,7 +113,7 @@ public class ExternalImageSource : ImageSourceProvider, IDisposable {
         }
         lock Session.Gate {
             if disposed || Session.IsClosed { return ExternalImageStatus.Closed }
-            if image.Native.Runtime.Generation != Session.Generation { return ExternalImageStatus.StaleGeneration }
+            if image.Native.Runtime.Runtime.Generation != Session.Runtime.Runtime.Generation { return ExternalImageStatus.StaleGeneration }
             if !Object.ReferenceEquals(image.Session, Session) { return ExternalImageStatus.WrongDevice }
             if image.Native.Closed { return ExternalImageStatus.Closed }
             if image.Native.Busy { return ExternalImageStatus.Busy }

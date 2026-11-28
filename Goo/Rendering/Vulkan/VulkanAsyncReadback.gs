@@ -64,7 +64,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       if nativeTarget.ResourceGeneration != expectedGeneration {
         throw ArgumentOutOfRangeException("expectedGeneration")
       }
-      if nativeSharedLease.Generation != expectedGeneration {
+      if nativeSharedLease.Runtime.Generation != expectedGeneration {
         throw ArgumentOutOfRangeException("nativeSharedLease")
       }
       target = nativeTarget
@@ -103,7 +103,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
         target.RecordScene(frame, clearColor, textScaleX, textScaleY)
         let submit = target.Submit()
         if submit == VkConstants.VK_ERROR_DEVICE_LOST || target.DeviceLossDetected {
-          sharedLease.MarkDeviceLost()
+          sharedLease.Runtime.MarkDeviceLost()
         }
         if submit == VkConstants.VK_SUCCESS {
           region = requestedRegion
@@ -141,8 +141,8 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
     }
     if completion != VkConstants.VK_SUCCESS {
       if completion == VkConstants.VK_ERROR_DEVICE_LOST
-        || target.DeviceLossDetected || sharedLease.DeviceLost{
-          sharedLease.MarkDeviceLost()
+        || target.DeviceLossDetected || sharedLease.Runtime.DeviceLost{
+          sharedLease.Runtime.MarkDeviceLost()
           state = VulkanReadbackState.Abandoned
           AbandonAfterDeviceLoss()
           return VkConstants.VK_ERROR_DEVICE_LOST
@@ -183,8 +183,8 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       return completion
     }
     if completion == VkConstants.VK_ERROR_DEVICE_LOST
-      || target.DeviceLossDetected || sharedLease.DeviceLost{
-        sharedLease.MarkDeviceLost()
+      || target.DeviceLossDetected || sharedLease.Runtime.DeviceLost{
+        sharedLease.Runtime.MarkDeviceLost()
         state = VulkanReadbackState.Abandoned
         AbandonAfterDeviceLoss()
         return VkConstants.VK_ERROR_DEVICE_LOST
@@ -217,7 +217,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
     if disposed {
       return
     }
-    sharedLease.MarkDeviceLost()
+    sharedLease.Runtime.MarkDeviceLost()
     state = VulkanReadbackState.Abandoned
     result = nil
     reusablePixels = nil
@@ -287,7 +287,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
 
   private func MarkDeviceLossIfDetected() {
     if target.DeviceLossDetected {
-      sharedLease.MarkDeviceLost()
+      sharedLease.Runtime.MarkDeviceLost()
     }
   }
 

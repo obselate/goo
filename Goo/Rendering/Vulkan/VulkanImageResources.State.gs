@@ -29,7 +29,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           let finalChunk = completedRows == entry.Height
           if finalChunk {
             if let currentDiagnostics = diagnostics {
-              currentDiagnostics.AddImageUploadCompleted(1uL)
+              currentDiagnostics.AddCounter(VulkanCounterId.ImageUploadCompletedCount)
             }
           }
           let pendingRetire = entry.PendingRetire
@@ -88,7 +88,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         DestroyImage(index, entry)
         if entry.Id.IsValid { CompleteLogicalRetirement(logicalIndex, entry) }
         if let currentDiagnostics = diagnostics {
-          currentDiagnostics.AddImageRetirement(1uL)
+          currentDiagnostics.AddCounter(VulkanCounterId.ImageRetirementCount)
         }
         currentReferenceCounts[index] = 0
         entries[index] = VulkanImageResourceEntry{}
@@ -142,7 +142,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
     Collect(highestCompletedFence)
     if let currentDiagnostics = diagnostics {
-      currentDiagnostics.AddImageEviction(1uL)
+      currentDiagnostics.AddCounter(VulkanCounterId.ImageEvictionCount)
     }
   }
 
@@ -301,7 +301,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if !lookup.Renderable {
         throw InvalidOperationException("Vulkan image upload is not complete")
       }
-      if lookup.DescriptorSet == 0uL {
+      if lookup.DescriptorSet == VkDescriptorSet.Null {
         throw InvalidOperationException("Vulkan image descriptor is stale")
       }
       var descriptorSet = lookup.DescriptorSet

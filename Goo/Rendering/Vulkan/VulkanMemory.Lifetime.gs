@@ -29,7 +29,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
             unmapMemory(device, block.memory)
             block.mapped = nil
           }
-          if block.memory != 0uL {
+          if block.memory != VkDeviceMemory.Null {
             let freeMemory = deviceDispatch.vkFreeMemory
             freeMemory(device, block.memory, nil)
             if let recorder = FrameRecorder.Current {
@@ -38,7 +38,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
             if let accounting = objectAccounting {
               accounting.Release()
             }
-            block.memory = 0uL
+            block.memory = VkDeviceMemory.Null
           }
           block.allocationCount = 0u
           heapResidentBytes[int32(block.heapIndex)] -= block.size
@@ -98,7 +98,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   }
 
   private func EnsureUsable(allocation VulkanMemoryAllocation) {
-    if allocation.state != VulkanMemoryAllocationState.Live || allocation.memory == 0uL {
+    if allocation.state != VulkanMemoryAllocationState.Live || allocation.memory == VkDeviceMemory.Null {
       throw InvalidOperationException("Vulkan memory allocation is not live")
     }
   }
@@ -110,7 +110,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   }
 
   private func ResetAllocation(allocation VulkanMemoryAllocation) {
-    allocation.memory = 0uL
+    allocation.memory = VkDeviceMemory.Null
     allocation.size = 0uL
     allocation.placementSpan = 0uL
     allocation.offset = 0uL

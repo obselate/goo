@@ -100,15 +100,15 @@ func RunImageBudgetPressureSmoke() {
     cell.Show(pooled[32..64])
     let pooledSwapped = ImageBudgetPressureSettle(opened)
     let pooledEnd = ImageBudgetPressureSettle(opened)
-    Require(pooledEnd.memoryAllocationRetryCount > pooledStart.memoryAllocationRetryCount
-        && pooledEnd.memoryEvictionCount > pooledStart.memoryEvictionCount
-        && pooledEnd.memoryEvictionCount <= pooledStart.memoryEvictionCount + 32uL
-        && pooledEnd.memoryPressureCount == pooledSwapped.memoryPressureCount
-        && pooledEnd.imagePressureFailureCount == pooledSwapped.imagePressureFailureCount,
+    Require(pooledEnd[VulkanCounterId.MemoryAllocationRetryCount] > pooledStart[VulkanCounterId.MemoryAllocationRetryCount]
+        && pooledEnd[VulkanCounterId.MemoryEvictionCount] > pooledStart[VulkanCounterId.MemoryEvictionCount]
+        && pooledEnd[VulkanCounterId.MemoryEvictionCount] <= pooledStart[VulkanCounterId.MemoryEvictionCount] + 32uL
+        && pooledEnd[VulkanCounterId.MemoryPressureCount] == pooledSwapped[VulkanCounterId.MemoryPressureCount]
+        && pooledEnd[VulkanCounterId.ImagePressureFailureCount] == pooledSwapped[VulkanCounterId.ImagePressureFailureCount],
       "Pooled image spans were not reused through eviction: retries="
-      + (pooledEnd.memoryAllocationRetryCount - pooledStart.memoryAllocationRetryCount).ToString()
-      +" evictions=" + (pooledEnd.memoryEvictionCount - pooledStart.memoryEvictionCount).ToString()
-      +" steadyPressure=" + (pooledEnd.memoryPressureCount - pooledSwapped.memoryPressureCount).ToString())
+      + (pooledEnd[VulkanCounterId.MemoryAllocationRetryCount] - pooledStart[VulkanCounterId.MemoryAllocationRetryCount]).ToString()
+      +" evictions=" + (pooledEnd[VulkanCounterId.MemoryEvictionCount] - pooledStart[VulkanCounterId.MemoryEvictionCount]).ToString()
+      +" steadyPressure=" + (pooledEnd[VulkanCounterId.MemoryPressureCount] - pooledSwapped[VulkanCounterId.MemoryPressureCount]).ToString())
     target.SetMemoryHeadroomForTest(nil)
     cell.Show([0]ImageSource)
     ImageBudgetPressureSettle(opened)
@@ -123,13 +123,13 @@ func RunImageBudgetPressureSmoke() {
     let limited = ImageBudgetPressureSettle(opened)
     let limitedLive = WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount
     Require(opened.IsOpen && limitedLive > 0 && limitedLive < sources.Length
-        && limited.imagePressureFailureCount > limitedStart.imagePressureFailureCount,
+        && limited[VulkanCounterId.ImagePressureFailureCount] > limitedStart[VulkanCounterId.ImagePressureFailureCount],
       "Limited headroom did not keep a partial resident set: live=" + limitedLive.ToString())
     let limitedSteady = ImageBudgetPressureSettle(opened)
-    Require(limitedSteady.memoryAllocationRetryCount == limited.memoryAllocationRetryCount
-        && limitedSteady.imagePressureFailureCount == limited.imagePressureFailureCount,
+    Require(limitedSteady[VulkanCounterId.MemoryAllocationRetryCount] == limited[VulkanCounterId.MemoryAllocationRetryCount]
+        && limitedSteady[VulkanCounterId.ImagePressureFailureCount] == limited[VulkanCounterId.ImagePressureFailureCount],
       "Refused images retried without freed memory: retries="
-      + (limitedSteady.memoryAllocationRetryCount - limited.memoryAllocationRetryCount).ToString())
+      + (limitedSteady[VulkanCounterId.MemoryAllocationRetryCount] - limited[VulkanCounterId.MemoryAllocationRetryCount]).ToString())
     let pressureCapture = ImageBudgetPressureCapture(opened)
     Require(pressureCapture.Width == uint32(WindowReadbackTestFixture.Metrics(opened).FramebufferWidth)
         && WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount == limitedLive,
@@ -141,11 +141,11 @@ func RunImageBudgetPressureSmoke() {
     let unlimitedStart = ImageBudgetPressureSettle(opened)
     let unlimited = ImageBudgetPressureSettle(opened)
     Require(WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount == sources.Length
-        && unlimited.imagePressureFailureCount == unlimitedStart.imagePressureFailureCount,
+        && unlimited[VulkanCounterId.ImagePressureFailureCount] == unlimitedStart[VulkanCounterId.ImagePressureFailureCount],
       "Driver budget did not keep all images resident: live="
       + WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount.ToString()
-      +" pressure=" + (unlimited.imagePressureFailureCount - unlimitedStart.imagePressureFailureCount).ToString()
-      +" headroom=" + unlimited.heapHeadroom.ToString())
+      +" pressure=" + (unlimited[VulkanCounterId.ImagePressureFailureCount] - unlimitedStart[VulkanCounterId.ImagePressureFailureCount]).ToString()
+      +" headroom=" + unlimited[VulkanCounterId.HeapHeadroom].ToString())
 
     cell.Show(sources[0..50])
     ImageBudgetPressureSettle(opened)
@@ -153,7 +153,7 @@ func RunImageBudgetPressureSmoke() {
     let shrunk = ImageBudgetPressureSettle(opened)
     let shrunkLive = WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount
     Require(opened.IsOpen && shrunkLive >= 50 && shrunkLive < sources.Length
-        && shrunk.memoryEvictionCount > unlimited.memoryEvictionCount,
+        && shrunk[VulkanCounterId.MemoryEvictionCount] > unlimited[VulkanCounterId.MemoryEvictionCount],
       "Budget shrink did not evict unreferenced images: live=" + shrunkLive.ToString())
 
     target.SetMemoryHeadroomForTest(nil)
@@ -161,8 +161,8 @@ func RunImageBudgetPressureSmoke() {
     ImageBudgetPressureReload(cell, opened, sources)
     let retried = ImageBudgetPressureSettle(opened)
     Require(WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount == sources.Length
-        && retried.memoryAllocationRetryCount > shrunk.memoryAllocationRetryCount
-        && retried.memoryPressureCount == shrunk.memoryPressureCount,
+        && retried[VulkanCounterId.MemoryAllocationRetryCount] > shrunk[VulkanCounterId.MemoryAllocationRetryCount]
+        && retried[VulkanCounterId.MemoryPressureCount] == shrunk[VulkanCounterId.MemoryPressureCount],
       "One allocation failure was not recovered by eviction and retry")
 
     cell.Show(sources[0..50])
@@ -177,13 +177,13 @@ func RunImageBudgetPressureSmoke() {
     ImageBudgetPressureReload(cell, opened, sources)
     let failed = ImageBudgetPressureSettle(opened)
     Require(opened.IsOpen && WindowReadbackTestFixture.ImageResourceStats(opened).LiveCount == sources.Length
-        && failed.memoryPressureCount > failedStart.memoryPressureCount,
+        && failed[VulkanCounterId.MemoryPressureCount] > failedStart[VulkanCounterId.MemoryPressureCount],
       "Two allocation failures did not degrade to a pressure event and recover")
     summary = "image-budget-pressure-smoke: limited_live=" + limitedLive.ToString()
       +" shrunk_live=" + shrunkLive.ToString()
-      +" evictions=" + failed.memoryEvictionCount.ToString()
-      +" retries=" + failed.memoryAllocationRetryCount.ToString()
-      +" pressure=" + failed.memoryPressureCount.ToString()
+      +" evictions=" + failed[VulkanCounterId.MemoryEvictionCount].ToString()
+      +" retries=" + failed[VulkanCounterId.MemoryAllocationRetryCount].ToString()
+      +" pressure=" + failed[VulkanCounterId.MemoryPressureCount].ToString()
     opened.RequestClose()
     Application.Run(opened)
     Require(!opened.IsOpen, "Image budget pressure gate window did not close")

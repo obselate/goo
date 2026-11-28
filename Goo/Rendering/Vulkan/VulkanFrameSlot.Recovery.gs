@@ -11,9 +11,9 @@ internal unsafe partial class VulkanFrameSlot {
     submitPrepared = false
     inFlight = false
     submissionFailed = true
-    if acquireSemaphore != 0uL {
+    if acquireSemaphore != VkSemaphore.Null {
       let staleSemaphore = acquireSemaphore
-      acquireSemaphore = 0uL
+      acquireSemaphore = VkSemaphore.Null
       let destroySemaphore = dispatch.vkDestroySemaphore
       try { destroySemaphore(device, staleSemaphore, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
