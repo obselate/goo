@@ -696,7 +696,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let displayContentScale = SDL.GetDisplayContentScale(displayId)
       let mode = SDL.GetDesktopDisplayMode(displayId)
       let modeDensity = !mode.IsNull && mode.PixelDensity > 0.0F ? mode.PixelDensity : 1.0F
-      let initialContentScale = ResolveContentScale(1, 1, 1, 1, displayContentScale, modeDensity)
+      let initialContentScale = DisplayScale.ResolveContentScale(1, 1, 1, 1, displayContentScale, modeDensity)
       if initialContentScale != 1.0 {
         requested = ElementRect{
           X: requested.X,

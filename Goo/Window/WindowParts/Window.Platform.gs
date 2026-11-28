@@ -16,7 +16,7 @@ public partial class Window {
       pendingFramebufferHeight = nativeHeight
       pendingMetrics = true
       MetricSubscriptions.ReportWindowMetrics(this,
-        ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+        DisplayScale.ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
           host?.DisplayScale ?? 0.0F, host?.PixelDensity ?? 0.0F))
     }
 

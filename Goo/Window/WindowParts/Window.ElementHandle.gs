@@ -64,7 +64,7 @@ public partial class Window {
       nativeWidth = native.FramebufferWidth
       nativeHeight = native.FramebufferHeight
     }
-    let metrics = ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+    let metrics = DisplayScale.ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
       host?.DisplayScale ?? 0.0F, host?.PixelDensity ?? 0.0F)
     return WindowMetrics{...metrics, UiScale: UiScale}
   }
