@@ -55,6 +55,10 @@ public partial class Window {
       scheduler.ServiceNativeTracking()
     }
 
+    internal func ServiceLiveResize() {
+      scheduler.ServiceLiveResize()
+    }
+
     internal func RequestHotReload() {
       scheduler.RequestHotReload()
     }
@@ -668,6 +672,12 @@ public partial class Window {
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
     || windowTarget?.RetirementWorkPending == true
+
+  internal func SchedulerHasPendingMetrics() bool -> pendingMetrics
+
+  internal func PollSchedulerQueueCompletion() {
+    windowTarget?.PollQueueCompletion()
+  }
 
   internal func SchedulerFrameDue(nowTicks float64) bool {
     guard let native = host else {

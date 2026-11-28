@@ -36,19 +36,31 @@ internal class SdlEventRouter {
   }
 }
 
+@UnmanagedFunctionPointer(CallingConvention.Cdecl)
+internal delegate SdlLiveEventWatch(userData nint, nativeEvent nint) uint8;
+
 internal unsafe partial class SdlRuntime {
   shared {
     @DllImport("libdl.so.2", EntryPoint: "dlopen", CallingConvention: CallingConvention.Cdecl)
     private func OpenMainModule(path nint, flags int32) nint;
+    @DllImport("SDL3", EntryPoint: "SDL_AddEventWatch", CallingConvention: CallingConvention.Cdecl)
+    private func AddLiveEventWatch(callback nint, userData nint) uint8;
+    @DllImport("SDL3", EntryPoint: "SDL_RemoveEventWatch", CallingConvention: CallingConvention.Cdecl)
+    private func RemoveLiveEventWatch(callback nint, userData nint);
     private let libraryConfigured bool = ConfigureLibrary()
     private let requiredSubsystems uint32 = uint32(SDLInitFlags.Video | SDLInitFlags.Events)
     private let sync object = Object()
     private let events SdlEventRouter = SdlEventRouter()
+    private let liveWatchCallback SdlLiveEventWatch = WatchLiveWindowEvent
+    private let liveWatchAddress nint = Marshal.GetFunctionPointerForDelegate(liveWatchCallback)
     private var mainThreadId int32
     private var references int32
     private var wakeEventType uint32
     private var wakePending int32
     private var eventModifierMask uint16
+    private var inEventPump bool
+    private var inLiveWatch bool
+    private var liveWatchInstalled bool
     private let cursors []SDLCursorPtr = [int32(Cursor.ResizeWest) + 1]SDLCursorPtr
     private var currentCursor Cursor = Cursor.Default
     private var applicationConfigured bool
@@ -141,6 +153,24 @@ internal unsafe partial class SdlRuntime {
     }
 
     internal prop EventModifierMask uint16{ get -> eventModifierMask }
+
+    private func WatchLiveWindowEvent(userData nint, nativeEvent nint) uint8 {
+      if inEventPump && !inLiveWatch && nativeEvent != nint(0) && SDL.IsMainThread() {
+        let eventType = SDLEventType(uint32(Marshal.ReadInt32(nativeEvent)))
+        if eventType == SDLEventType.WindowExposed || eventType == SDLEventType.WindowResized
+          || eventType == SDLEventType.WindowPixelSizeChanged {
+            inLiveWatch = true
+            try { Window.ServiceLiveResize() }
+            catch (_ Exception) { }
+            finally { inLiveWatch = false }
+          }
+      }
+      return uint8(1)
+    }
+
+    internal func SetEventPump(active bool) {
+      inEventPump = active
+    }
 
     internal func PumpEvents(maxEvents int32) int32 {
       RequireMainThread("SDL event polling")
@@ -285,6 +315,9 @@ internal unsafe partial class SdlRuntime {
           }
           eventModifierMask = SDL.GetModState()
           Interlocked.Exchange(ref wakePending, int32(0))
+          if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) && !liveWatchInstalled {
+            liveWatchInstalled = AddLiveEventWatch(liveWatchAddress, nint(0)) != uint8(0)
+          }
         }
         references++
       }
@@ -298,6 +331,10 @@ internal unsafe partial class SdlRuntime {
         }
         references--
         if references == 0 {
+          if liveWatchInstalled {
+            RemoveLiveEventWatch(liveWatchAddress, nint(0))
+            liveWatchInstalled = false
+          }
           eventModifierMask = uint16(0)
           SDL.SetCursor(SDL.GetDefaultCursor())
           for cursor in cursors {

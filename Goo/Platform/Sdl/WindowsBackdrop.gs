@@ -321,11 +321,30 @@ internal class WindowsBackdrop : NativeBackdrop {
       return true
     }
 
+    private let LiveSizeMoveTimerId nuint = nuint(0x474F50u)
+
     private func CaptionMessage(window nint, message uint32, wparam nuint, lparam nint, id nuint, data nuint) nint {
       if message == 0x82u {
+        KillTimer(window, LiveSizeMoveTimerId)
         ClearWindow(window)
         RemoveWindowSubclass(window, captionAddress, nuint(1))
         return DefSubclassProc(window, message, wparam, lparam)
+      }
+      if message == 0x0014u {
+        return nint(1)
+      }
+      if message == 0x0231u {
+        SetTimer(window, LiveSizeMoveTimerId, 16u, nint(0))
+      } else if message == 0x0232u {
+        KillTimer(window, LiveSizeMoveTimerId)
+      } else if message == 0x0113u && wparam == LiveSizeMoveTimerId {
+        if !inSizeMoveTimer {
+          inSizeMoveTimer = true
+          try { Window.ServiceLiveResize() }
+          catch (_ Exception) { }
+          finally { inSizeMoveTimer = false }
+        }
+        return nint(0)
       }
       if IsFullscreen(window) {
         return DefSubclassProc(window, message, wparam, lparam)
@@ -403,6 +422,7 @@ internal class WindowsBackdrop : NativeBackdrop {
     private let windowStates Dictionary[nint, WindowsBackdropWindowState] = Dictionary[nint, WindowsBackdropWindowState]()
     private var captionCallback SdlTitlebarSubclass?
     private var captionAddress nint
+    private var inSizeMoveTimer bool
 
     @DllImport("dwmapi.dll") private func DwmSetWindowAttribute(window nint, attribute uint32, ref value int32, size uint32) int32;
     @DllImport("dwmapi.dll") private func DwmExtendFrameIntoClientArea(window nint, ref margins BackdropWindowsMargins) int32;
@@ -412,6 +432,8 @@ internal class WindowsBackdrop : NativeBackdrop {
     @DllImport("user32.dll", EntryPoint: "GetWindowLongPtrW") private func GetWindowLongPtr(window nint, index int32) nint;
     @DllImport("user32.dll", EntryPoint: "SetWindowLongPtrW") private func SetWindowLongPtr(window nint, index int32, value nint) nint;
     @DllImport("user32.dll") private func SetWindowPos(window nint, after nint, x int32, y int32, width int32, height int32, flags uint32) int32;
+    @DllImport("user32.dll") private func SetTimer(window nint, eventId nuint, elapse uint32, timerProc nint) nuint;
+    @DllImport("user32.dll") private func KillTimer(window nint, eventId nuint) int32;
     @DllImport("user32.dll", EntryPoint: "DefWindowProcW") private func DefWindowProc(window nint, message uint32, wparam nuint, lparam nint) nint;
     @DllImport("user32.dll") private func IsZoomed(window nint) int32;
     @DllImport("user32.dll") private func GetWindowRect(window nint, ref rect WindowsRect) int32;

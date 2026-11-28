@@ -141,7 +141,11 @@ internal class WindowScheduler {
     ServiceWindows()
   }
 
-  private func ServiceWindows() {
+  internal func ServiceLiveResize() {
+    ServiceWindows(true)
+  }
+
+  private func ServiceWindows(forceFrame bool = false) {
     if servicingWindows { return }
     servicingWindows = true
     try {
@@ -156,9 +160,11 @@ internal class WindowScheduler {
       for offset in 0 ... count {
         let window = snapshot[(start + offset) % count]
         if window.IsOpen && !window.ExternallyDriven {
+          if forceFrame { window.PollSchedulerQueueCompletion() }
           let service = window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork()
           let timed = window.SchedulerTimedServiceDue(now)
           let frameDue = window.SchedulerFrameDue(now)
+            || (forceFrame && window.IsVisible && window.SchedulerHasPendingMetrics() && !window.SchedulerHasPendingQueueWork())
           if service || timed || frameDue { window.SchedulerPump(now, frameDue) }
         }
       }
@@ -213,10 +219,14 @@ internal class WindowScheduler {
         }
         if hasVisibleWindow { closedVisibleWindow = false }
         if waitMs == 0 {
-          SdlRuntime.PumpEvents(EventBudget)
+          SdlRuntime.SetEventPump(true)
+          try { SdlRuntime.PumpEvents(EventBudget) }
+          finally { SdlRuntime.SetEventPump(false) }
         } else {
           for index in 0 ... currentCount { snapshot[index].BeginProfileCapWait(now) }
-          SdlRuntime.WaitEventsBounded(waitMs, EventBudget)
+          SdlRuntime.SetEventPump(true)
+          try { SdlRuntime.WaitEventsBounded(waitMs, EventBudget) }
+          finally { SdlRuntime.SetEventPump(false) }
           for index in 0 ... currentCount { snapshot[index].EndProfileCapWait() }
         }
         ServiceWindows()
