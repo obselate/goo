@@ -222,7 +222,7 @@ internal partial class VulkanSceneCompiler {
         BothAxes: bothAxes,
         HasRadius: bothAxes && HasRadius(node, bounds),
         DepthExceeded: depthExceeded,
-        RectangularEmittable: bothAxes && axisAligned && !depthExceeded,
+        RectangularEmittable: bothAxes && !depthExceeded,
       }
     }
 

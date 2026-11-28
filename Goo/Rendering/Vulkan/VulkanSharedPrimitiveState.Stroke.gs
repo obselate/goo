@@ -4,17 +4,13 @@ import System
 
 internal unsafe sealed partial class VulkanSharedPrimitiveState {
     private var strokeFragmentModule VkShaderModule
-    private var strokeMaskModule VkShaderModule
     private var strokeMetricModule VkShaderModule
     private var strokeDescriptorLayout VkDescriptorSetLayout
     private var strokePipelineLayout VkPipelineLayout
-    private var strokeMaskPipelineLayout VkPipelineLayout
     private var strokeMetricPipelineLayout VkPipelineLayout
     private var strokeMetricPipeline VkPipeline
     private var strokeRgbaPipeline VkPipeline
     private var strokeBgraPipeline VkPipeline
-    private var strokeMaskR8Pipeline VkPipeline
-    private var strokeMaskRgbaPipeline VkPipeline
 
     internal prop StrokeDescriptorSetLayout VkDescriptorSetLayout {
         get {
@@ -27,13 +23,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
         get {
             EnsurePathStrokes()
             return strokePipelineLayout
-        }
-    }
-
-    internal prop StrokeMaskPipelineLayout VkPipelineLayout {
-        get {
-            EnsurePathStrokes()
-            return strokeMaskPipelineLayout
         }
     }
 
@@ -53,25 +42,15 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
 
     internal func StrokePipelineFor(format VkFormat) VkPipeline {
         if format == VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
-            return ResolveStrokePipeline(ref strokeRgbaPipeline, format, false)
+            return ResolveStrokePipeline(ref strokeRgbaPipeline, format)
         }
         if format == VkConstants.VK_FORMAT_B8G8R8A8_UNORM {
-            return ResolveStrokePipeline(ref strokeBgraPipeline, format, false)
+            return ResolveStrokePipeline(ref strokeBgraPipeline, format)
         }
         throw ArgumentOutOfRangeException("format")
     }
 
-    internal func StrokeMaskPipelineFor(format VulkanClipMaskFormat) VkPipeline {
-        if format == VulkanClipMaskFormat.R8Unorm {
-            return ResolveStrokePipeline(ref strokeMaskR8Pipeline, VkConstants.VK_FORMAT_R8_UNORM, true)
-        }
-        if format == VulkanClipMaskFormat.Rgba8Unorm {
-            return ResolveStrokePipeline(ref strokeMaskRgbaPipeline, VkConstants.VK_FORMAT_R8G8B8A8_UNORM, true)
-        }
-        throw ArgumentOutOfRangeException("format")
-    }
-
-    private func ResolveStrokePipeline(ref pipeline VkPipeline, format VkFormat, mask bool) VkPipeline {
+    private func ResolveStrokePipeline(ref pipeline VkPipeline, format VkFormat) VkPipeline {
         lock (strokePipelineGate) {
             EnsurePathStrokes()
             if pipeline == VkPipeline.Null {
@@ -80,14 +59,14 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
                     dispatch,
                     pipelineCache,
                     objectAccounting,
-                    mask ? clipMaskVertexModule: pathVertexModule,
-                    mask ? strokeMaskModule: strokeFragmentModule,
-                    mask ? strokeMaskPipelineLayout: strokePipelineLayout,
+                    pathVertexModule,
+                    strokeFragmentModule,
+                    strokePipelineLayout,
                     format,
                     VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-                    !mask,
+                    true,
                     uint32(
-                        mask ? VkConstants.VK_COLOR_COMPONENT_R_BIT: VkConstants.VK_COLOR_COMPONENT_R_BIT
+                        VkConstants.VK_COLOR_COMPONENT_R_BIT
                         | VkConstants.VK_COLOR_COMPONENT_G_BIT | VkConstants.VK_COLOR_COMPONENT_B_BIT
                         | VkConstants.VK_COLOR_COMPONENT_A_BIT
                     ),
@@ -110,7 +89,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
                     LoadShaderCode("path_stroke.frag.spv"),
                     "path_stroke.frag.spv"
                 )
-                strokeMaskModule = CreateShaderModule(LoadShaderCode("stroke_mask.frag.spv"), "stroke_mask.frag.spv")
                 strokeMetricModule = CreateShaderModule(LoadShaderCode("path_stroke.comp.spv"), "path_stroke.comp.spv")
                 strokeDescriptorLayout = VulkanDescriptorFactory.CreateSingleBindingLayout(
                     device,
@@ -138,16 +116,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
                     1u
                 )
                 graphicsLayouts[1] = strokeDescriptorLayout
-                drawRange.size = 112u
-                strokeMaskPipelineLayout = VulkanPipelineFactory.CreateLayout(
-                    device,
-                    dispatch,
-                    objectAccounting,
-                    graphicsLayouts,
-                    2u,
-                    &drawRange,
-                    1u
-                )
                 var computeRange = VkPushConstantRange{
                     stageFlags: uint32(VkConstants.VK_SHADER_STAGE_COMPUTE_BIT),
                     size: 4u,
@@ -224,18 +192,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
             device,
             dispatch.vkDestroyPipeline,
             objectAccounting,
-            ref strokeMaskR8Pipeline
-        )
-        VulkanNativeHandleDestroyer.DestroyPipeline(
-            device,
-            dispatch.vkDestroyPipeline,
-            objectAccounting,
-            ref strokeMaskRgbaPipeline
-        )
-        VulkanNativeHandleDestroyer.DestroyPipeline(
-            device,
-            dispatch.vkDestroyPipeline,
-            objectAccounting,
             ref strokeMetricPipeline
         )
         VulkanNativeHandleDestroyer.DestroyPipelineLayout(
@@ -243,12 +199,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
             dispatch.vkDestroyPipelineLayout,
             objectAccounting,
             ref strokePipelineLayout
-        )
-        VulkanNativeHandleDestroyer.DestroyPipelineLayout(
-            device,
-            dispatch.vkDestroyPipelineLayout,
-            objectAccounting,
-            ref strokeMaskPipelineLayout
         )
         VulkanNativeHandleDestroyer.DestroyPipelineLayout(
             device,
@@ -267,12 +217,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState {
             dispatch.vkDestroyShaderModule,
             objectAccounting,
             ref strokeFragmentModule
-        )
-        VulkanNativeHandleDestroyer.DestroyShaderModule(
-            device,
-            dispatch.vkDestroyShaderModule,
-            objectAccounting,
-            ref strokeMaskModule
         )
         VulkanNativeHandleDestroyer.DestroyShaderModule(
             device,

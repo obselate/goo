@@ -89,6 +89,10 @@ internal partial class VulkanWindowTarget {
     for index in 0 ... frame.ClipMaskCount {
       clipMasks[index].Bounds = ScaleBounds(clipMasks[index].Bounds, scaleX, scaleY)
       clipMasks[index].PathBounds = ScaleBounds(clipMasks[index].PathBounds, scaleX, scaleY)
+      clipMasks[index].RadiusTopLeft = ScaleRadius(clipMasks[index].RadiusTopLeft, scaleX, scaleY)
+      clipMasks[index].RadiusTopRight = ScaleRadius(clipMasks[index].RadiusTopRight, scaleX, scaleY)
+      clipMasks[index].RadiusBottomRight = ScaleRadius(clipMasks[index].RadiusBottomRight, scaleX, scaleY)
+      clipMasks[index].RadiusBottomLeft = ScaleRadius(clipMasks[index].RadiusBottomLeft, scaleX, scaleY)
       clipMasks[index].ScaleX = clipMasks[index].ScaleX * scaleX
       clipMasks[index].ScaleY = clipMasks[index].ScaleY * scaleY
       clipMasks[index].TranslateX = clipMasks[index].TranslateX * scaleX

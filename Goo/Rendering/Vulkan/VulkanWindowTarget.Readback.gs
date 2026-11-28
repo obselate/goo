@@ -204,8 +204,7 @@ internal unsafe partial class VulkanWindowTarget {
           let copyDispatch = EnsureReadbackDispatch()
           guard let currentAllocator = memoryAllocator,
           let currentImages = imageResources,
-          let currentPaths = pathResources,
-          let currentClipAtlas = clipMaskAtlas else {
+          let currentPaths = pathResources else {
             readbackLease.Release()
             leaseOwned = false
             ownedLease = nil
@@ -228,7 +227,6 @@ internal unsafe partial class VulkanWindowTarget {
             activeRuntime.Runtime.PrimitiveState,
             currentPaths.Atlas,
             currentPaths,
-            currentClipAtlas,
             textAtlas,
             objectAccounting,
             diagnostics,

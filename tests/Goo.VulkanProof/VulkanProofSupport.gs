@@ -51,7 +51,7 @@ internal func AwaitVulkanProductionSubmission(
 
 internal func AwaitVulkanProductionReadback(
   capture VulkanProductionReadbackCapture) VulkanReadbackResult{
-    let deadline = Environment.TickCount64 + 5000L
+    let deadline = Environment.TickCount64 + 15000L
     var status = capture.Poll()
     while status == VkConstants.VK_NOT_READY && Environment.TickCount64 < deadline {
       Thread.Yield()

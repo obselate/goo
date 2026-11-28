@@ -70,7 +70,7 @@ internal partial class SceneFrame {
       let reference = drawRefs[index]
       hash = Mix(hash, uint64(int32(reference.Kind)))
       hash = Mix(hash, uint64(reference.Flags))
-      hash = Mix(hash, uint64(reference.ClipChainId))
+      hash = HashClipChain(hash, reference.ClipChainId)
       hash = HashDrawContent(hash, reference)
     }
     for index in chunk.FirstResource ... chunk.FirstResource + chunk.ResourceCount {
@@ -79,7 +79,39 @@ internal partial class SceneFrame {
     return hash
   }
 
-  internal func DrawContentDigest(reference DrawRef) uint64 -> HashDrawContent(HashOffset, reference)
+  internal func ClipChainContentDigest(chainId int32) uint64 -> HashClipChain(HashOffset, chainId)
+
+  private func HashClipChain(hash uint64, chainId int32) uint64 {
+    var result = Mix(hash, uint64(chainId))
+    var cursor = chainId
+    var steps int32 = 0
+    while cursor > 0 && cursor < clipChainCount && steps < clipChainCount {
+      let chain = clipChains[cursor]
+      result = Mix(result, chain.ContentKey)
+      result = Mix(result, uint64(chain.Flags))
+      if chain.MaskIndex >= 0 && chain.MaskIndex < clipMaskCount {
+        let mask = clipMasks[chain.MaskIndex]
+        result = Mix(result, mask.ContentKey)
+        result = HashBounds(result, mask.Bounds)
+        result = Mix(result, mask.AnalyticBox ? 1uL : 0uL)
+        result = HashFloat(result, mask.RadiusTopLeft)
+        result = HashFloat(result, mask.RadiusTopRight)
+        result = HashFloat(result, mask.RadiusBottomRight)
+        result = HashFloat(result, mask.RadiusBottomLeft)
+        result = HashFloat(result, mask.ScaleX)
+        result = HashFloat(result, mask.ScaleY)
+        result = HashFloat(result, mask.TranslateX)
+        result = HashFloat(result, mask.TranslateY)
+        result = HashTransformIndex(result, mask.TransformIndex)
+      }
+      cursor = chain.ParentIndex
+      steps = steps + 1
+    }
+    return result
+  }
+
+  internal func DrawContentDigest(reference DrawRef) uint64 ->
+  HashClipChain(HashDrawContent(HashOffset, reference), reference.ClipChainId)
 
   private func HashDrawContent(hash uint64, reference DrawRef) uint64 {
     var result = hash

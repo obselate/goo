@@ -16,19 +16,20 @@
 [IL]: Error [ReturnPtrToStack]: [Goo.dll : Goo.NativeBytes::Tail(int32, int32)][offset] Return type is ByRef, TypedReference, ArgHandle, or ArgIterator.
 [IL]: Error [ReturnPtrToStack]: [Goo.dll : Goo.NativeBytes::get_Bytes()][offset] Return type is ByRef, TypedReference, ArgHandle, or ArgIterator.
 [IL]: Error [ReturnPtrToStack]: [Goo.dll : Goo.NativeImage::get_Pixels()][offset] Return type is ByRef, TypedReference, ArgHandle, or ArgIterator.
+[IL]: Error [ReturnPtrToStack]: [Goo.dll : Goo.VulkanGpuTable`1::Prepare(int32, int32, uint64, uint32)][offset] Return type is ByRef, TypedReference, ArgHandle, or ArgIterator.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.MacTrayBackend::CreateImage([Goo]Goo.TrayContent, [S.P.CoreLib]System.Collections.Generic.IReadOnlyList`1<uint8>)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SdlHost::ReadPreferredLocales()][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Decode(native int)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling+<closure_<lambda1>_ordinal>::Invoke(native int)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Release(native int)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Table(native int)][offset][found Native Int] Expected ByRef on the stack.
-[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanClipMaskAtlas::PackedLayerCount(uint32, uint32, uint32, uint32, uint32, bool, bool)][offset][found Native Int] Expected ByRef on the stack.
-[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanClipMaskFrameData::CreateDescriptorResources()][offset][found Native Int] Expected ByRef on the stack.
-[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanClipMaskFrameData::WriteMaskWords(uint32*, int32, [Goo]Goo.VulkanClipMaskRegion, [S.P.CoreLib]System.Numerics.Vector2)][offset][found Native Int] Expected ByRef on the stack.
-[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanClipMaskFrameData::WriteWords(uint32*, [Goo]Goo.SceneFrame, [Goo]Goo.VulkanClipMaskRegion[], int32, bool, uint64)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanPipelineFactory::CreateGraphics([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanPipelineCache, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkShaderModule, [Goo]Goo.VkShaderModule, [Goo]Goo.VkPipelineLayout, int32, int32, bool, uint32, [Goo]Goo.VkSpecializationInfo*)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanPrimitiveFrameData::CommitHistory([Goo]Goo.VulkanPrimitiveFrameSlot)][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanPrimitiveFrameData::FinishPrepare()][offset][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanPrimitiveFrameData::PatchRecordWord(int32, int32, uint32)][offset][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanPrimitiveRenderer::RecordFallbackImageInit([Goo]Goo.VkCommandBuffer)][offset][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanPrimitiveRenderer::WritePrepassRecord(void*)][offset][found Native Int] Expected ByRef on the stack.
+[IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanScissorTable::CreateFallbackPathBuffer()][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateBlendPipelineLayout()][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateClipDescriptorSetLayout()][offset][found Native Int] Expected ByRef on the stack.
 [IL]: Error [StackByRef]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreatePathPipelineLayout()][offset][found Native Int] Expected ByRef on the stack.
@@ -97,7 +98,7 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanExternalImage::SupportsModifier([Goo]Goo.VulkanSharedLease, [Goo]Goo.VulkanExternalImageDescription)][offset][found address of '[Goo]Goo.VkDrmFormatModifierPropertiesListEXT'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanImageResources::CreateDescriptorBlock(int32, int32)][offset][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateBuffer([Goo]Goo.VkBuffer, [Goo]Goo.VulkanMemoryPolicy)][offset][found address of '[Goo]Goo.VkMemoryDedicatedRequirements'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateImage([Goo]Goo.VkImage, [Goo]Goo.VulkanMemoryPolicy)][offset][found address of '[Goo]Goo.VkMemoryDedicatedRequirements'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateImage([Goo]Goo.VkImage, [Goo]Goo.VulkanMemoryPolicy, bool)][offset][found address of '[Goo]Goo.VkMemoryDedicatedRequirements'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanMemoryAllocator::CreateBlock(uint64, [Goo]Goo.VulkanMemoryTypeSelection, [Goo]Goo.VulkanMemoryResourceClass, bool, [Goo]Goo.VkImage, [Goo]Goo.VkBuffer)][offset][found address of '[Goo]Goo.VkMemoryDedicatedAllocateInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanMemoryBudgetState::Refresh()][offset][found address of '[Goo]Goo.VkPhysicalDeviceMemoryBudgetPropertiesEXT'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanOffscreenLayerPool::CreateDescriptorResources(int32, int32)][offset][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
@@ -108,20 +109,19 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPathStrokeFrameData::CreateDescriptors()][offset][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveFrameData::CreateDescriptorResources()][offset][found address of '[Goo]Goo.VkDescriptorPoolSize'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::ApplyExternalFrame([Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.ExternalFrameLease, [Goo]Goo.CachedImageRefRecord, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VkExtent2D)][offset][found Native Int][expected address of '[Goo]Goo.VulkanPrimitiveGpuRecord'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::BeginClipMaskRendering([Goo]Goo.VkCommandBuffer, [Goo]Goo.VulkanClipMaskAtlas, [Goo]Goo.VulkanClipMaskDirtyRegion)][offset][found address of '[Goo]Goo.VkRenderingAttachmentInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::BeginRendering([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkRect2D, [Goo]Goo.VkImageView, bool)][offset][found address of '[Goo]Goo.VkRenderingAttachmentInfo'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitBlendLayer([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitBorder([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.PerEdgeBorderRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitImage([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.CachedImageRefRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitLayer([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitLinear([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LinearGradientRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitRadial([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.RadialGradientRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitShaderEffect([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.ShaderEffectRecord, [Goo]Goo.ConservativeBounds, bool)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitShadow([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.ShadowRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitSolidResolved([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.ConservativeBounds, float32, float32, float32, float32, float32, float32, uint32, float32, [Goo]Goo.PrimitiveTransform, float32, float32)][offset][found address of '[Goo]Goo.VulkanPrimitiveGeometry'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitBlendLayer([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitBorder([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.PerEdgeBorderRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitImage([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.CachedImageRefRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitLayer([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitLinear([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LinearGradientRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitRadial([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.RadialGradientRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitShaderEffect([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.ShaderEffectRecord, [Goo]Goo.ConservativeBounds, bool)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitShadow([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.ShadowRecord, [Goo]Goo.SceneFrame)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitSolidResolved([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.ConservativeBounds, float32, float32, float32, float32, float32, float32, uint32, float32, [Goo]Goo.PrimitiveTransform, float32, float32)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::FillGradientStops([Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.SceneFrame, int32, int32, float32)][offset][found Native Int][expected address of '[Goo]Goo.VulkanPrimitiveGpuRecord'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::FillTransform([Goo]Goo.VulkanPrimitiveGeometry*, [Goo]Goo.ConservativeBounds, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VkExtent2D)][offset][found Native Int][expected address of '[Goo]Goo.VulkanPrimitiveGeometry'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::TryEmitOpaqueInterior([Goo]Goo.VkCommandBuffer, [Goo]Goo.ConservativeBounds, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VulkanPrimitiveGpuRecord*, uint32, float32)][offset][found Native Int][expected readonly address of '[Goo]Goo.VulkanPrimitiveGpuRecord'] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::FillTransform([Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.ConservativeBounds, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VkExtent2D)][offset][found Native Int][expected address of '[Goo]Goo.VulkanPrimitiveGpuRecord'] Unexpected type on the stack.
+[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::RecordFallbackImageInit([Goo]Goo.VkCommandBuffer)][offset][found address of '[Goo]Goo.VkClearColorValue'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanPrimitiveRenderer::WriteGradientStopRecords([Goo]Goo.SceneFrame, int32, int32, float32)][offset][found address of '[Goo]Goo.VulkanPrimitiveGpuRecord'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanQueueMailbox::RunPresent([Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkQueue)][offset][found address of '[Goo]Goo.VkFence'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanQueueMailbox::RunPresent([Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkQueue)][offset][found address of '[Goo]Goo.VkSemaphore'][expected Native Int] Unexpected type on the stack.
@@ -129,8 +129,6 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanQueueMailbox::RunPresent([Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkQueue)][offset][found address of '[Goo]Goo.VkSwapchainPresentFenceInfoEXT'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanQueueMailbox::RunPresent([Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkQueue)][offset][found address of UInt32][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanQueueMailbox::RunSubmit([Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkQueue)][offset][found address of '[Goo]Goo.VkCommandBufferSubmitInfo'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateClipMaskPipelineLayout()][offset][found address of '[Goo]Goo.VkDescriptorSetLayout'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateClipMaskPipelineLayout()][offset][found address of '[Goo]Goo.VkPushConstantRange'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::CreateGraphicsQueueCore([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VkQueue, [Goo]Goo.VulkanObjectAccounting)][offset][found address of '[Goo]Goo.VkSemaphoreTypeCreateInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)][offset][found address of '[Goo]Goo.VkSemaphore'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanSharedRuntime::WaitGraphicsSubmission(uint64, uint64)][offset][found address of UInt64][expected Native Int] Unexpected type on the stack.
@@ -205,11 +203,6 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.MacSpelling+<lambda_host_<lambda1>_ordinal>::Invoke([S.P.CoreLib]System.Span`1<char>, native int)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.MacSpelling::String(string)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Table(native int)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanClipMaskAtlas::PackedLayerCount(uint32, uint32, uint32, uint32, uint32, bool, bool)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanClipMaskFrameData::CreateDescriptorResources()][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanClipMaskFrameData::Prepare([Goo]Goo.SceneFrame, [Goo]Goo.VulkanClipMaskRegion[], int32, int32, uint64, [Goo]Goo.VulkanOffscreenLayerPool)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanClipMaskFrameData::WriteMaskWords(uint32*, int32, [Goo]Goo.VulkanClipMaskRegion, [S.P.CoreLib]System.Numerics.Vector2)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanClipMaskFrameData::WriteWords(uint32*, [Goo]Goo.SceneFrame, [Goo]Goo.VulkanClipMaskRegion[], int32, bool, uint64)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanCommandFactory::CreatePoolAndAllocate([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, uint32, uint32, int32, uint32, [Goo]Goo.VkCommandBuffer*)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDescriptorFactory::CreateLayout([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkDescriptorSetLayoutBinding*, uint32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanDescriptorFactory::CreatePoolAndAllocate([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkDescriptorPoolSize*, uint32, [Goo]Goo.VkDescriptorSetLayout*, uint32, [Goo]Goo.VkDescriptorSet*)][offset] Unmanaged pointers are not a verifiable type.
@@ -239,13 +232,17 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveFrameData::CommitHistory([Goo]Goo.VulkanPrimitiveFrameSlot)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveFrameData::CreateDescriptorResources()][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveFrameData::FinishPrepare()][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveFrameData::PatchRecordWord(int32, int32, uint32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveFrameData::WriteRecord(int32, void*)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::ApplyExternalFrame([Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.ExternalFrameLease, [Goo]Goo.CachedImageRefRecord, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VkExtent2D)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::BindAndDraw([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipeline, void*, bool, float32, float32)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::BindPrimitiveAndDraw([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipeline, [Goo]Goo.VkPipelineLayout, void*, uint32, bool, float32, float32)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::BindAndDraw([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipeline, void*)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::BindPrimitiveAndDraw([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipeline, [Goo]Goo.VkPipelineLayout, void*, uint32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::FillGradientStops([Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.SceneFrame, int32, int32, float32)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::FillTransform([Goo]Goo.VulkanPrimitiveGeometry*, [Goo]Goo.ConservativeBounds, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VkExtent2D)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::TryEmitOpaqueInterior([Goo]Goo.VkCommandBuffer, [Goo]Goo.ConservativeBounds, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VulkanPrimitiveGpuRecord*, uint32, float32)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::FillTransform([Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.ConservativeBounds, [Goo]Goo.PrimitiveTransform, [Goo]Goo.VkExtent2D)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::RecordFallbackImageInit([Goo]Goo.VkCommandBuffer)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanPrimitiveRenderer::WritePrepassRecord(void*)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanScissorTable::CreateFallbackPathBuffer()][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanScissorTable::FinishPrepare([Goo]Goo.VulkanPathStrokeFrameData, float32, float32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateBlendPipelineLayout()][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateClipDescriptorSetLayout()][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreatePathPipelineLayout()][offset] Unmanaged pointers are not a verifiable type.
@@ -291,15 +288,13 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyEditorRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyEntryRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.TextGeometryQueries::copyStaticRange([Goo]Goo.Node, [Goo]Goo.TextRange, [Goo]Goo.TextCoordinateSpace, [S.P.CoreLib]System.Span`1<Goo.ElementRect>, int32&)][offset] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanClipMaskAtlas::PackedLayerCount(uint32, uint32, uint32, uint32, uint32, bool, bool)][offset] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanClipMaskFrameData::CreateDescriptorResources()][offset] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanClipMaskFrameData::PrepareScaledMasks([Goo]Goo.SceneFrame, [Goo]Goo.VulkanOffscreenLayerPool)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanDiagnosticTimestampState::ResolveTimestampSlot(int32, [Goo]Goo.VulkanDiagnosticTimestampContext)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanExternalImage::Create([Goo]Goo.VulkanExternalImageDescription, uint32, bool)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanMemoryAllocator::ProfileAccounts([Goo]Goo.FrameRecorder, int64)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanOffscreenLayerPool::PrepareLayerBudget([Goo]Goo.SceneFrame, uint64)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanOffscreenTarget::ResolveGpuTiming()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanPipelineFactory::CreateGraphics([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanPipelineCache, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkShaderModule, [Goo]Goo.VkShaderModule, [Goo]Goo.VkPipelineLayout, int32, int32, bool, uint32, [Goo]Goo.VkSpecializationInfo*)][offset] Instruction cannot be verified.
+[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanScissorTable::CreateDescriptorResources()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateBlendPipelineLayout()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateClipDescriptorSetLayout()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreatePathPipelineLayout()][offset] Instruction cannot be verified.
@@ -348,11 +343,6 @@
 [IL]: Error []: [Goo.dll : Goo.SpellCheck.HunspellSpellingService::Suggest([Goo]Goo.TextSnapshot, [Goo]Goo.TextRange, string, [S.P.CoreLib]System.Threading.CancellationToken)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanBufferFactory::Create([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanMemoryAllocator, [Goo]Goo.VulkanObjectAccounting, uint64, uint32, [Goo]Goo.VulkanMemoryPolicy, [Goo]Goo.VulkanMemoryOwnerKind)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanBufferFactory::CreateMapped([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanMemoryAllocator, [Goo]Goo.VulkanObjectAccounting, uint64, uint32, [Goo]Goo.VulkanMemoryPolicy, [Goo]Goo.VulkanMemoryOwnerKind)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::CreateSampler()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyImage()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyImageView()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyLayerViews()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroySampler()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::DestroyStagingChunks()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::DestroyVulkanPageResources([Goo]Goo.VkImage, [Goo]Goo.VkImageView, [Goo]Goo.VulkanMemoryAllocation)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::RecordUploads([Goo]Goo.VkCommandBuffer)] ImportCalli not implemented
@@ -381,7 +371,7 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanFrameSlot::DisposeAfterDeviceLoss()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanFrameSlot::PrepareAcquire()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanFrameSlot::PrepareAcquiredImageReplay()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanImageFactory::Create([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanMemoryAllocator, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkExtent2D, int32, uint32, uint32, uint32, int32, [Goo]Goo.VulkanMemoryPolicy, [Goo]Goo.VulkanMemoryOwnerKind, uint32)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanImageFactory::Create([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanMemoryAllocator, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkExtent2D, int32, uint32, uint32, uint32, int32, [Goo]Goo.VulkanMemoryPolicy, [Goo]Goo.VulkanMemoryOwnerKind, uint32, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanImageFactory::CreateView([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VkImage, int32, int32, uint32, uint32, uint32, uint32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanImageResources::BindDescriptor([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipelineLayout, [Goo]Goo.ResourceId, [Goo]Goo.ResourceId, [Goo]Goo.VulkanImageSamplerMode, uint64)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanImageResources::CreateSampler(int32)] ImportCalli not implemented
@@ -392,8 +382,8 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanImageResources::ReleaseStagingBuffer([Goo]Goo.VkBuffer, [Goo]Goo.VulkanMemoryAllocation)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateBuffer([Goo]Goo.VkBuffer, [Goo]Goo.VulkanMemoryPolicy)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateBufferMemory([Goo]Goo.VkBuffer, [Goo]Goo.VkMemoryRequirements, [Goo]Goo.VkMemoryDedicatedRequirements, [Goo]Goo.VulkanMemoryPolicy)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateImage([Goo]Goo.VkImage, [Goo]Goo.VulkanMemoryPolicy)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateImageMemory([Goo]Goo.VkImage, [Goo]Goo.VkMemoryRequirements, [Goo]Goo.VkMemoryDedicatedRequirements, [Goo]Goo.VulkanMemoryPolicy)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateImage([Goo]Goo.VkImage, [Goo]Goo.VulkanMemoryPolicy, bool)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::AllocateImageMemory([Goo]Goo.VkImage, [Goo]Goo.VkMemoryRequirements, [Goo]Goo.VkMemoryDedicatedRequirements, [Goo]Goo.VulkanMemoryPolicy, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::CreateBlock(uint64, [Goo]Goo.VulkanMemoryTypeSelection, [Goo]Goo.VulkanMemoryResourceClass, bool, [Goo]Goo.VkImage, [Goo]Goo.VkBuffer)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::Dispose()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanMemoryAllocator::FlushBeforeSubmit([Goo]Goo.VulkanMemoryAllocation, uint64, uint64, bool&)] ImportCalli not implemented
@@ -436,28 +426,28 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanPipelineCache::DisposeCore(bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPipelineCache::PersistCore()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPipelineFactory::CreateShaderModule([Goo]Goo.VkDevice, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, uint8[], string)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::BeginClipMaskRendering([Goo]Goo.VkCommandBuffer, [Goo]Goo.VulkanClipMaskAtlas, [Goo]Goo.VulkanClipMaskDirtyRegion)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::BeginLayer([Goo]Goo.VkCommandBuffer, [Goo]Goo.LayerRecord, [Goo]Goo.SceneFrame, int32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::BeginRendering([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkRect2D, [Goo]Goo.VkImageView, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::CopyBackdrop([Goo]Goo.VkCommandBuffer, [Goo]Goo.LayerRecord, [Goo]Goo.VulkanOffscreenLayerTarget)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::CopyBackdropCapture([Goo]Goo.VkCommandBuffer, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.VulkanOffscreenLayerTarget)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::DrawSampledTarget([Goo]Goo.VkCommandBuffer, [Goo]Goo.VulkanPrimitiveGpuRecord*, [Goo]Goo.VulkanOffscreenLayerTarget)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitClipMask([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.ClipMaskRecord, [Goo]Goo.VulkanClipMaskRegion, [Goo]Goo.SceneFrame, [Goo]Goo.VkPipeline, int32)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::CreateFallbackDescriptors()] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::DisposeFallbackDescriptors()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitPath([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.AnalyticPathBandRecord, [Goo]Goo.SceneFrame, int32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EmitTextSegment([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.CachedTextSegmentRefRecord, int32, [Goo]Goo.SceneFrame)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EndLayer([Goo]Goo.VkCommandBuffer, [Goo]Goo.LayerRecord, [Goo]Goo.SceneFrame)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EnsureBatchedStrokeDescriptor([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipelineLayout)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EnsureFallbackSampledDescriptor([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipelineLayout)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::EnsurePrimitiveBatchPipeline([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipeline, [Goo]Goo.VkPipelineLayout, uint32, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::FlushPendingPrimitiveBatch([Goo]Goo.VkCommandBuffer)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::FlushPendingTextDraw([Goo]Goo.VkCommandBuffer)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::QueuePrimitiveDraw([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkPipeline, [Goo]Goo.VkPipelineLayout, uint32, bool, float32, float32)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::RecordClipMaskPass([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::QueueSampledTargetDraw([Goo]Goo.VkCommandBuffer, [Goo]Goo.VulkanOffscreenLayerTarget)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::RecordInsideRendering([Goo]Goo.VkCommandBuffer, [Goo]Goo.SceneFrame, [Goo]Goo.VkExtent2D, [Goo]Goo.VulkanDamageRegion, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::RenderBackdropBlurPass([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkExtent2D, [Goo]Goo.VulkanOffscreenLayerTarget, [Goo]Goo.ShaderEffect, [S.P.CoreLib]System.Numerics.Vector4, [S.P.CoreLib]System.Numerics.Vector4, [Goo]Goo.VulkanOffscreenLayerTarget)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::SetClipMaskViewport([Goo]Goo.VkCommandBuffer, [Goo]Goo.VulkanClipMaskRegion)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::SetLayerViewport([Goo]Goo.VkCommandBuffer)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanPrimitiveRenderer::SetScissor([Goo]Goo.VkCommandBuffer, [Goo]Goo.PrimitiveClip)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanQueueMailbox::RunCompletionWait([Goo]Goo.VkDeviceDispatch, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanReadbackDispatch::CopyImageToBuffer([Goo]Goo.VkCommandBuffer, [Goo]Goo.VkImage, int32, [Goo]Goo.VkBuffer, [Goo]Goo.VkBufferImageCopy)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanSharedPrimitiveFormatState::DestroyPipelines()] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanScissorTable::DestroyFallbackPathBuffer()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedPrimitiveState::PreparePipelines()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedRuntime::DestroyNativeResources()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanSharedRuntime::GetCompletedGraphicsSubmissionSerial(uint64&)] ImportCalli not implemented
@@ -501,7 +491,6 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::HasRequiredDeviceExtensions([Goo]Goo.VkPhysicalDevice)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::PrepareForDeviceRecovery()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::Present()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::QueryClipMaskFormatSupport(uint32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::QuerySelection(bool, bool, bool)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::QuerySurfaceCapabilities()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ReadbackFormatSupported(int32)] ImportCalli not implemented

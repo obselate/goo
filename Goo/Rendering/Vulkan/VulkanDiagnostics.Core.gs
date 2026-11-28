@@ -598,18 +598,8 @@ internal unsafe partial class VulkanDiagnostics {
     try { counters.SetPathAtlasStats(stats, liveObjectCount) } finally { ExitWriter() }
   }
 
-  internal func SetClipMaskAtlasStats(stats VulkanClipMaskAtlasStats) {
-    if !EnterWriter() { return }
-    try { counters.SetClipMaskAtlasStats(stats) } finally { ExitWriter() }
-  }
-
-  internal func ClearClipMaskAtlasCurrentState() {
-    if !EnterWriter() { return }
-    try { counters.ClearClipMaskAtlasCurrentState() } finally { ExitWriter() }
-  }
-
-  internal func SetClipMaskFrameStats(stats VulkanClipMaskFrameStats,
-    totals VulkanClipMaskFrameTotals) {
+  internal func SetClipMaskFrameStats(stats VulkanScissorTableStats,
+    totals VulkanScissorTableTotals) {
       if !EnterWriter() { return }
       try { counters.SetClipMaskFrameStats(stats, totals) } finally { ExitWriter() }
     }

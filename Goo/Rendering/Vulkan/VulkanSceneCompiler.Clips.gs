@@ -165,6 +165,76 @@ internal partial class VulkanSceneCompiler {
     }
 
 
+  private func PublishAnalyticBoxClip(
+    parentChainId int32,
+    parentDepth int32,
+    stableId uint64,
+    contentKey uint64,
+    bounds ConservativeBounds,
+    topLeft float32,
+    topRight float32,
+    bottomRight float32,
+    bottomLeft float32,
+    transformIndex int32) VulkanScenePathClipResult {
+      let mask = frame.AddClipMask(ClipMaskRecord{
+        StableId: stableId,
+        Bounds: bounds,
+        ScaleX: bounds.Width,
+        ScaleY: bounds.Height,
+        TranslateX: bounds.X,
+        TranslateY: bounds.Y,
+        TransformIndex: transformIndex,
+        ContentKey: contentKey,
+        AnalyticBox: true,
+        RadiusTopLeft: topLeft,
+        RadiusTopRight: topRight,
+        RadiusBottomRight: bottomRight,
+        RadiusBottomLeft: bottomLeft,
+      })
+      clipMaskCount = frame.ClipMaskCount
+      let chain = frame.AddClipChain(ClipChainRecord{
+        StableId: stableId,
+        ParentIndex: parentChainId,
+        MaskIndex: mask,
+        Depth: parentDepth + 1,
+        Flags: uint32(SceneClipChainFlags.None),
+        ContentKey: contentKey,
+      })
+      clipChainCount = frame.ClipChainCount - 1
+      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+    }
+
+  private func AnalyticClipContentKey(
+    stableId uint64,
+    bounds ConservativeBounds,
+    topLeft float32,
+    topRight float32,
+    bottomRight float32,
+    bottomLeft float32,
+    transformIndex int32) uint64 {
+      var hash = PathHashOffset
+      hash = MixPathHash(hash, stableId)
+      hash = HashPathBounds(hash, bounds)
+      hash = HashPathFloat(hash, topLeft)
+      hash = HashPathFloat(hash, topRight)
+      hash = HashPathFloat(hash, bottomRight)
+      hash = HashPathFloat(hash, bottomLeft)
+      var index = transformIndex
+      var guardCount int32 = 0
+      while index >= 0 && index < frame.TransformCount && guardCount < frame.TransformCount {
+        let transform = frame.Transforms[index]
+        hash = HashPathFloat(hash, transform.A)
+        hash = HashPathFloat(hash, transform.B)
+        hash = HashPathFloat(hash, transform.C)
+        hash = HashPathFloat(hash, transform.D)
+        hash = HashPathFloat(hash, transform.TX)
+        hash = HashPathFloat(hash, transform.TY)
+        index = transform.ParentIndex
+        guardCount = guardCount + 1
+      }
+      return hash
+    }
+
   private func ResolveRoundedOverflowClip(
     node Node,
     bounds ConservativeBounds,
@@ -173,7 +243,6 @@ internal partial class VulkanSceneCompiler {
     parentChainId int32,
     borderBox bool = false) VulkanScenePathClipResult{
       let maskBit = borderBox ? BackdropBlurMaskBit : OverflowClipMaskBit
-      let paths = borderBox ? backdropBlurPaths : roundedOverflowPaths
       if bounds.IsEmpty {
         return VulkanScenePathClipResult{}
       }
@@ -185,14 +254,6 @@ internal partial class VulkanSceneCompiler {
         var contentKey = HashPathBounds(stableId, clipBounds)
         contentKey = MixPathHash(contentKey, maskBit)
         return AppendZeroPathClip(parentChainId, stableId, contentKey)
-      }
-      let owner = Owner(node)
-      let entry = if paths.TryGetValue(owner, out var existing) {
-        existing
-      } else {
-        let created = VulkanRoundedOverflowPathCacheEntry()
-        paths.Add(owner, created)
-        created
       }
       let topLeft = borderBox ? Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)
         : PaddingEdgeRadius(node, node.BorderTopLeftRadius,
@@ -206,35 +267,12 @@ internal partial class VulkanSceneCompiler {
       let bottomLeft = borderBox ? Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)
         : PaddingEdgeRadius(node, node.BorderBottomLeftRadius,
           node.BorderRadius, bounds, clipBounds, true, false)
-      let clipPath = entry.Resolve(
-        topLeft / clipBounds.Width, topLeft / clipBounds.Height,
-        topRight / clipBounds.Width, topRight / clipBounds.Height,
-        bottomRight / clipBounds.Width, bottomRight / clipBounds.Height,
-        bottomLeft / clipBounds.Width, bottomLeft / clipBounds.Height)
       let stableId = OwnerId(node) | maskBit
-      let mapping = PathGeometry.Map(clipPath, ShapeFit.Fill,
-        clipBounds.X, clipBounds.Y, clipBounds.Width, clipBounds.Height)
-      var contentKey = ClipContentKey(node, clipPath, ShapeFit.Fill,
-        uint32(FillRule.NonZero), clipBounds, transformIndex)
-      contentKey = MixPathHash(contentKey, maskBit)
-      if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        return AppendZeroPathClip(parentChainId, stableId, contentKey)
-      }
-      guard let renderer = pathScene else {
-        return VulkanScenePathClipResult{}
-      }
-      let path = renderer.Emit(PathGeometry.ForDrawing(clipPath,
-        PathDeviceScale(transformIndex) * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY))),
-        FillRule.NonZero)
-      if !path.Renderable {
-        if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
-          && path.UploadPending{
-            return AppendZeroPathClip(parentChainId, stableId, contentKey)
-          }
-        return VulkanScenePathClipResult{}
-      }
-      return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
-        clipBounds, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
+      let contentKey = AnalyticClipContentKey(
+        stableId, clipBounds, topLeft, topRight, bottomRight, bottomLeft, transformIndex)
+      return PublishAnalyticBoxClip(
+        parentChainId, parentDepth, stableId, contentKey,
+        clipBounds, topLeft, topRight, bottomRight, bottomLeft, transformIndex)
     }
 
   private func ResolveMixedOverflowClip(
@@ -258,46 +296,13 @@ internal partial class VulkanSceneCompiler {
         return VulkanScenePathClipResult{}
       }
       mixedOverflowClipCount++
-      let owner = Owner(node)
-      let entry = if roundedOverflowPaths.TryGetValue(owner, out var existing) {
-        existing
-      } else {
-        let created = VulkanRoundedOverflowPathCacheEntry()
-        roundedOverflowPaths.Add(owner, created)
-        created
-      }
-      let clipPath = entry.Resolve(0.0F, 0.0F, 0.0F, 0.0F,
-        0.0F, 0.0F, 0.0F, 0.0F)
-      let mapping = PathGeometry.Map(clipPath, ShapeFit.Fill,
-        clipBounds.X, clipBounds.Y, clipBounds.Width, clipBounds.Height)
       let stableId = OwnerId(node) | OverflowClipMaskBit
-      var contentKey = ClipContentKey(node, clipPath, ShapeFit.Fill,
-        uint32(FillRule.NonZero), clipBounds, transformIndex)
-      contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
+      var contentKey = AnalyticClipContentKey(
+        stableId, clipBounds, 0.0F, 0.0F, 0.0F, 0.0F, transformIndex)
       contentKey = MixPathHash(contentKey, clipsX ? 1uL : 2uL)
-      if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        return AppendZeroPathClip(parentChainId, stableId, contentKey)
-      }
-      guard let renderer = pathScene else {
-        return VulkanScenePathClipResult{}
-      }
-      let path = renderer.Emit(PathGeometry.ForDrawing(clipPath,
-        PathDeviceScale(transformIndex) * MathF.Max(MathF.Abs(mapping.ScaleX), MathF.Abs(mapping.ScaleY))),
-        FillRule.NonZero)
-      if !path.Renderable {
-        if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
-          && path.UploadPending{
-            return AppendZeroPathClip(parentChainId, stableId, contentKey)
-          }
-        return VulkanScenePathClipResult{}
-      }
-      let geometry = PathGeometry.For(clipPath)
-      let closedBounds = ClosedPathBounds(geometry)
-      if !geometry.HasFillContour || closedBounds.IsEmpty {
-        return AppendZeroPathClip(parentChainId, stableId, contentKey)
-      }
-      return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
-        clipBounds, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
+      return PublishAnalyticBoxClip(
+        parentChainId, parentDepth, stableId, contentKey,
+        clipBounds, 0.0F, 0.0F, 0.0F, 0.0F, transformIndex)
     }
 
   private func MixedOverflowBounds(

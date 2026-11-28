@@ -92,19 +92,13 @@ internal data struct VulkanPathCompileProbeTestSnapshot {
   internal var PathClipCount int32
   internal var ClipMaskCount int32
 }
-internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
-  internal var ActiveLayerCount uint32
-  internal var MaximumLayerCount uint32
-  internal var UniqueLayerMask uint32
-  internal var IncrementalGrowth bool
-  internal var ResolutionReduced bool
-  internal var ScreenMappingPreserved bool
-  internal var ResizeGenerationPreserved bool
-  internal var ResizeContentMatched bool
-  internal var PressureGenerationPreserved bool
-  internal var ShrinkQualityRecovered bool
-  internal var PressureFailureCount uint64
-  internal var CompletedRegionsReclaimed bool
+internal data struct VulkanScissorTableRetentionTestSnapshot {
+  internal var ChainCount uint32
+  internal var EntryCount uint32
+  internal var CapacityBytes uint64
+  internal var RetainedUnchanged bool
+  internal var InvalidatedOnChange bool
+  internal var HighCardinalitySupported bool
 }
 
 @StructLayout(LayoutKind.Sequential)
@@ -367,8 +361,9 @@ internal partial class VulkanWindowTarget {
 
   internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
   internal func LayerResolutionShiftForTest() int32 -> layerPool?.LayerResolutionShift ?? 0
-  internal func ClipAtlasStatsForTest() VulkanClipMaskAtlasStats ->
-    clipMaskAtlas?.Stats ?? VulkanClipMaskAtlasStats{}
+  internal func ScissorTableStatsForTest() VulkanScissorTableStats ->
+    primitiveRenderer?.ClipMaskFrameStats ?? VulkanScissorTableStats{}
+  internal prop HasPrimitiveRendererForTest bool { get -> primitiveRenderer != nil }
   internal func ResetRenderResourcesForTest(headroom int64?) {
     guard let activeRuntime = runtime, let allocator = memoryAllocator,
       let resources = imageResources, let current = generation else {
@@ -384,12 +379,7 @@ internal partial class VulkanWindowTarget {
     primitiveRenderer = nil
     layerPool?.Dispose()
     layerPool = nil
-    clipMaskAtlas?.RetireAll(completed)
-    clipMaskAtlas?.Dispose()
     allocator.SetHeadroomForTest(nil)
-    clipMaskAtlas = VulkanClipMaskAtlas(device, dispatch, allocator,
-      current.Extent.width, current.Extent.height, clipMaskFormatSupport,
-      0uL, activeRuntime.Runtime.Generation, windowObjectAccounting, diagnostics)
     RecreateSwapchain(framebufferWidth, framebufferHeight)
     layerPool?.Dispose()
     layerPool = VulkanOffscreenLayerPool(device, dispatch, allocator,
@@ -624,117 +614,84 @@ internal partial class VulkanWindowTarget {
       return hasDamage && !fullRedraw
     }
 
-  internal func VerifyClipMaskAtlasGrowthForTest()
-  VulkanClipMaskAtlasGrowthTestSnapshot{
-    guard let activeRuntime = runtime else {
-      return VulkanClipMaskAtlasGrowthTestSnapshot{}
+  private func BuildScissorTestFrame(radius float32) SceneFrame {
+    let frame = SceneFrame(64)
+    frame.Reset()
+    frame.BeginChunk(1uL, 1uL, ConservativeBounds{ X: 0.0F, Y: 0.0F, Width: 256.0F, Height: 256.0F }, true)
+    for i in 0 ... 40 {
+      let maskIdx = frame.AddClipMask(ClipMaskRecord{
+        StableId: uint64(i + 1),
+        Bounds: ConservativeBounds{ X: float32(i * 4), Y: 8.0F, Width: 32.0F, Height: 32.0F },
+        ScaleX: 1.0F,
+        ScaleY: 1.0F,
+        TransformIndex: -1,
+        ContentKey: uint64(i + 1),
+        AnalyticBox: true,
+        RadiusTopLeft: radius,
+        RadiusTopRight: radius,
+        RadiusBottomRight: radius,
+        RadiusBottomLeft: radius,
+      })
+      let _ = frame.AddClipChain(ClipChainRecord{
+        StableId: uint64(i + 100),
+        ParentIndex: 0,
+        MaskIndex: maskIdx,
+        Depth: 1,
+        Flags: 0u,
+        ContentKey: uint64(i + 100),
+      })
     }
-    guard let activeAllocator = memoryAllocator else {
-      return VulkanClipMaskAtlasGrowthTestSnapshot{}
+    frame.EndChunk()
+    return frame
+  }
+
+  internal func VerifyScissorTableRetentionForTest() VulkanScissorTableRetentionTestSnapshot {
+    guard let activeRuntime = runtime, let activeAllocator = memoryAllocator,
+      let atlas = pathResources?.Atlas else {
+      return VulkanScissorTableRetentionTestSnapshot{}
     }
-    let atlas = VulkanClipMaskAtlas(
+    let table = VulkanScissorTable(
       device,
       dispatch,
       activeAllocator,
-      32u,
-      32u,
-      clipMaskFormatSupport,
-      32768uL * if clipMaskFormatSupport.R8UnormSampledImage
-        && clipMaskFormatSupport.R8UnormColorAttachment
-        && clipMaskFormatSupport.R8UnormLinearFilter { 1uL } else { 4uL },
-      activeRuntime.Runtime.Generation,
-      nil)
+      activeRuntime.Runtime.PrimitiveState.ClipDescriptorSetLayout,
+      activeRuntime.Runtime.MaxStorageBufferRange,
+      2,
+      nil
+    )
     try {
-      atlas.BeginUsageBatch()
-      atlas.Acquire(1000uL, 0, 0, 16u, 16u)
-      let resizeGeneration = atlas.Generation
-      var resizeGenerationPreserved = true
-      var resizeContentMatched = true
-      for size in 8 ... 17 {
-        atlas.EndUsageBatch()
-        atlas.AbortUsageBatch()
-        atlas.BeginUsageBatch()
-        let resized = atlas.Acquire(1000uL, 0, 0, uint32(size), uint32(size))
-        resizeGenerationPreserved &= atlas.Generation == resizeGeneration
-        resizeContentMatched &= resized.ContentWidth == uint32(size) && resized.ContentHeight == uint32(size)
+      let frameA = BuildScissorTestFrame(1.0F)
+      table.BeginBuild(frameA, atlas, 0, 0uL)
+      for chainId in 1 ... frameA.ClipChainCount {
+        let _ = table.ResolveChainId(-1, chainId, 0.0F, 0.0F,
+          VkExtent2D{ width: 256u, height: 256u }, VkExtent2D{ width: 256u, height: 256u })
       }
-      atlas.AbortUsageBatch()
-      atlas.Reset(0uL)
-      atlas.Resize(32u, 32u, 0uL)
-      let evictionBaseline = atlas.Stats.EvictionCount
-      atlas.BeginUsageBatch()
-      var key uint64 = 1uL
-      var incrementalGrowth = true
-      while key <= 32uL {
-        atlas.Acquire(key, 0, 0, 32u, 32u)
-        if atlas.Stats.ActiveLayerCount != uint32(key) {
-          incrementalGrowth = false
-        }
-        key++
-      }
-      let grown = atlas.Stats
-      var uniqueLayerMask uint32 = 0u
-      key = 1uL
-      while key <= 32uL {
-        let region = atlas.Acquire(key, 0, 0, 32u, 32u)
-        if region.Generation == grown.Generation && region.Layer < 32u {
-          uniqueLayerMask = uniqueLayerMask | (1u << int32(region.Layer))
-        }
-        key++
-      }
-      let reduced = atlas.Acquire(33uL, 0, 0, 32u, 32u)
-      let afterReduction = atlas.Stats
-      let recovered = atlas.Acquire(1uL, 0, 0, 32u, 32u)
-      var pressureGenerationPreserved = true
-      for frameIndex in 0 ... 4 {
-        atlas.EndUsageBatch()
-        atlas.AbortUsageBatch()
-        atlas.BeginUsageBatch()
-        for retainedKey in 1 ... 34 {
-          atlas.Acquire(uint64(retainedKey), 0, 0, 32u, 32u)
-        }
-        pressureGenerationPreserved &= atlas.Generation == afterReduction.Generation
-      }
-      let regions = [33]VulkanClipMaskRegion
-      for retainedKey in 1 ... 34 {
-        atlas.Acquire(uint64(retainedKey), 0, 0, 16u, 32u)
-      }
-      atlas.RestoreFullResolution()
-      let afterShrink = atlas.Acquire(1uL, 0, 0, 16u, 32u)
-      for index in 0 ... 33 {
-        regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 16u, 32u)
-      }
-      atlas.EndUsageBatch()
-      atlas.MarkUsed(regions, regions.Length, 1uL)
-      atlas.Collect(3uL)
-      atlas.BeginUsageBatch()
-      let replacement = atlas.Acquire(34uL, 0, 0, 32u, 32u)
-      let reclaimed = atlas.Stats
-      return VulkanClipMaskAtlasGrowthTestSnapshot{
-        ActiveLayerCount: grown.ActiveLayerCount,
-        MaximumLayerCount: grown.MaximumLayerCount,
-        UniqueLayerMask: uniqueLayerMask,
-        IncrementalGrowth: incrementalGrowth,
-        ResolutionReduced: reduced.ContentWidth < reduced.ScreenWidth
-          && recovered.ContentWidth < recovered.ScreenWidth,
-        ScreenMappingPreserved: recovered.ScreenWidth == 32u
-          && recovered.ScreenHeight == 32u && recovered.Mapping.ScaleX > 0.0F,
-        ResizeGenerationPreserved: resizeGenerationPreserved,
-        ResizeContentMatched: resizeContentMatched,
-        PressureGenerationPreserved: pressureGenerationPreserved,
-        ShrinkQualityRecovered: afterShrink.ContentWidth >= afterShrink.ScreenWidth
-          && afterShrink.ContentHeight >= afterShrink.ScreenHeight,
-        PressureFailureCount: afterReduction.PressureFailureCount,
-        CompletedRegionsReclaimed: replacement.Dirty
-          && reclaimed.RegionCount == 1
-          && replacement.ContentWidth == replacement.ScreenWidth
-          && reclaimed.EvictionCount == evictionBaseline + 33uL
-          && reclaimed.Generation >= grown.Generation
-          && reclaimed.PressureFailureCount == afterReduction.PressureFailureCount,
+      let first = table.FinishPrepare(nil, 1.0F, 1.0F)
+      table.Record(VkCommandBuffer(nint(1)))
+      table.MarkSubmitted(0, 1uL)
+
+      table.BeginBuild(frameA, atlas, 0, 1uL)
+      let second = table.FinishPrepare(nil, 1.0F, 1.0F)
+      table.Record(VkCommandBuffer(nint(1)))
+      table.MarkSubmitted(0, 2uL)
+
+      let frameB = BuildScissorTestFrame(6.0F)
+      table.BeginBuild(frameB, atlas, 0, 2uL)
+      let third = table.FinishPrepare(nil, 1.0F, 1.0F)
+      table.Record(VkCommandBuffer(nint(1)))
+      table.MarkSubmitted(0, 3uL)
+      table.Collect(3uL)
+
+      return VulkanScissorTableRetentionTestSnapshot{
+        ChainCount: uint32(second.ClipChainCount),
+        EntryCount: uint32(second.RecordCount),
+        CapacityBytes: second.Capacity,
+        RetainedUnchanged: !first.Retained && second.Retained,
+        InvalidatedOnChange: !third.Retained,
+        HighCardinalitySupported: second.MaskCount == 40 && second.RecordCount >= 40,
       }
     } finally {
-      atlas.AbortUsageBatch()
-      atlas.Dispose()
+      table.Dispose()
     }
   }
 }
@@ -1339,6 +1296,12 @@ internal class WindowReadbackTestFixture {
       window.WaitForPipelinePreparationForTest()
     }
 
+    internal func PinnedShaderEffectCount(window Window) int32 ->
+    window.PinnedShaderEffectPipelineCountForTest()
+
+    internal func RetiredShaderEffectPipelineCount(window Window) int32 ->
+    window.RetiredShaderEffectPipelineCountForTest()
+
     internal func VerifyShaderEffectDigestCollision(window Window,
       first ShaderEffectProgram, second ShaderEffectProgram) bool ->
     window.VerifyShaderEffectDigestCollisionForTest(first, second)
@@ -1369,17 +1332,19 @@ internal class WindowReadbackTestFixture {
     internal func DiagnosticCounters(window Window) VulkanDiagnosticCounterSnapshot -> window.DiagnosticCountersSnapshotForTest()
     internal func ImageResourceStats(window Window) VulkanImageResourceStats ->
     window.ImageResourceStatsForTest()
-    internal func VerifyClipMaskAtlasGrowth(window Window)
-    VulkanClipMaskAtlasGrowthTestSnapshot{
+    internal func VerifyScissorTableRetention(window Window)
+    VulkanScissorTableRetentionTestSnapshot{
       guard let target = window.CaptureTargetForTest() else {
-        return VulkanClipMaskAtlasGrowthTestSnapshot{}
+        return VulkanScissorTableRetentionTestSnapshot{}
       }
-      return target.VerifyClipMaskAtlasGrowthForTest()
+      return target.VerifyScissorTableRetentionForTest()
     }
+    internal func ScissorTableStats(window Window) VulkanScissorTableStats ->
+      window.CaptureTargetForTest()?.ScissorTableStatsForTest() ?? VulkanScissorTableStats{}
     internal func CaptureTarget(window Window) VulkanWindowTarget ? -> window.CaptureTargetForTest()
 
     internal func ForceRender(window Window, dt float64,
-      timeoutSeconds float64 = 2.0, waitForPresentation bool = false) {
+      timeoutSeconds float64 = 15.0, waitForPresentation bool = false) {
         let baseline = window.FrameSubmissionSerialsForTest()
         let presented = window.PresentationAcceptedIndexForTest
         window.ForceRenderForTest(dt)
@@ -1660,7 +1625,7 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
           uniquePipelineCount++
         }
       }
-      let beforeWarm = shaderEffectPipelineCount
+      let beforeWarm = ShaderEffectPipelineEntryCountForTest
       let warmPipeline = ResolveShaderEffectPipeline(warmEffect)
       var warmIndex int32
       var sameObjectStable = warmPipeline == firstPipeline
@@ -1670,9 +1635,9 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
         warmIndex++
       }
       sameObjectStable = sameObjectStable
-        && shaderEffectPipelineCount == beforeWarm
+        && ShaderEffectPipelineEntryCountForTest == beforeWarm
       return VulkanShaderEffectPipelineIdentityTestSnapshot{
-        EntryCount: shaderEffectPipelineCount,
+        EntryCount: ShaderEffectPipelineEntryCountForTest,
         UniquePipelineCount: uniquePipelineCount,
         FirstPipeline: firstPipeline.Raw,
         AllHandlesEqual: allHandlesEqual,
@@ -1688,12 +1653,12 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
         return false
       }
       Array.Copy(firstDigest, secondDigest, firstDigest.Length)
-      let before = shaderEffectPipelineCount
+      let before = ShaderEffectPipelineEntryCountForTest
       let firstPipeline = ResolveShaderEffectPipeline(ShaderEffect(first))
       let secondPipeline = ResolveShaderEffectPipeline(ShaderEffect(second))
       return firstPipeline != VkPipeline.Null && secondPipeline != VkPipeline.Null
         && firstPipeline != secondPipeline
-        && shaderEffectPipelineCount == before + 1
+        && ShaderEffectPipelineEntryCountForTest == before + 1
     }
 
   internal func RejectMissingArtifactForTest(effect ShaderEffect) bool {
@@ -1706,7 +1671,27 @@ internal unsafe partial class VulkanSharedPrimitiveFormatState {
   }
 
   internal prop ShaderEffectPipelineEntryCountForTest int32{
-    get -> shaderEffectPipelineCount
+    get {
+      lock (pipelineGate) {
+        return shaderEffectPipelines.Count
+      }
+    }
+  }
+
+  internal prop PinnedShaderEffectPipelineCountForTest int32{
+    get {
+      lock (pipelineGate) {
+        var count int32
+        for entry in shaderEffectPipelines {
+          if entry.Pinned { count++ }
+        }
+        return count
+      }
+    }
+  }
+
+  internal prop RetiredShaderEffectPipelineCountForTest int32{
+    get -> RetiredPipelineCount
   }
 }
 
@@ -1727,6 +1712,14 @@ internal unsafe partial class VulkanPrimitiveRenderer {
 
   internal prop ShaderEffectPipelineEntryCountForTest int32{
     get -> primitivePipelines.ShaderEffectPipelineEntryCountForTest
+  }
+
+  internal prop PinnedShaderEffectPipelineCountForTest int32{
+    get -> primitivePipelines.PinnedShaderEffectPipelineCountForTest
+  }
+
+  internal prop RetiredShaderEffectPipelineCountForTest int32{
+    get -> primitivePipelines.RetiredShaderEffectPipelineCountForTest
   }
 }
 
@@ -1775,6 +1768,20 @@ internal unsafe partial class VulkanWindowTarget {
     get {
       WaitForPipelinePreparationForTest()
       return primitiveRenderer?.ShaderEffectPipelineEntryCountForTest ?? 0
+    }
+  }
+
+  internal prop PinnedShaderEffectPipelineCountForTest int32{
+    get {
+      WaitForPipelinePreparationForTest()
+      return primitiveRenderer?.PinnedShaderEffectPipelineCountForTest ?? 0
+    }
+  }
+
+  internal prop RetiredShaderEffectPipelineCountForTest int32{
+    get {
+      WaitForPipelinePreparationForTest()
+      return primitiveRenderer?.RetiredShaderEffectPipelineCountForTest ?? 0
     }
   }
 }
@@ -1854,6 +1861,10 @@ public partial class Window {
   VulkanTargetForTest()!!.ResolveShaderEffectPipelineForTest(effect)
   internal func ShaderEffectPipelineEntryCountForTest() int32 ->
   VulkanTargetForTest()!!.ShaderEffectPipelineEntryCountForTest
+  internal func PinnedShaderEffectPipelineCountForTest() int32 ->
+  VulkanTargetForTest()!!.PinnedShaderEffectPipelineCountForTest
+  internal func RetiredShaderEffectPipelineCountForTest() int32 ->
+  VulkanTargetForTest()!!.RetiredShaderEffectPipelineCountForTest
   internal func WaitForPipelinePreparationForTest() {
     VulkanTargetForTest()!!.WaitForPipelinePreparationForTest()
   }

@@ -12,7 +12,6 @@ internal unsafe partial class VulkanWindowTarget {
   private var pageText VulkanTextScene?
   private var pageAtlases VulkanTextAtlasSet?
   private var pageColorAtlas VulkanColorGlyphAtlas?
-  private var pageClips VulkanClipMaskAtlas?
   private var pageImages VulkanImageScene?
   private var pagePaths VulkanPathScene?
   private var pageReadback VulkanAsyncReadback?
@@ -113,9 +112,6 @@ internal unsafe partial class VulkanWindowTarget {
           active.Runtime.ImageResources, active.Runtime.ImageIdentityRegistry, active.Runtime.Generation,
           objectAccounting, nil)
         pageColorAtlas = colorAtlas
-        let clips = VulkanClipMaskAtlas(device, dispatch, allocator, options.PixelWidth, options.PixelHeight,
-          clipMaskFormatSupport, uint64(options.MaxBytes), active.Runtime.Generation, objectAccounting)
-        pageClips = clips
         pageText = VulkanTextScene(atlases, colorAtlas)
         pageImages = VulkanImageScene(active.Runtime.ImageIdentityRegistry, active.Runtime.ImageResources, active.Runtime.Generation)
         pagePaths = VulkanPathScene(active.Runtime.PathResources)
@@ -135,7 +131,7 @@ internal unsafe partial class VulkanWindowTarget {
           target = VulkanOffscreenTarget(device, dispatch, queue, allocator, EnsureReadbackDispatch(),
             extent, pixels * 4uL, active.Runtime.GraphicsFamilyIndex, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             active.Runtime.ImageResources, active.Runtime.Generation, active.Runtime.MaxStorageBufferRange, active.Runtime.ResourcePolicy,
-            active.Runtime.PrimitiveState, active.Runtime.PathResources.Atlas, active.Runtime.PathResources, clips, atlases,
+            active.Runtime.PrimitiveState, active.Runtime.PathResources.Atlas, active.Runtime.PathResources, atlases,
             objectAccounting, nil, nil, active.Runtime.QueueWorker.CreateMailbox(nil), lease, colorAtlas)
           target.EnableResourceUploads()
           leaseTransferred = true
@@ -273,15 +269,12 @@ internal unsafe partial class VulkanWindowTarget {
     if status == OffscreenRenderStatus.DeviceLost {
       pageColorAtlas?.DisposeAfterDeviceLoss()
       pageAtlases?.DisposeAfterDeviceLoss()
-      pageClips?.DisposeAfterDeviceLoss()
     } else {
       pageColorAtlas?.Dispose()
       pageAtlases?.Dispose()
-      pageClips?.Dispose()
     }
     pageColorAtlas = nil
     pageAtlases = nil
-    pageClips = nil
     pageCompiler = nil
     try { pageWindow?.Close() }
     catch (error Exception) { completion?.TrySetException(error) }

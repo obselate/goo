@@ -54,7 +54,6 @@ internal unsafe partial class VulkanWindowTarget {
     primitiveRenderer = nil
     layerPool?.Dispose()
     layerPool = nil
-    clipMaskAtlas?.Reset(completed)
     hideReleasePending = false
   }
 
@@ -70,8 +69,6 @@ internal unsafe partial class VulkanWindowTarget {
     let completedGlobalSubmissionSerial = CompletedGlobalSubmissionSerial()
     if let renderer = primitiveRenderer {
       renderer.Collect(completedGlobalSubmissionSerial)
-    } else if let atlas = clipMaskAtlas {
-      atlas.Collect(completedGlobalSubmissionSerial)
     }
     layerPool?.Collect(completedGlobalSubmissionSerial, resizing: true)
     var surfaceRecovery = false
@@ -148,7 +145,6 @@ internal unsafe partial class VulkanWindowTarget {
     }
     if old == nil { CaptureDiagnosticSwapchains() }
     created.ResetSceneVersions()
-    EnsureClipMaskAtlas(created.Extent.width, created.Extent.height)
     if primitiveRenderer == nil {
       guard let activeRuntime = runtime else {
         throw InvalidOperationException("Vulkan shared runtime is unavailable")
@@ -166,8 +162,7 @@ internal unsafe partial class VulkanWindowTarget {
         activeRuntime.Runtime.PathResources.Atlas,
         textAtlas,
         windowObjectAccounting,
-        memoryAllocator,
-        clipMaskAtlas)
+        memoryAllocator)
     }
     if layerPool == nil {
       guard let allocator = memoryAllocator,
@@ -812,38 +807,6 @@ internal unsafe partial class VulkanWindowTarget {
     let deviceWaitIdleFunction = nullable
     using let profile = FrameProfileScope(FrameProfileStage.DeviceIdle)
     return deviceWaitIdleFunction(device)
-  }
-
-  private func EnsureClipMaskAtlas(nativeWidth uint32, nativeHeight uint32) {
-    if nativeWidth == 0u || nativeHeight == 0u {
-      throw ArgumentOutOfRangeException("nativeWidth")
-    }
-    guard let activeRuntime = runtime else {
-      throw InvalidOperationException("Vulkan shared runtime is unavailable")
-    }
-    guard let allocator = memoryAllocator else {
-      throw InvalidOperationException("Vulkan memory allocator is unavailable")
-    }
-    if let atlas = clipMaskAtlas {
-      if atlas.Width != nativeWidth || atlas.Height != nativeHeight
-        || atlas.Stats.ActiveLayerCount == 0u {
-        atlas.Resize(nativeWidth, nativeHeight, CompletedGlobalSubmissionSerial())
-        clipMaskRedrawPending = true
-      }
-      return
-    }
-    clipMaskAtlas = VulkanClipMaskAtlas(
-      device,
-      dispatch,
-      allocator,
-      nativeWidth,
-      nativeHeight,
-      clipMaskFormatSupport,
-      0uL,
-      activeRuntime.Runtime.Generation,
-      windowObjectAccounting, diagnostics)
-    clipMaskRedrawPending = true
-    clipMaskAtlasAbandoned = false
   }
 
   private func CompletedGlobalSubmissionSerial() uint64 {

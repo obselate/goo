@@ -117,8 +117,6 @@ internal unsafe partial class VulkanWindowTarget {
         renderer.Collect(completedGraphicsSubmissionSerial)
         clipMaskFrameStats = renderer.ClipMaskFrameStats
         clipMaskFrameTotals = renderer.ClipMaskFrameTotals
-      } else if let atlas = clipMaskAtlas {
-        atlas.Collect(completedGraphicsSubmissionSerial)
       }
       memoryAllocator?.BeginFrame(completedGraphicsSubmissionSerial)
       pressureWaiting = false
@@ -358,7 +356,7 @@ internal unsafe partial class VulkanWindowTarget {
         out damageRegion,
         out fullRedraw)
       if forceFullRedraw || textRedrawPending || imageRedrawPending
-        || pathRedrawPending || clipMaskRedrawPending
+        || pathRedrawPending
         || VulkanGpuExperiments.Selected == VulkanGpuExperiment.FullRedraw {
           fullRedraw = true
           hasDamage = true
@@ -389,15 +387,12 @@ internal unsafe partial class VulkanWindowTarget {
           }
           renderer.ReserveImageReferences(sceneCompiler.Frame)
           clipMaskFrameStarted = true
-          let clipFrameStats = renderer.PrepareClipMasks(
+          renderer.PrepareClipMasks(
             sceneCompiler.Frame,
             current.Extent,
             int32(activeFrameSlotIndex),
             completedGraphicsSubmissionSerial)
-          clipMaskFrameStats = clipFrameStats
-          clipMaskFrameTotals = renderer.ClipMaskFrameTotals
           clipMaskFramePrepared = true
-          clipMaskRedrawPending = clipFrameStats.DirtyRegionCount > 0
           if activePartialRedraw && !renderer.CanRedrawBackdrops(sceneCompiler.Frame, activeDamageRegion) {
             activePartialRedraw = false
             activeDamageRegion = VulkanDamageRegion{
@@ -412,12 +407,11 @@ internal unsafe partial class VulkanWindowTarget {
             scaleX,
             scaleY,
             completedGraphicsSubmissionSerial)
+          clipMaskFrameStats = renderer.ClipMaskFrameStats
+          clipMaskFrameTotals = renderer.ClipMaskFrameTotals
           BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.PrimitiveUpload)
           renderer.RecordPrimitiveFrameUpload(slot.CommandBuffer)
           EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.PrimitiveUpload)
-          BeginDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Clip)
-          renderer.RecordClipMaskPass(slot.CommandBuffer, current.Extent)
-          EndDiagnosticTimestamp(slot, VulkanDiagnosticTimestampStage.Clip)
           BeginRendering(current, slot, activeImageIndex, activeDamageRegion)
           renderer.ConfigureLayerFrame(
             slot.CommandBuffer,

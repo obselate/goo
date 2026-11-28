@@ -98,17 +98,8 @@ internal unsafe partial class VulkanWindowTarget {
         clipMaskFrameStats = renderer.ClipMaskFrameStats
         clipMaskFrameTotals = renderer.ClipMaskFrameTotals
       }
-      if let atlas = clipMaskAtlas {
-        try { atlas.InvalidateRecordedLayouts() } catch (cleanup Exception) { }
-      }
       clipMaskFrameStarted = false
       clipMaskFramePrepared = false
-      clipMaskRedrawPending = true
-    }
-    if let atlas = clipMaskAtlas {
-      if atlas.DirtyRegionCount > 0 {
-        clipMaskRedrawPending = true
-      }
     }
   }
 

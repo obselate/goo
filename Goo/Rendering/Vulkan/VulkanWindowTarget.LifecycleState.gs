@@ -42,13 +42,10 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var colorGlyphAtlas VulkanColorGlyphAtlas? = nil
   private var textScene VulkanTextScene? = nil
   private var textAtlasDiagnosticsToken uint64
-  private var clipMaskAtlas VulkanClipMaskAtlas? = nil
-  private var clipMaskRedrawPending bool
   private var clipMaskFrameStarted bool
   private var clipMaskFramePrepared bool
-  private var clipMaskAtlasAbandoned bool
-  private var clipMaskFrameStats VulkanClipMaskFrameStats
-  private var clipMaskFrameTotals VulkanClipMaskFrameTotals
+  private var clipMaskFrameStats VulkanScissorTableStats
+  private var clipMaskFrameTotals VulkanScissorTableTotals
   private var instance VkInstance = VkInstance.Null
   private var instanceDispatch VkInstanceDispatch = VkInstanceDispatch{}
   private var getProcAddress nint = nint(0)
@@ -56,7 +53,6 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var swapchainMaintenanceVariant VulkanSwapchainMaintenanceVariant
   private var portabilitySubsetSupported bool
   private var memoryBudgetSupported bool
-  private var clipMaskFormatSupport VulkanClipMaskFormatSupport
   private var physicalDevice VkPhysicalDevice = VkPhysicalDevice.Null
   private var device VkDevice = VkDevice.Null
   private var dispatch VkDeviceDispatch = VkDeviceDispatch{}
@@ -170,7 +166,6 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
         }
       }
       return frameRenderDeferred || pageCompletion != nil || queuedPage != nil || textRedrawPending || imageRedrawPending || pathRedrawPending
-        || clipMaskRedrawPending
         || forceFullRedraw
         || sceneCompiler.Frame.ShaderPlaybackActive
         || (recreatePending && framebufferWidth > 0 && framebufferHeight > 0)

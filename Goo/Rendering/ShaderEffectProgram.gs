@@ -25,6 +25,7 @@ public class ShaderEffectProgram {
   private let programId uint64
   private let sourceIndependent bool
   internal let ReplacesBackdrop bool
+  internal let IsBuiltIn bool
 
   shared {
     private var nextProgramId int64
@@ -116,6 +117,7 @@ public class ShaderEffectProgram {
     vulkanSpirv = selectedVulkanSpirv
     sourceIndependent = generator
     ReplacesBackdrop = replacesBackdrop
+    IsBuiltIn = embeddedDigest != nil
     vulkanSpirvDigest = if let bytes = selectedVulkanSpirv {
       embeddedDigest ?? SHA256.HashData(bytes)
     } else {

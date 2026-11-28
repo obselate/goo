@@ -182,16 +182,6 @@ internal enum VulkanCounterId {
   PathAtlasReuseCount;
   PathAtlasPressureEventCount;
   PathAtlasPressureFailureCount;
-  ClipMaskAtlasByteBudget;
-  ClipMaskAtlasResidentBytes;
-  ClipMaskAtlasRegionCount;
-  ClipMaskAtlasFreePlacementCount;
-  ClipMaskAtlasActiveLayerCount;
-  ClipMaskAtlasMaximumLayerCount;
-  ClipMaskAtlasRetiredGenerationCount;
-  ClipMaskAtlasEvictionCount;
-  ClipMaskAtlasPressureEventCount;
-  ClipMaskAtlasPressureFailureCount;
   ClipFrameWrittenBytes;
   ClipFrameSkippedBytes;
   ClipFrameMappedWrites;

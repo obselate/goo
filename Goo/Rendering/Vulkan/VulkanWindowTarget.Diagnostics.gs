@@ -120,11 +120,11 @@ internal unsafe partial class VulkanWindowTarget {
     if let current = generation { context.Generation = current.Generation }
     return context
   }
-  internal prop LastClipMaskFrameStats VulkanClipMaskFrameStats{
+  internal prop LastClipMaskFrameStats VulkanScissorTableStats{
     get -> clipMaskFrameStats
   }
 
-  internal prop ClipMaskFrameTotals VulkanClipMaskFrameTotals{
+  internal prop ClipMaskFrameTotals VulkanScissorTableTotals{
     get -> clipMaskFrameTotals
   }
 
@@ -969,11 +969,6 @@ internal unsafe partial class VulkanWindowTarget {
           let stats = resources.Stats
           cacheBytes = cacheBytes + uint64(stats.LiveWordCount) * 4uL
           current.SetPathAtlasStats(stats, resources.Atlas.Stats.LiveObjectCount)
-        }
-        if let atlas = clipMaskAtlas {
-          current.SetClipMaskAtlasStats(atlas.Stats)
-        } else {
-          current.ClearClipMaskAtlasCurrentState()
         }
         current.SetClipMaskFrameStats(clipMaskFrameStats, clipMaskFrameTotals)
         if let renderer = primitiveRenderer {

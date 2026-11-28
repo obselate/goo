@@ -96,19 +96,6 @@ internal unsafe partial class VulkanDiagnostics {
       VulkanCounterField(VulkanCounterId.ResultFailureCount, "resultFailureCount"),
     }
 
-    private let ClipMaskAtlasFields []VulkanCounterField = []VulkanCounterField{
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasByteBudget, "clipMaskAtlasByteBudget"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasResidentBytes, "clipMaskAtlasResidentBytes"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasRegionCount, "clipMaskAtlasRegionCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasFreePlacementCount, "clipMaskAtlasFreePlacementCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasActiveLayerCount, "clipMaskAtlasActiveLayerCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasMaximumLayerCount, "clipMaskAtlasMaximumLayerCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasRetiredGenerationCount, "clipMaskAtlasRetiredGenerationCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasEvictionCount, "clipMaskAtlasEvictionCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasPressureEventCount, "clipMaskAtlasPressureEventCount"),
-      VulkanCounterField(VulkanCounterId.ClipMaskAtlasPressureFailureCount, "clipMaskAtlasPressureFailureCount"),
-    }
-
     private let ImageUploadFields []VulkanCounterField = []VulkanCounterField{
       VulkanCounterField(VulkanCounterId.ImageUploadChunkCount, "imageUploadChunkCount"),
       VulkanCounterField(VulkanCounterId.ImageUploadDeferredCount, "imageUploadDeferredCount"),
@@ -337,12 +324,6 @@ internal unsafe partial class VulkanDiagnostics {
       FlushLiveSnapshot(writer, livePreTeardown)
     }
     let snapshot = counters.Snapshot
-    let clipBuilder = StringBuilder(512)
-    clipBuilder.Append("{\"kind\":\"clip_mask_atlas\"")
-    AppendCounterFields(clipBuilder, snapshot, ClipMaskAtlasFields, false)
-    clipBuilder.Append('}')
-    writer.WriteLine(clipBuilder.ToString())
-
     let uploadBuilder = StringBuilder(256)
     uploadBuilder.Append("{\"kind\":\"image_upload\"")
     AppendCounterFields(uploadBuilder, snapshot, ImageUploadFields, false)

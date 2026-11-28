@@ -110,6 +110,7 @@ standard_smokes=(
   "transparent-window|GOO_VK_DIAGNOSTICS=1|GOO_TRANSPARENT_WINDOW_SMOKE=1"
   "ordered-modifier|GOO_VK_DIAGNOSTICS=1|GOO_ORDERED_MODIFIER_SMOKE=1"
   "prevented-key-repeat|GOO_PREVENTED_KEY_REPEAT_SMOKE=1"
+  "batched-ui-scissor|GOO_VK_DIAGNOSTICS=1|GOO_BATCHED_UI_SCISSOR_SMOKE=1"
 )
 
 specs_file="$tmp_root/standard-smokes.specs"

@@ -270,6 +270,7 @@ internal struct VulkanSceneDrawIdentity {
   internal var Kind SceneDrawKind
   internal var Flags uint32
   internal var ClipChainId int32
+  internal var ClipChainDigest uint64
   internal var Solid SolidBoxRecord
   internal var Rounded RoundedBoxRecord
   internal var Border PerEdgeBorderRecord
@@ -449,6 +450,11 @@ internal struct ClipMaskRecord {
   internal var TranslateY float32
   internal var TransformIndex int32
   internal var ContentKey uint64
+  internal var AnalyticBox bool
+  internal var RadiusTopLeft float32
+  internal var RadiusTopRight float32
+  internal var RadiusBottomRight float32
+  internal var RadiusBottomLeft float32
 }
 
 internal struct ClipChainRecord {

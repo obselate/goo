@@ -13,7 +13,6 @@ internal unsafe partial class VulkanWindowTarget {
     retiredSwapchains = VulkanRetiredSwapchainSet(8)
     runtime = shared
     ApplySharedRuntime(shared)
-    clipMaskFormatSupport = source.clipMaskFormatSupport
   }
 
   internal func CreateOffscreenSession(closed CancellationToken) OffscreenRenderSessionResult {

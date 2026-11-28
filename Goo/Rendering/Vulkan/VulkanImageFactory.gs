@@ -20,7 +20,8 @@ internal unsafe class VulkanImageFactory {
       aspectMask VkImageAspectFlags,
       memoryPolicy VulkanMemoryPolicy,
       ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Image,
-      mipLevels uint32 = 1u) VulkanImageCreation ->
+      mipLevels uint32 = 1u,
+      forceDedicated bool = false) VulkanImageCreation ->
     Create(
       device,
       dispatch,
@@ -32,7 +33,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask,
       1u,
       VkConstants.VK_IMAGE_VIEW_TYPE_2D,
-      memoryPolicy, ownerKind, mipLevels)
+      memoryPolicy, ownerKind, mipLevels, forceDedicated)
 
     internal func Create2DArray(
       device VkDevice,
@@ -57,7 +58,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask,
       layerCount,
       VkConstants.VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-      memoryPolicy, ownerKind, 1u)
+      memoryPolicy, ownerKind, 1u, false)
 
     internal func CreateView(
       device VkDevice,
@@ -144,7 +145,8 @@ internal unsafe class VulkanImageFactory {
       aspectMask VkImageAspectFlags,
       layerCount uint32,
       viewType VkImageViewType,
-      memoryPolicy VulkanMemoryPolicy, ownerKind VulkanMemoryOwnerKind, mipLevels uint32) VulkanImageCreation{
+      memoryPolicy VulkanMemoryPolicy, ownerKind VulkanMemoryOwnerKind,
+      mipLevels uint32, forceDedicated bool) VulkanImageCreation{
 
         if extent.width == 0u || extent.height == 0u {
           throw ArgumentOutOfRangeException("extent")
@@ -202,7 +204,8 @@ internal unsafe class VulkanImageFactory {
 
           let createdAllocation = allocator.AllocateImage(
             image,
-            memoryPolicy)
+            memoryPolicy,
+            forceDedicated)
           allocation = createdAllocation
           createdAllocation.ownerKind = if ownerKind == VulkanMemoryOwnerKind.Image
             && (usage & uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) != 0u {

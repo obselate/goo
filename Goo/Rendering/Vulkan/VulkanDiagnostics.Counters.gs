@@ -40,29 +40,7 @@ internal class VulkanDiagnosticCounters {
     Set(VulkanCounterId.MemoryPressureCount, pressure)
   }
 
-  internal func SetClipMaskAtlasStats(stats VulkanClipMaskAtlasStats) {
-    Set(VulkanCounterId.ClipMaskAtlasByteBudget, uint64(stats.ByteBudget))
-    Set(VulkanCounterId.ClipMaskAtlasResidentBytes, uint64(stats.ResidentBytes))
-    Set(VulkanCounterId.ClipMaskAtlasRegionCount, uint64(stats.RegionCount))
-    Set(VulkanCounterId.ClipMaskAtlasFreePlacementCount, uint64(stats.FreePlacementCount))
-    Set(VulkanCounterId.ClipMaskAtlasActiveLayerCount, uint64(stats.ActiveLayerCount))
-    Set(VulkanCounterId.ClipMaskAtlasMaximumLayerCount, uint64(stats.MaximumLayerCount))
-    Set(VulkanCounterId.ClipMaskAtlasRetiredGenerationCount, uint64(stats.RetiredGenerationCount))
-    Set(VulkanCounterId.ClipMaskAtlasEvictionCount, stats.EvictionCount)
-    Set(VulkanCounterId.ClipMaskAtlasPressureEventCount, stats.PressureEventCount)
-    Set(VulkanCounterId.ClipMaskAtlasPressureFailureCount, stats.PressureFailureCount)
-  }
-
-  internal func ClearClipMaskAtlasCurrentState() {
-    Set(VulkanCounterId.ClipMaskAtlasResidentBytes, 0uL)
-    Set(VulkanCounterId.ClipMaskAtlasRegionCount, 0uL)
-    Set(VulkanCounterId.ClipMaskAtlasFreePlacementCount, 0uL)
-    Set(VulkanCounterId.ClipMaskAtlasActiveLayerCount, 0uL)
-    Set(VulkanCounterId.ClipMaskAtlasMaximumLayerCount, 0uL)
-    Set(VulkanCounterId.ClipMaskAtlasRetiredGenerationCount, 0uL)
-  }
-
-  internal func SetClipMaskFrameStats(stats VulkanClipMaskFrameStats, totals VulkanClipMaskFrameTotals) {
+  internal func SetClipMaskFrameStats(stats VulkanScissorTableStats, totals VulkanScissorTableTotals) {
     Set(VulkanCounterId.ClipFrameWrittenBytes, totals.WrittenBytes)
     Set(VulkanCounterId.ClipFrameSkippedBytes, totals.SkippedBytes)
     Set(VulkanCounterId.ClipFrameMappedWrites, totals.MappedWrites)
@@ -72,7 +50,7 @@ internal class VulkanDiagnosticCounters {
     Set(VulkanCounterId.ClipFrameDrawCount, uint64(stats.DrawCount < 0 ? 0 : stats.DrawCount))
     Set(VulkanCounterId.ClipFrameMaskCount, uint64(stats.MaskCount < 0 ? 0 : stats.MaskCount))
     Set(VulkanCounterId.ClipFrameChainCount, uint64(stats.ClipChainCount < 0 ? 0 : stats.ClipChainCount))
-    Set(VulkanCounterId.ClipFrameLayerCount, uint64(stats.LayerCount < 0 ? 0 : stats.LayerCount))
+    Set(VulkanCounterId.ClipFrameLayerCount, uint64(stats.RecordCount < 0 ? 0 : stats.RecordCount))
     Set(VulkanCounterId.ClipFrameByteCount, uint64(stats.ByteCount))
     Set(VulkanCounterId.ClipFrameCapacity, uint64(stats.Capacity))
     Set(VulkanCounterId.ClipFrameBufferGeneration, stats.BufferGeneration)

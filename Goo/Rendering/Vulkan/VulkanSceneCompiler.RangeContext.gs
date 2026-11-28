@@ -104,7 +104,12 @@ internal partial class VulkanSceneCompiler {
     private func RangeMasksMatch(previous int32, current int32) bool {
         let old = rangeData.ClipMasks[previous]
         let value = frame.ClipMasks[current]
-        if old.StableId != value.StableId || !SameResource(old.PathId, value.PathId)
+        if old.StableId != value.StableId || old.AnalyticBox != value.AnalyticBox
+        || !ExactFloat(old.RadiusTopLeft, value.RadiusTopLeft)
+        || !ExactFloat(old.RadiusTopRight, value.RadiusTopRight)
+        || !ExactFloat(old.RadiusBottomRight, value.RadiusBottomRight)
+        || !ExactFloat(old.RadiusBottomLeft, value.RadiusBottomLeft)
+        || !SameResource(old.PathId, value.PathId)
         || !SameResource(old.AtlasId, value.AtlasId)
         || old.AtlasWordOffset != value.AtlasWordOffset || old.AtlasWordCount != value.AtlasWordCount
         || old.CurveCount != value.CurveCount || old.FillRule != value.FillRule || old.Fit != value.Fit
@@ -158,10 +163,13 @@ internal partial class VulkanSceneCompiler {
             }
         }
         for index in start.ClipMasks ... end.ClipMasks {
+            let value = rangeData.ClipMasks[index]
+            if value.AnalyticBox {
+                continue
+            }
             guard let scene = pathScene else {
                 return false
             }
-            let value = rangeData.ClipMasks[index]
             if !scene.TryRetain(
                 value.PathId,
                 value.AtlasId,

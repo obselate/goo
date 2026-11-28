@@ -9,10 +9,10 @@
       "executable": "slangc"
     },
     "compatibilityCompiler": {
-      "project": "google/shaderc",
-      "version": "2026.3",
-      "commit": "ef2c68b4871a3c399a0808321b51379847a54673",
-      "executable": "glslc"
+      "project": "shader-slang/slang",
+      "version": "2026.16",
+      "commit": "2c6ca521d2c38e7ab67c63293351bc88eb747340",
+      "executable": "slangc"
     },
     "validator": {
       "project": "KhronosGroup/SPIRV-Tools",
@@ -77,11 +77,19 @@
     "never"
   ],
   "compatibilityCompileFlags": [
-    "--target-env=vulkan1.3",
-    "--target-spv=spv1.6",
-    "-std=450core",
-    "-O",
-    "-Werror"
+    "-allow-glsl",
+    "-lang",
+    "glsl",
+    "-entry",
+    "main",
+    "-target",
+    "spirv",
+    "-capability",
+    "SPIRV_1_6",
+    "-matrix-layout-row-major",
+    "-O2",
+    "-diagnostic-color",
+    "never"
   ],
   "primitiveRecord": {
     "set": 2,
@@ -169,10 +177,10 @@
       }
     ],
     "hostPacking": {
-      "path": "HbGpuTextInstanceRecord.Generated.gs",
+      "path": "VulkanShaderAbi.Generated.gs",
       "typeName": "HbGpuTextInstanceRecord",
-      "sha256": "a5ef6af50e518632f5573059fc161963178fcddb11262f99a65f23504450d67a",
-      "bytes": 1493
+      "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+      "bytes": 5510
     }
   },
   "assemblies": [
@@ -192,7 +200,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-          "sha256": "91b6487213513c606f312e8eafcc1ae9cb501f7d7d0e812a5a26e8a330300557"
+          "sha256": "30412a28b8aa5e71328eb5d964be28183abb17f6e91d9d2ea862ad0f96f06c92"
         }
       ]
     },
@@ -216,7 +224,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl",
-          "sha256": "892f76421162819caae0db0d0a29aa6b50e3fbdacfa82926b79d423cb27e0274"
+          "sha256": "8141b1a0774ac80d4acc3e8c73c3a27dd8d51a29aea9b7fcf5599f24a427ec5d"
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_draw.frag.wrapper.glsl",
@@ -248,7 +256,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl",
-          "sha256": "892f76421162819caae0db0d0a29aa6b50e3fbdacfa82926b79d423cb27e0274"
+          "sha256": "8141b1a0774ac80d4acc3e8c73c3a27dd8d51a29aea9b7fcf5599f24a427ec5d"
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_paint.frag.wrapper.glsl",
@@ -272,79 +280,27 @@
       ]
     },
     {
-      "id": "analytic_solid_fragment",
-      "stage": "fragment",
-      "source": "analytic_solid.frag.slang",
-      "output": "analytic_solid.frag.spv",
+      "id": "batched_ui_vertex",
+      "stage": "vertex",
+      "source": "batched_ui.vert.slang",
+      "output": "batched_ui.vert.spv",
       "entryPoint": "main",
-      "sourceSha256": "c57a9efeb1616b08fb5241a92be5e05003928ec0ae47ce2e9afe287cb20723ce",
-      "outputSha256": "953ae16c50c6b19d0843b5d7f4050f8bcc052934e790c980fa2c2050cd67fc3e",
-      "outputBytes": 35720,
+      "sourceSha256": "2dcc4cb5064cfe0b2704dbd2479a6ff528e75fc15e584ec42f8bd11b8d6bda74",
+      "outputSha256": "ac91bfba2f5004769ed2102d95f714ab21414058fa800e3967bb44cf04e2629e",
+      "outputBytes": 2940,
       "capabilities": [
         1
       ]
     },
     {
-      "id": "analytic_shadow_fragment",
+      "id": "batched_ui_fragment",
       "stage": "fragment",
-      "source": "analytic_shadow.frag.slang",
-      "output": "analytic_shadow.frag.spv",
+      "source": "batched_ui.frag.slang",
+      "output": "batched_ui.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "53b169aad593f49ff31b6e386281476c362894edceb3cac9f490add704b01d6d",
-      "outputSha256": "b96c02314d70afb6d86799edaa9393704a9aeffcf0ab14c704ac31f8586e7534",
-      "outputBytes": 62856,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "analytic_border_fragment",
-      "stage": "fragment",
-      "source": "analytic_border.frag.slang",
-      "output": "analytic_border.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "e5a85eed92411fea27073839a58521d03ad71ac8de02b8569c93a3909f84e8bf",
-      "outputSha256": "cb5bff0bcd6833d389614db6db00cff38b536b8bb2bd5550a94bad7decb42493",
-      "outputBytes": 71036,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "analytic_linear4_fragment",
-      "stage": "fragment",
-      "source": "analytic_linear4.frag.slang",
-      "output": "analytic_linear4.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "702fe9d8d533626cf43cb6add0a16bb2c96064122c7e035ac417a1d84224553a",
-      "outputSha256": "75be7723553297b85ebf33ab249ede3324fef655bf229b5c0f5e6137bedfa820",
-      "outputBytes": 30480,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "analytic_radial4_fragment",
-      "stage": "fragment",
-      "source": "analytic_radial4.frag.slang",
-      "output": "analytic_radial4.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "cbfa0e52225925169b68c9242940fbf1868ddff0febac58bd01e2abf8a3af49f",
-      "outputSha256": "c6f1ad49786c9335dcb8463795edd2450c510caa7a447fa2ff52407d0ffe61d0",
-      "outputBytes": 30452,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "analytic_sampled_image_fragment",
-      "stage": "fragment",
-      "source": "analytic_sampled_image.frag.slang",
-      "output": "analytic_sampled_image.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "4f1df269fdd0f981e23bffd3ff719f4979a288ffe7e1a9b921bd012b9e452289",
-      "outputSha256": "54d37ee8add44d6d12d14ceb0de00016fdd14337c6fc4d8b668045e40536cfb5",
-      "outputBytes": 7232,
+      "sourceSha256": "45cd44eb7857e3051bd737d2608af1b8d840f6620deb1f83d354e1e5c4b623fa",
+      "outputSha256": "79531ba82a6e0999c80a986eb66e05df6d324d21adeb5c3b006da5b29972d7eb",
+      "outputBytes": 441384,
       "capabilities": [
         1
       ]
@@ -355,9 +311,9 @@
       "source": "analytic_blend.frag.slang",
       "output": "analytic_blend.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "cefbf8aa545314115303440e8287bcd4c7722384d016c882fe3410ea338c4d23",
-      "outputSha256": "3afc9252097fc2ab5932bf77a97f3e8d1188e061378013ef66fece5f00dad47c",
-      "outputBytes": 22676,
+      "sourceSha256": "b06f1f759e50e7dc10bca14e34945f7f40a0dd877808f8aa8092cf8c4808b893",
+      "outputSha256": "2dcf62cc751d51e626e13a503f51e27acae8a7d203c846c3d8bc0e91e9cbc13e",
+      "outputBytes": 112992,
       "capabilities": [
         1
       ]
@@ -368,7 +324,7 @@
       "source": "path_band.vert.slang",
       "output": "path_band.vert.spv",
       "entryPoint": "main",
-      "sourceSha256": "49690d970b0df87a8e5eb1809b36e5ebbe52e9f21b60cdd3b0b06b375c14e3c8",
+      "sourceSha256": "f87b4aef9bf51f20b8f40b72a1673aee5becc238cd5edeb7edff6a70866adc2f",
       "outputSha256": "00c272bc913b89343bf4e9065c41f06a9349b62a727fdffc7dc2c35da3cab52c",
       "outputBytes": 3288,
       "capabilities": [
@@ -381,9 +337,9 @@
       "source": "path_band.frag.slang",
       "output": "path_band.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "e3f5f535a5291c691b21de163427fcb51e189f04d1c549de2105fbb5606114d5",
-      "outputSha256": "8415656fa213deefd42b1a74c37a2caeede4845686052bda3da3fa09fcdc8120",
-      "outputBytes": 72492,
+      "sourceSha256": "30c48a0b5998e55b49dc2205ea7b4fcb318dfeea9c98ff94db8d7ddfc5de3738",
+      "outputSha256": "07eb2aea7f5cc4294ff5d7ed9860103fb914f40e6ca120b874e5ce408538b5b7",
+      "outputBytes": 165676,
       "capabilities": [
         1
       ]
@@ -395,9 +351,9 @@
       "output": "hb_gpu.vert.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_vertex",
-      "sourceSha256": "b6d50b694d971e09469a571ad00be11c1ca99c9d9deba42b6b5d9e96dda8a56d",
-      "outputSha256": "92d2df29e151eca05fac85ec6f7cca877d675f1ecb87931fe2f742e32f8ae27a",
-      "outputBytes": 5532,
+      "sourceSha256": "219c805cd5dc2015c908945b05df8df60da293666513e26f419d7e21f68a277b",
+      "outputSha256": "71ef7cd51228bc08f4449d7421cccaee6236fffcf113df27102232685d55f200",
+      "outputBytes": 6044,
       "capabilities": [
         1
       ]
@@ -409,9 +365,9 @@
       "output": "hb_gpu_draw.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_draw_fragment",
-      "sourceSha256": "3ba5e024b1156795b63eb23fce7eea779f95b995044b804bf8fdffd45b4b1542",
-      "outputSha256": "26f7c15e8c8c61d2abd291d1058d5ee41b885d43a89a9e565b7357b807e54c5d",
-      "outputBytes": 67080,
+      "sourceSha256": "382cf75d1aa5503aca0048fc30c116501ebb55071631de98384c1c905802e126",
+      "outputSha256": "9707fa86d47aee028cbcca27531aec52fbf79e049de0927143d6873d112f76b0",
+      "outputBytes": 114148,
       "capabilities": [
         1,
         46
@@ -424,38 +380,12 @@
       "output": "hb_gpu_paint.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_paint_fragment",
-      "sourceSha256": "60f977bc5cd770fd96d1c2c4b02ed9ef4bc94ac996ce0f77f5e4e9e006c7143e",
-      "outputSha256": "621fe0cb8609f9dede6e43a85bca736e35819f2a8935395266bc9e90a4a84d9a",
-      "outputBytes": 155396,
+      "sourceSha256": "ba450a534032364259e7ad9ffdb8c8f96a88d94b1189094df46b06c3a722c2d9",
+      "outputSha256": "382f1d8acb57f0e01c35658e6c5fcbb81702e4adedee75c832ce15fa35581fd0",
+      "outputBytes": 203224,
       "capabilities": [
         1,
         46
-      ]
-    },
-    {
-      "id": "clip_mask_vertex",
-      "stage": "vertex",
-      "source": "clip_mask.vert.slang",
-      "output": "clip_mask.vert.spv",
-      "entryPoint": "main",
-      "sourceSha256": "77d715a5aaa286f30784adf3ee76a0ee2472cfecb3e267eee513d7e6f0d1b5f9",
-      "outputSha256": "b9b53bd57c62e9350c887c53ba57e308ab9a07a815a909a5296de1e7ffd7c347",
-      "outputBytes": 3088,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "clip_mask_fragment",
-      "stage": "fragment",
-      "source": "clip_mask.frag.slang",
-      "output": "clip_mask.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "c9e1d9a3ad1d84ee6ea7525434d0d326f96792d865c8191dd308aeb16b4423ae",
-      "outputSha256": "22dfd20cdc3ddb9fccb7bc725b724cf52cfde5054db31cf3a32cfb1f04f032ed",
-      "outputBytes": 70828,
-      "capabilities": [
-        1
       ]
     },
     {
@@ -464,22 +394,9 @@
       "source": "path_stroke.frag.slang",
       "output": "path_stroke.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "2e7c5d5039cd4989533138e3d47a698a11273e257c4f7f83f2748714ea828792",
-      "outputSha256": "1c11b5aa565a42953398bf8f9e8d4e3525564ad47c998fcd84398b85395523ff",
-      "outputBytes": 145916,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "stroke_mask_fragment",
-      "stage": "fragment",
-      "source": "stroke_mask.frag.slang",
-      "output": "stroke_mask.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "3636cc3cf0936480dadab954aba68db92ec97d1ae3dea6cd3715726541b77b0f",
-      "outputSha256": "ae9bd5482b4cf4b7c30ddf1a7506a8857d2b33ee89f8a22c8ed44df0ebb2fe58",
-      "outputBytes": 144244,
+      "sourceSha256": "21f05446284245be21a4791a2984edd477cea94cfe395598ae4bf6a5ec14d06b",
+      "outputSha256": "aebee93109a8f0bc3e506467df064dfcc0c1109fd9e46e2d8ccedb9aa7ab0d97",
+      "outputBytes": 239304,
       "capabilities": [
         1
       ]
@@ -500,7 +417,7 @@
   ],
   "pipelines": [
     {
-      "id": "analytic_solid",
+      "id": "batched_ui",
       "topology": "triangle-strip",
       "vertexInput": "none",
       "pushConstants": {
@@ -550,691 +467,7 @@
           }
         ]
       },
-      "descriptorCount": 3,
-      "descriptors": [
-        {
-          "set": 1,
-          "binding": 0,
-          "type": "combined-image-sampler",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 1,
-          "binding": 1,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 2,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "analytic_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ]
-        },
-        {
-          "shader": "analytic_solid_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "swapchain-UNORM-sRGB",
-      "sampleCount": 1,
-      "blend": "source-over-premultiplied-srgb",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "AnalyticSolidPushConstants.Generated.gs",
-        "typeName": "AnalyticSolidPushConstants",
-        "sha256": "53e3e208472ef0fe35cc90fe479c02827d89715a34390e847b6180d068440d9f",
-        "bytes": 1552
-      }
-    },
-    {
-      "id": "analytic_shadow",
-      "topology": "triangle-strip",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 0,
-        "stages": [],
-        "members": [
-          {
-            "name": "rect",
-            "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform0",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "radii",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "stopPositions",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "packedColors",
-            "offset": 96,
-            "type": "uvec4"
-          },
-          {
-            "name": "packedColorsExtra",
-            "offset": 112,
-            "type": "uvec4"
-          }
-        ]
-      },
-      "descriptorCount": 3,
-      "descriptors": [
-        {
-          "set": 1,
-          "binding": 0,
-          "type": "combined-image-sampler",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 1,
-          "binding": 1,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 2,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "analytic_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ]
-        },
-        {
-          "shader": "analytic_shadow_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "swapchain-UNORM-sRGB",
-      "sampleCount": 1,
-      "blend": "source-over-premultiplied-srgb",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "AnalyticSolidPushConstants.Generated.gs",
-        "typeName": "AnalyticSolidPushConstants",
-        "sha256": "53e3e208472ef0fe35cc90fe479c02827d89715a34390e847b6180d068440d9f",
-        "bytes": 1552
-      }
-    },
-    {
-      "id": "analytic_border",
-      "topology": "triangle-strip",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 0,
-        "stages": [],
-        "members": [
-          {
-            "name": "rect",
-            "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform0",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "widths",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "radii",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "packedColors",
-            "offset": 96,
-            "type": "uvec4"
-          },
-          {
-            "name": "packedColorsExtra",
-            "offset": 112,
-            "type": "uvec4"
-          }
-        ]
-      },
-      "descriptorCount": 3,
-      "descriptors": [
-        {
-          "set": 1,
-          "binding": 0,
-          "type": "combined-image-sampler",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 1,
-          "binding": 1,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 2,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "analytic_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ]
-        },
-        {
-          "shader": "analytic_border_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "swapchain-UNORM-sRGB",
-      "sampleCount": 1,
-      "blend": "source-over-premultiplied-srgb",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "AnalyticBorderPushConstants.Generated.gs",
-        "typeName": "AnalyticBorderPushConstants",
-        "sha256": "1abfe575b26019baec4ef949da51fbd23e98f9877e35b6b3ef74708591d49196",
-        "bytes": 1525
-      }
-    },
-    {
-      "id": "analytic_linear4",
-      "topology": "triangle-strip",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 8,
-        "stages": [
-          "fragment"
-        ],
-        "members": [
-          {
-            "name": "ditherOffset",
-            "offset": 0,
-            "type": "vec2"
-          }
-        ]
-      },
-      "descriptorCount": 3,
-      "descriptors": [
-        {
-          "set": 1,
-          "binding": 0,
-          "type": "combined-image-sampler",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 1,
-          "binding": 1,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 2,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "analytic_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ]
-        },
-        {
-          "shader": "analytic_linear4_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "swapchain-UNORM-sRGB",
-      "sampleCount": 1,
-      "blend": "source-over-premultiplied-srgb",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "AnalyticLinear4PushConstants.Generated.gs",
-        "typeName": "AnalyticLinear4PushConstants",
-        "sha256": "03ca39b9ca759d4670004d4e585fa1ded670be2aee8b90e990e6add67fbbb2cf",
-        "bytes": 250
-      }
-    },
-    {
-      "id": "analytic_radial4",
-      "topology": "triangle-strip",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 8,
-        "stages": [
-          "fragment"
-        ],
-        "members": [
-          {
-            "name": "ditherOffset",
-            "offset": 0,
-            "type": "vec2"
-          }
-        ]
-      },
-      "descriptorCount": 3,
-      "descriptors": [
-        {
-          "set": 1,
-          "binding": 0,
-          "type": "combined-image-sampler",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 1,
-          "binding": 1,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        },
-        {
-          "set": 2,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "analytic_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ]
-        },
-        {
-          "shader": "analytic_radial4_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec2",
-              "name": "uv"
-            },
-            {
-              "location": 2,
-              "type": "uint",
-              "name": "gooClipDrawOrdinal"
-            },
-            {
-              "location": 3,
-              "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
-            }
-          ],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "swapchain-UNORM-sRGB",
-      "sampleCount": 1,
-      "blend": "source-over-premultiplied-srgb",
-      "colorPacking": "rgb11-11-10-alpha10-premultiplied-srgb",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "AnalyticRadial4PushConstants.Generated.gs",
-        "typeName": "AnalyticRadial4PushConstants",
-        "sha256": "07ca1a4302c1566cf622b733d78dfa1ae6e03063b740ecf40d21e3cdce753c81",
-        "bytes": 250
-      }
-    },
-    {
-      "id": "analytic_sampled_image",
-      "topology": "triangle-strip",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 0,
-        "stages": [],
-        "members": [
-          {
-            "name": "rect",
-            "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform0",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "radii",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "stopPositions",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "packedColors",
-            "offset": 96,
-            "type": "uvec4"
-          },
-          {
-            "name": "packedColorsExtra",
-            "offset": 112,
-            "type": "uvec4"
-          }
-        ]
-      },
-      "descriptorCount": 4,
+      "descriptorCount": 5,
       "descriptors": [
         {
           "set": 0,
@@ -1248,7 +481,7 @@
         {
           "set": 1,
           "binding": 0,
-          "type": "combined-image-sampler",
+          "type": "storage-buffer",
           "count": 1,
           "stages": [
             "fragment"
@@ -1272,11 +505,20 @@
             "vertex",
             "fragment"
           ]
+        },
+        {
+          "set": 3,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "fragment"
+          ]
         }
       ],
       "stages": [
         {
-          "shader": "analytic_vertex",
+          "shader": "batched_ui_vertex",
           "stage": "vertex",
           "entryPoint": "main",
           "inputs": [],
@@ -1289,17 +531,17 @@
             {
               "location": 2,
               "type": "uint",
-              "name": "gooClipDrawOrdinal"
+              "name": "scissorChainId"
             },
             {
               "location": 3,
               "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
+              "name": "primitiveRecordOrdinal"
             }
           ]
         },
         {
-          "shader": "analytic_sampled_image_fragment",
+          "shader": "batched_ui_fragment",
           "stage": "fragment",
           "entryPoint": "main",
           "inputs": [
@@ -1311,12 +553,12 @@
             {
               "location": 2,
               "type": "uint",
-              "name": "gooClipDrawOrdinal"
+              "name": "scissorChainId"
             },
             {
               "location": 3,
               "type": "uint",
-              "name": "gooPrimitiveRecordOrdinal"
+              "name": "primitiveRecordOrdinal"
             }
           ],
           "outputs": [
@@ -1331,15 +573,15 @@
       "colorFormat": "swapchain-UNORM-sRGB",
       "sampleCount": 1,
       "blend": "source-over-premultiplied-srgb",
-      "colorPacking": "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-srgb",
+      "colorPacking": "batched-ui-premultiplied-srgb",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",
       "hostPacking": {
-        "path": "SampledImagePushConstants.Generated.gs",
-        "typeName": "SampledImagePushConstants",
-        "sha256": "970ba410430b4b68b3a94c0f2c4d2bc0e3dfac94429a77e43b88d62f4ea5b7c3",
-        "bytes": 1551
+        "path": "VulkanShaderAbi.Generated.gs",
+        "typeName": "VulkanPrimitiveGpuRecord",
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     },
     {
@@ -1426,7 +668,7 @@
         {
           "set": 3,
           "binding": 0,
-          "type": "combined-image-sampler",
+          "type": "storage-buffer",
           "count": 1,
           "stages": [
             "fragment"
@@ -1504,10 +746,10 @@
       "cullMode": "none",
       "frontFace": "counter-clockwise",
       "hostPacking": {
-        "path": "SampledImagePushConstants.Generated.gs",
-        "typeName": "SampledImagePushConstants",
-        "sha256": "970ba410430b4b68b3a94c0f2c4d2bc0e3dfac94429a77e43b88d62f4ea5b7c3",
-        "bytes": 1551
+        "path": "VulkanShaderAbi.Generated.gs",
+        "typeName": "VulkanPrimitiveGpuRecord",
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     },
     {
@@ -1564,7 +806,7 @@
         {
           "set": 1,
           "binding": 0,
-          "type": "combined-image-sampler",
+          "type": "storage-buffer",
           "count": 1,
           "stages": [
             "fragment"
@@ -1632,10 +874,10 @@
       "cullMode": "none",
       "frontFace": "counter-clockwise",
       "hostPacking": {
-        "path": "PathBandPushConstants.Generated.gs",
+        "path": "VulkanShaderAbi.Generated.gs",
         "typeName": "PathBandPushConstants",
-        "sha256": "a7ca637b53ab1af1ea0404f5604322db5ff60743db94e1eec441dd14fb7f5150",
-        "bytes": 991
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     },
     {
@@ -1644,7 +886,7 @@
       "vertexInput": "none",
       "pushConstants": {
         "offset": 0,
-        "size": 32,
+        "size": 48,
         "stages": [
           "vertex"
         ],
@@ -1658,6 +900,11 @@
             "name": "origin",
             "offset": 16,
             "type": "vec4"
+          },
+          {
+            "name": "scissor",
+            "offset": 32,
+            "type": "uvec4"
           }
         ]
       },
@@ -1675,7 +922,7 @@
         {
           "set": 1,
           "binding": 0,
-          "type": "combined-image-sampler",
+          "type": "storage-buffer",
           "count": 1,
           "stages": [
             "fragment"
@@ -1719,8 +966,8 @@
             },
             {
               "location": 2,
-              "type": "uint",
-              "name": "v_clipChainId"
+              "type": "uvec2",
+              "name": "v_clipChains"
             },
             {
               "location": 3,
@@ -1751,8 +998,8 @@
             },
             {
               "location": 2,
-              "type": "uint",
-              "name": "v_clipChainId"
+              "type": "uvec2",
+              "name": "v_clipChains"
             },
             {
               "location": 3,
@@ -1782,10 +1029,10 @@
       "cullMode": "none",
       "frontFace": "counter-clockwise",
       "hostPacking": {
-        "path": "HbGpuTextFrameConstants.Generated.gs",
+        "path": "VulkanShaderAbi.Generated.gs",
         "typeName": "HbGpuTextFrameConstants",
-        "sha256": "f518b351c6cf2128c2bdf7d284e78aed23b8ac5ed7e2521bc74b35eb8de59ad6",
-        "bytes": 481
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     },
     {
@@ -1794,7 +1041,7 @@
       "vertexInput": "none",
       "pushConstants": {
         "offset": 0,
-        "size": 32,
+        "size": 48,
         "stages": [
           "vertex"
         ],
@@ -1808,6 +1055,11 @@
             "name": "origin",
             "offset": 16,
             "type": "vec4"
+          },
+          {
+            "name": "scissor",
+            "offset": 32,
+            "type": "uvec4"
           }
         ]
       },
@@ -1825,7 +1077,7 @@
         {
           "set": 1,
           "binding": 0,
-          "type": "combined-image-sampler",
+          "type": "storage-buffer",
           "count": 1,
           "stages": [
             "fragment"
@@ -1869,8 +1121,8 @@
             },
             {
               "location": 2,
-              "type": "uint",
-              "name": "v_clipChainId"
+              "type": "uvec2",
+              "name": "v_clipChains"
             },
             {
               "location": 3,
@@ -1901,13 +1153,8 @@
             },
             {
               "location": 2,
-              "type": "uint",
-              "name": "v_clipChainId"
-            },
-            {
-              "location": 3,
-              "type": "vec4",
-              "name": "v_effectAndOrigin"
+              "type": "uvec2",
+              "name": "v_clipChains"
             },
             {
               "location": 4,
@@ -1932,108 +1179,10 @@
       "cullMode": "none",
       "frontFace": "counter-clockwise",
       "hostPacking": {
-        "path": "HbGpuTextFrameConstants.Generated.gs",
+        "path": "VulkanShaderAbi.Generated.gs",
         "typeName": "HbGpuTextFrameConstants",
-        "sha256": "f518b351c6cf2128c2bdf7d284e78aed23b8ac5ed7e2521bc74b35eb8de59ad6",
-        "bytes": 481
-      }
-    },
-    {
-      "id": "clip_mask",
-      "topology": "triangle-list",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 112,
-        "stages": [
-          "vertex",
-          "fragment"
-        ],
-        "members": [
-          {
-            "name": "transform0",
-            "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "sampleStep",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "borderRect",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "borderTransform0",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "borderTransform1",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 96,
-            "type": "uvec4"
-          }
-        ]
-      },
-      "descriptorCount": 1,
-      "descriptors": [
-        {
-          "set": 0,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "clip_mask_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": []
-        },
-        {
-          "shader": "clip_mask_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "r8-unorm",
-      "sampleCount": 1,
-      "blend": "disabled",
-      "colorPacking": "clip-mask-r8-coverage",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "ClipMaskPushConstants.Generated.gs",
-        "typeName": "ClipMaskPushConstants",
-        "sha256": "05903dcc620b8779f58a0799fa74e51fb29e89378f8a6d51df8f85da6ecf8c86",
-        "bytes": 1415
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     },
     {
@@ -2090,7 +1239,7 @@
         {
           "set": 1,
           "binding": 0,
-          "type": "combined-image-sampler",
+          "type": "storage-buffer",
           "count": 1,
           "stages": [
             "fragment"
@@ -2167,117 +1316,10 @@
       "cullMode": "none",
       "frontFace": "counter-clockwise",
       "hostPacking": {
-        "path": "PathBandPushConstants.Generated.gs",
+        "path": "VulkanShaderAbi.Generated.gs",
         "typeName": "PathBandPushConstants",
-        "sha256": "a7ca637b53ab1af1ea0404f5604322db5ff60743db94e1eec441dd14fb7f5150",
-        "bytes": 991
-      }
-    },
-    {
-      "id": "stroke_mask",
-      "topology": "triangle-list",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 112,
-        "stages": [
-          "vertex",
-          "fragment"
-        ],
-        "members": [
-          {
-            "name": "transform0",
-            "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "transform1",
-            "offset": 16,
-            "type": "vec4"
-          },
-          {
-            "name": "sampleStep",
-            "offset": 32,
-            "type": "vec4"
-          },
-          {
-            "name": "borderRect",
-            "offset": 48,
-            "type": "vec4"
-          },
-          {
-            "name": "borderTransform0",
-            "offset": 64,
-            "type": "vec4"
-          },
-          {
-            "name": "borderTransform1",
-            "offset": 80,
-            "type": "vec4"
-          },
-          {
-            "name": "params",
-            "offset": 96,
-            "type": "uvec4"
-          }
-        ]
-      },
-      "descriptorCount": 2,
-      "descriptors": [
-        {
-          "set": 0,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "vertex",
-            "fragment"
-          ]
-        },
-        {
-          "set": 1,
-          "binding": 0,
-          "type": "storage-buffer",
-          "count": 1,
-          "stages": [
-            "fragment"
-          ]
-        }
-      ],
-      "stages": [
-        {
-          "shader": "clip_mask_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": []
-        },
-        {
-          "shader": "stroke_mask_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "r8-unorm",
-      "sampleCount": 1,
-      "blend": "disabled",
-      "colorPacking": "clip-mask-r8-coverage",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "ClipMaskPushConstants.Generated.gs",
-        "typeName": "ClipMaskPushConstants",
-        "sha256": "05903dcc620b8779f58a0799fa74e51fb29e89378f8a6d51df8f85da6ecf8c86",
-        "bytes": 1415
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     },
     {
@@ -2335,10 +1377,10 @@
       "cullMode": "none",
       "frontFace": "none",
       "hostPacking": {
-        "path": "StrokeMetricPushConstants.Generated.gs",
+        "path": "VulkanShaderAbi.Generated.gs",
         "typeName": "StrokeMetricPushConstants",
-        "sha256": "bf4fc2eccafa502e4ee32b8efdba9af46bb9c0e5167a62ca87f07c2cf4d2792a",
-        "bytes": 194
+        "sha256": "eb4a27c04cd5f881ae916995c20c1b8d5f1633323e2d984c336e320de6c74f61",
+        "bytes": 5510
       }
     }
   ]

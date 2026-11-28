@@ -14,7 +14,7 @@ internal data struct VulkanPrimitiveRecordResult {
 internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private const DefaultClipDepth int32 = 64
   private const PathPushConstantSize uint32 = 80u
-  private const TextPushConstantSize uint32 = 32u
+  private const TextPushConstantSize uint32 = 48u
   private const MaxLayerDepth int32 = 32
 
   private let device VkDevice
@@ -23,8 +23,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private let imageResources VulkanImageResources?
   private var pathAtlas VulkanPathAtlas
   private let textAtlases VulkanTextAtlasSet?
-  private let clipMaskAtlas VulkanClipMaskAtlas?
-  private let clipMaskFrameData VulkanClipMaskFrameData?
+  private let scissorTable VulkanScissorTable
   private let primitiveState VulkanSharedPrimitiveState
   private let primitivePipelines VulkanSharedPrimitiveFormatState
   private let primitiveFrameData VulkanPrimitiveFrameData
@@ -39,19 +38,23 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private let maxStorageBufferRange VkDeviceSize
   private let objectAccounting VulkanObjectAccounting?
   private let clipStack []PrimitiveClip
+  private let activeRectClipStack []int32
   private let layerStates []VulkanLayerRenderState
   private let layerClipSnapshots []PrimitiveClip
+  private let layerRectClipSnapshots []int32
+  private let pendingGradientStops List[PendingGradientStops]
+  private let usedEffectPrograms List[ShaderEffectProgram]
   private var pipelineLayout VkPipelineLayout
   private var blendPipelineLayout VkPipelineLayout
   private var pathPipelineLayout VkPipelineLayout
   private var textPipelineLayout VkPipelineLayout
-  private var clipMaskPipelineLayout VkPipelineLayout
   private var activePipeline VkPipeline
   private var boundDescriptorLayout VkPipelineLayout
   private var clipDescriptorLayout VkPipelineLayout
   private var clipDescriptorBound bool
   private var clipDescriptorSlot int32
   private var sampledDescriptorBound bool
+  private var sampledTarget VulkanOffscreenLayerTarget?
   private var sampledImageId ResourceId
   private var sampledSamplerId ResourceId
   private var sampledSamplerMode VulkanImageSamplerMode
@@ -82,6 +85,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var timestampSlot int32 = -1
   private var timestampContext VulkanDiagnosticTimestampContext
   private var currentDrawOrdinal uint32
+  private var currentDrawClipChainId int32
+  private var forceZeroScissor bool
   private var primitiveRecordOrdinal uint32
   private var primitiveRecordCount int32
   private var primitiveRecordPlan []uint32
@@ -93,9 +98,26 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var preparedClipFrame SceneFrame?
   private var preparedClipExtent VkExtent2D
   private var preparedClipSlot int32 = -1
-  private var preparedClipMaskCount int32
-  private var clipRegions []VulkanClipMaskRegion
-  private let clipContentKeys Dictionary[uint64, uint64]
+  private var fallbackImage VkImage
+  private var fallbackImageView VkImageView
+  private var fallbackImageAllocation VulkanMemoryAllocation?
+  private var fallbackSampler VkSampler
+  private var fallbackImagePool VkDescriptorPool
+  private var fallbackImageDescriptorSet VkDescriptorSet
+  private var fallbackImageAccounted bool
+  private var fallbackImageViewAccounted bool
+  private var fallbackSamplerAccounted bool
+  private var fallbackImagePoolAccounted bool
+  private var fallbackImageSetAccounted bool
+  private var fallbackImageInitialized bool
+  private var fallbackImageRecorded bool
+  private var fallbackStrokeBuffer VkBuffer
+  private var fallbackStrokeAllocation VulkanMemoryAllocation?
+  private var fallbackStrokePool VkDescriptorPool
+  private var fallbackStrokeDescriptorSet VkDescriptorSet
+  private var fallbackStrokeBufferAccounted bool
+  private var fallbackStrokePoolAccounted bool
+  private var fallbackStrokeSetAccounted bool
   private var recordPipelineChangeCount uint64
   private var recordDescriptorChangeCount uint64
   private var disposed bool
@@ -134,8 +156,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     nativePathAtlas VulkanPathAtlas,
     nativeTextAtlases VulkanTextAtlasSet?,
     nativeObjectAccounting VulkanObjectAccounting?,
-    nativeAllocator VulkanMemoryAllocator?,
-    nativeClipMaskAtlas VulkanClipMaskAtlas?) {
+    nativeAllocator VulkanMemoryAllocator?) {
       if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -161,9 +182,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if nativePathAtlas == nil {
         throw ArgumentNullException("nativePathAtlas")
       }
-      if (nativeAllocator == nil) != (nativeClipMaskAtlas == nil) {
-        throw ArgumentException("Vulkan clip mask allocator and atlas must be supplied together")
-      }
       guard let suppliedAllocator = nativeAllocator else {
         throw ArgumentNullException("nativeAllocator")
       }
@@ -178,11 +196,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           throw ArgumentOutOfRangeException("expectedGeneration")
         }
       }
-      if let suppliedClipAtlas = nativeClipMaskAtlas {
-        if suppliedClipAtlas.Generation == 0uL {
-          throw ArgumentOutOfRangeException("nativeClipMaskAtlas")
-        }
-      }
       let pipelines = sharedState.PipelinesFor(colorFormat)
       this.device = nativeDevice
       this.dispatch = nativeDispatch
@@ -190,9 +203,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       this.imageResources = sharedImages
       this.pathAtlas = suppliedPathAtlas
       this.textAtlases = nativeTextAtlases
-      this.clipMaskAtlas = nativeClipMaskAtlas
       this.primitiveState = sharedState
       this.primitivePipelines = pipelines
+      this.scissorTable = VulkanScissorTable(device, dispatch, suppliedAllocator,
+        sharedState.ClipDescriptorSetLayout, nativeMaxStorageBufferRange,
+        nativePrimitiveFrameSlotCount, nativeObjectAccounting)
       this.primitiveFrameData = VulkanPrimitiveFrameData(device, dispatch, suppliedAllocator,
         sharedState.PrimitiveDescriptorSetLayout, sharedState.EffectDataDescriptorSetLayout,
         nativeMaxStorageBufferRange, nativePrimitiveFrameSlotCount, nativeObjectAccounting)
@@ -210,20 +225,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       blendPipelineLayout = pipelines.BlendPipelineLayout
       pathPipelineLayout = pipelines.PathPipelineLayout
       textPipelineLayout = pipelines.TextPipelineLayout
-      clipMaskPipelineLayout = sharedState.ClipMaskPipelineLayout
-      if let suppliedAllocator = nativeAllocator, let suppliedClipAtlas = nativeClipMaskAtlas {
-        clipMaskFrameData = VulkanClipMaskFrameData(device, dispatch, suppliedAllocator,
-          suppliedClipAtlas, sharedState.ClipDescriptorSetLayout,
-          maxStorageBufferRange, nativeObjectAccounting)
-      } else {
-        clipMaskFrameData = nil
-      }
       this.clipStack = [maxClipDepth + 1]PrimitiveClip
+      this.activeRectClipStack = [maxClipDepth + 1]int32
       this.layerStates = [MaxLayerDepth]VulkanLayerRenderState
       this.layerClipSnapshots = [MaxLayerDepth * (maxClipDepth + 1)]PrimitiveClip
+      this.layerRectClipSnapshots = [MaxLayerDepth * (maxClipDepth + 1)]int32
       this.primitiveRecordPlan = [1]uint32
-      this.clipRegions = [64]VulkanClipMaskRegion
-      this.clipContentKeys = Dictionary[uint64, uint64]()
+      this.pendingGradientStops = List[PendingGradientStops](8)
+      this.usedEffectPrograms = List[ShaderEffectProgram](8)
+      CreateFallbackDescriptors()
     }
 
   internal func SetLayerPool(value VulkanOffscreenLayerPool?) {
@@ -374,6 +384,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       primitiveRecordCount = 0
       primitiveRecordOrdinal = 0u
       currentDrawOrdinal = 0u
+      currentDrawClipChainId = 0
+      forceZeroScissor = false
       layerDepth = 0
       currentTarget = nil
       currentOriginX = 0.0F
@@ -381,11 +393,21 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       activeExtent = extent
       physicalExtent = extent
       clipStack[0] = FullClip()
+      activeRectClipStack[0] = -1
       clipDepth = 1
       textFrameScaleX = scaleX
       textFrameScaleY = scaleY
+      pendingGradientStops.Clear()
+      usedEffectPrograms.Clear()
       try {
-        textFrameData.Prepare(frame, primitiveFrameSlot, completedSubmissionSerial)
+        if !Object.ReferenceEquals(preparedClipFrame, frame) || preparedClipSlot != primitiveFrameSlot {
+          scissorTable.BeginBuild(frame, pathAtlas, primitiveFrameSlot, completedSubmissionSerial)
+          preparedClipFrame = frame
+          preparedClipExtent = extent
+          preparedClipSlot = primitiveFrameSlot
+        }
+        let textClipOverrides = scissorTable.ResolveTextClipChains(frame, layerPool)
+        textFrameData.Prepare(frame, primitiveFrameSlot, completedSubmissionSerial, textClipOverrides)
         pathStrokeFrameData?.Begin(frame.AnalyticPathBandCount, frame.ClipMaskCount)
         primitiveFrameData.BeginPrepare(primitiveFrameSlot, maximumRecordCount,
           frame.ShaderEffectDataByteCount, frame.ShaderEffectDataVersion,
@@ -403,15 +425,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         if clipDepth != 1 || layerDepth != 0 || currentTarget != nil {
           throw InvalidOperationException("Vulkan primitive prepass stack is not balanced")
         }
+        FlushPendingGradientStops(frame)
         primitiveFrameData.FinishPrepare()
         PrepareStrokeMasks(frame)
         pathStrokeFrameData?.FinishPrepare(primitiveFrameSlot, completedSubmissionSerial)
+        scissorTable.FinishPrepare(pathStrokeFrameData, scaleX, scaleY)
         primitivePrepared = true
         return primitiveFrameData.LastStats
       } catch (error Exception) {
         try { primitiveFrameData.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
         try { textFrameData.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
         try { pathStrokeFrameData?.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
+        try { scissorTable.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
         textFrameScaleX = 1.0F
         textFrameScaleY = 1.0F
         primitivePrepared = false
@@ -425,10 +450,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if !primitivePrepared {
       throw InvalidOperationException("Vulkan primitive frame data was not prepared")
     }
+    if !fallbackImageInitialized && fallbackImage != VkImage.Null {
+      RecordFallbackImageInit(commandBuffer)
+      fallbackImageRecorded = true
+    }
     imageResources?.RecordExternalAcquires(commandBuffer)
     primitiveFrameData.RecordUpload(commandBuffer)
     textFrameData.RecordUpload(commandBuffer)
     pathStrokeFrameData?.RecordMetrics(commandBuffer, pathAtlas)
+    scissorTable.Record(commandBuffer)
   }
 
   internal func FlushPrimitiveFrameBeforeSubmit() VkResult {
@@ -438,30 +468,45 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
 
   internal func ValidatePrimitiveFrameSubmission(submissionSerial uint64) {
+    primitivePipelines.StampShaderEffectSubmission(usedEffectPrograms, submissionSerial)
     primitiveFrameData.ValidateSubmission(primitiveFrameSlot, submissionSerial)
     textFrameData.ValidateSubmission(primitiveFrameSlot, submissionSerial)
     pathStrokeFrameData?.ValidateSubmission(submissionSerial)
   }
 
   internal func MarkPrimitiveFrameSubmitted(submissionSerial uint64) {
+    primitivePipelines.StampShaderEffectSubmission(usedEffectPrograms, submissionSerial)
+    usedEffectPrograms.Clear()
     primitiveFrameData.MarkSubmitted(primitiveFrameSlot, submissionSerial)
     textFrameData.MarkSubmitted(primitiveFrameSlot, submissionSerial)
     pathStrokeFrameData?.MarkSubmitted(primitiveFrameSlot, submissionSerial)
+    if fallbackImageRecorded {
+      fallbackImageInitialized = true
+      fallbackImageRecorded = false
+    }
     primitivePrepared = false
     textFrameScaleX = 1.0F
     textFrameScaleY = 1.0F
   }
 
   internal func ReconcilePrimitiveFrameSubmitted(submissionSerial uint64) {
+    primitivePipelines.StampShaderEffectSubmission(usedEffectPrograms, submissionSerial)
+    usedEffectPrograms.Clear()
     primitiveFrameData.ReconcileSubmitted(primitiveFrameSlot, submissionSerial)
     textFrameData.ReconcileSubmitted(primitiveFrameSlot, submissionSerial)
     pathStrokeFrameData?.MarkSubmitted(primitiveFrameSlot, submissionSerial)
+    if fallbackImageRecorded {
+      fallbackImageInitialized = true
+      fallbackImageRecorded = false
+    }
     primitivePrepared = false
     textFrameScaleX = 1.0F
     textFrameScaleY = 1.0F
   }
 
   internal func AbortPrimitiveFrame() {
+    usedEffectPrograms.Clear()
+    fallbackImageRecorded = false
     try {
       pathStrokeFrameData?.Abort(primitiveFrameSlot)
       try {
@@ -480,6 +525,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     primitiveFrameData.Collect(completedSubmissionSerial)
     textFrameData.Collect(completedSubmissionSerial)
     pathStrokeFrameData?.Collect(completedSubmissionSerial)
+    primitiveState.Collect(completedSubmissionSerial)
   }
 
   internal func RecordInsideRendering(
@@ -546,8 +592,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       clipDescriptorBound = false
       clipDescriptorSlot = -1
       currentDrawOrdinal = 0u
+      currentDrawClipChainId = 0
+      forceZeroScissor = false
       primitiveRecordOrdinal = 0u
       sampledDescriptorBound = false
+      sampledTarget = nil
       sampledImageId = ResourceId{}
       sampledSamplerId = ResourceId{}
       sampledSamplerMode = VulkanImageSamplerMode.Nearest
@@ -563,14 +612,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       recordPipelineChangeCount = 0uL
       recordDescriptorChangeCount = 0uL
       ResetPrimitiveBatching()
-      guard let clipData = clipMaskFrameData else {
-        throw NotSupportedException("Vulkan primitive renderer has no clip mask frame data")
-      }
-      if !Object.ReferenceEquals(preparedClipFrame, frame) {
+      if !Object.ReferenceEquals(preparedClipFrame, frame) || preparedClipSlot != primitiveFrameSlot {
         throw InvalidOperationException("Vulkan clip frame data must be prepared before scene recording")
-      }
-      if preparedClipSlot < 0 || clipData.PreparedSlot != preparedClipSlot {
-        throw InvalidOperationException("Vulkan clip frame slot is not prepared")
       }
       var viewport = VkViewport{}
       viewport.x = 0.0F
@@ -590,6 +633,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       activeExtent = extent
       physicalExtent = extent
       clipStack[0] = baseClip
+      activeRectClipStack[0] = -1
       clipDepth = 1
       SetScissor(commandBuffer, baseClip)
 
@@ -666,7 +710,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       || (VulkanGpuExperiments.Selected == VulkanGpuExperiment.NoLayers && reference.Kind == SceneDrawKind.GeneratorEffect) {
       return
     }
-    solidInteriorEligible = reference.ClipChainId == 0
+    currentDrawClipChainId = reference.ClipChainId
     switch reference.Kind {
       case SceneDrawKind.SolidBox {
         RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
@@ -696,12 +740,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       case SceneDrawKind.RectClipBegin {
         RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
-        PushClip(commandBuffer, ResolveRectClip(frame, frame.RectClips[reference.Index], activeExtent))
+        ValidateRectClip(frame, frame.RectClips[reference.Index], activeExtent)
+        PushClip(reference.Index)
       }
       case SceneDrawKind.RectClipEnd {
         RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
         ValidateRectClip(frame, frame.RectClips[reference.Index], activeExtent)
-        PopClip(commandBuffer)
+        PopClip()
       }
       case SceneDrawKind.Underline {
         RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
@@ -739,6 +784,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       case SceneDrawKind.AnalyticPathBand {
         RequireRecordIndex(reference.Index, frame.AnalyticPathBandCount, "analytic path band index")
         if primitivePrepass {
+          let _ = ActiveScissorChainId()
           if frame.AnalyticPathBands[reference.Index].Stroke.Width > 0.0F {
             PrepareStroke(reference.Index, false, frame)
           }
@@ -800,21 +846,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       switch kind {
         case SceneDrawKind.SolidBox {
           RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
-          let value = frame.SolidBoxes[reference.Index]
-          let bounds = value.Bounds
-          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
+          count = 1uL
         }
         case SceneDrawKind.RoundedBox {
           RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
-          let value = frame.RoundedBoxes[reference.Index]
-          let bounds = value.Bounds
-          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
+          count = 1uL
         }
         case SceneDrawKind.PerEdgeBorder {
           RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
           let value = frame.PerEdgeBorders[reference.Index]
-          let bounds = value.Bounds
-          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 20uL } else { 4uL }
+          let rounded = value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
+            || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F
+          count = if value.Style == uint32(int32(BorderStyle.Solid)) && !rounded { 4uL } else { 1uL }
         }
         case SceneDrawKind.LinearGradient {
           RequireRecordIndex(frame.DrawRefs[index].Index, frame.LinearGradientCount, "linear gradient index")
@@ -830,9 +873,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         case SceneDrawKind.Underline {
           RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
-          let value = frame.Underlines[reference.Index]
-          let bounds = value.Bounds
-          count = if bounds.Width * bounds.Height >= float32(OpaqueInteriorMinimumArea) { 5uL } else { 1uL }
+          count = 1uL
         }
         case SceneDrawKind.LayerBegin {
           let layer = frame.Layer(frame.DrawRefs[index].Index)
@@ -941,6 +982,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         var snapshotIndex int32 = 0
         while snapshotIndex < clipDepth {
           layerClipSnapshots[state.ClipSnapshotOffset + snapshotIndex] = clipStack[snapshotIndex]
+          layerRectClipSnapshots[state.ClipSnapshotOffset + snapshotIndex] = activeRectClipStack[snapshotIndex]
           snapshotIndex++
         }
         layerStates[layerDepth] = state
@@ -1009,10 +1051,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var snapshotIndex int32 = 0
       while snapshotIndex < clipDepth {
         layerClipSnapshots[state.ClipSnapshotOffset + snapshotIndex] = clipStack[snapshotIndex]
+        layerRectClipSnapshots[state.ClipSnapshotOffset + snapshotIndex] = activeRectClipStack[snapshotIndex]
         snapshotIndex = snapshotIndex + 1
       }
       let endRendering = dispatch.vkCmdEndRendering
       endRendering(commandBuffer)
+      ClearSampledDescriptor()
       if needsBackdrop && !borrowsParentBackdrop && cached == nil {
         guard let capturedBackdrop = backdropTarget else {
           throw InvalidOperationException("Vulkan layer backdrop target is unavailable")
@@ -1133,6 +1177,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         var clipIndex int32 = 0
         while clipIndex < clipDepth {
           clipStack[clipIndex] = layerClipSnapshots[state.ClipSnapshotOffset + clipIndex]
+          activeRectClipStack[clipIndex] = layerRectClipSnapshots[state.ClipSnapshotOffset + clipIndex]
           clipIndex++
         }
         EmitLayer(commandBuffer, activeExtent, state.Record, state.Target, state.BackdropTarget, frame)
@@ -1145,6 +1190,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       (state.Record.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) != 0u
       let endRendering = dispatch.vkCmdEndRendering
       endRendering(commandBuffer)
+      ClearSampledDescriptor()
       EndLayerTimestamp(
         state.TimestampHandle,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
@@ -1166,6 +1212,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var clipIndex int32 = 0
       while clipIndex < clipDepth {
         clipStack[clipIndex] = layerClipSnapshots[state.ClipSnapshotOffset + clipIndex]
+        activeRectClipStack[clipIndex] = layerRectClipSnapshots[state.ClipSnapshotOffset + clipIndex]
         clipIndex = clipIndex + 1
       }
       let parentImageView = if let parent = state.ParentTarget {
@@ -1192,6 +1239,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
       EmitLayer(commandBuffer, activeExtent, state.Record, target, state.BackdropTarget, frame)
       FlushPendingPrimitiveDraw(commandBuffer)
+      if sampledTarget != nil {
+        ClearSampledDescriptor()
+      }
       EndLayerTimestamp(
         effectHandle,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
@@ -1204,6 +1254,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
       }
     }
+
+  private func ClearSampledDescriptor() {
+    sampledDescriptorBound = false
+    sampledTarget = nil
+    sampledImageId = ResourceId{}
+    sampledSamplerId = ResourceId{}
+    sampledSamplerMode = VulkanImageSamplerMode.Nearest
+    sampledGeneration = 0uL
+  }
 
   private func BeginLayerRendering(
     commandBuffer VkCommandBuffer,
@@ -1468,13 +1527,276 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if disposed {
       return
     }
-    if let data = clipMaskFrameData {
-      data.Dispose()
-    }
+    scissorTable.Dispose()
+    DisposeFallbackDescriptors()
     primitiveFrameData.Dispose()
     textFrameData.Dispose()
     pathStrokeFrameData?.Dispose()
     disposed = true
+  }
+
+  private func CreateFallbackDescriptors() {
+    let imageCreation = VulkanImageFactory.Create2D(
+      device,
+      dispatch,
+      frameAllocator,
+      objectAccounting,
+      VkExtent2D{ width: 1u, height: 1u },
+      VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
+      uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
+      uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
+      VulkanMemoryPolicy.DeviceLocalRequiredPreferred,
+      forceDedicated: true
+    )
+    fallbackImage = imageCreation.Image
+    fallbackImageView = imageCreation.ImageView
+    fallbackImageAllocation = imageCreation.Allocation
+    fallbackImageAccounted = objectAccounting != nil
+    fallbackImageViewAccounted = objectAccounting != nil
+
+    var samplerInfo = VkSamplerCreateInfo{
+      sType: VkConstants.VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+      magFilter: VkConstants.VK_FILTER_NEAREST,
+      minFilter: VkConstants.VK_FILTER_NEAREST,
+      mipmapMode: VkConstants.VK_SAMPLER_MIPMAP_MODE_NEAREST,
+      addressModeU: VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+      addressModeV: VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+      addressModeW: VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+      maxLod: 1.0F,
+    }
+    let createSampler = dispatch.vkCreateSampler
+    let samplerResult = createSampler(device, &samplerInfo, nil, &fallbackSampler)
+    if samplerResult != VkConstants.VK_SUCCESS || fallbackSampler == VkSampler.Null {
+      throw InvalidOperationException("vkCreateSampler failed for fallback image")
+    }
+    if let accounting = objectAccounting {
+      accounting.Allocate()
+      fallbackSamplerAccounted = true
+    }
+
+    var imagePoolSize = VkDescriptorPoolSize{
+      _type: VkConstants.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      descriptorCount: 1u,
+    }
+    var imageSetLayout = imageResources!!.DescriptorSetLayout
+    var imageSet VkDescriptorSet
+    let imageAlloc = VulkanDescriptorFactory.CreatePoolAndAllocate(
+      device,
+      dispatch,
+      objectAccounting,
+      &imagePoolSize,
+      1u,
+      &imageSetLayout,
+      1u,
+      &imageSet
+    )
+    fallbackImagePool = imageAlloc.Pool
+    fallbackImageDescriptorSet = imageSet
+    if objectAccounting != nil {
+      fallbackImagePoolAccounted = true
+      fallbackImageSetAccounted = true
+    }
+    VulkanDescriptorFactory.WriteCombinedImageSampler(
+      device,
+      dispatch,
+      fallbackImageDescriptorSet,
+      0u,
+      fallbackSampler,
+      fallbackImageView,
+      VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    )
+
+    let strokeCreation = VulkanBufferFactory.CreateMapped(
+      device,
+      dispatch,
+      frameAllocator,
+      objectAccounting,
+      16uL,
+      uint32(VkConstants.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
+      VulkanMemoryPolicy.HostVisibleCoherentCached
+    )
+    fallbackStrokeBuffer = strokeCreation.Buffer
+    fallbackStrokeAllocation = strokeCreation.Allocation
+    fallbackStrokeBufferAccounted = objectAccounting != nil
+    let zeroWords = *uint32(nint(strokeCreation.Allocation.mapped))
+    for i in 0 ... 4 {
+      zeroWords[i] = 0u
+    }
+    let _ = frameAllocator.FlushBeforeSubmit(strokeCreation.Allocation, 0uL, 16uL)
+
+    var strokePoolSize = VkDescriptorPoolSize{
+      _type: VkConstants.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      descriptorCount: 1u,
+    }
+    var strokeSetLayout = primitiveState.StrokeDescriptorSetLayout
+    var strokeSet VkDescriptorSet
+    let strokeAlloc = VulkanDescriptorFactory.CreatePoolAndAllocate(
+      device,
+      dispatch,
+      objectAccounting,
+      &strokePoolSize,
+      1u,
+      &strokeSetLayout,
+      1u,
+      &strokeSet
+    )
+    fallbackStrokePool = strokeAlloc.Pool
+    fallbackStrokeDescriptorSet = strokeSet
+    if objectAccounting != nil {
+      fallbackStrokePoolAccounted = true
+      fallbackStrokeSetAccounted = true
+    }
+    VulkanDescriptorFactory.WriteStorageBuffer(
+      device,
+      dispatch,
+      fallbackStrokeDescriptorSet,
+      0u,
+      fallbackStrokeBuffer,
+      0uL,
+      16uL
+    )
+  }
+
+  private func RecordFallbackImageInit(commandBuffer VkCommandBuffer) {
+    VulkanTransitions.RecordImage(
+      commandBuffer,
+      dispatch.vkCmdPipelineBarrier2,
+      fallbackImage,
+      VulkanTransitions.ColorSubresourceRange(),
+      VkConstants.VK_IMAGE_LAYOUT_UNDEFINED,
+      VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      VkConstants.VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+      VkConstants.VK_ACCESS_2_NONE,
+      VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT
+    )
+    var clear = VkClearColorValue{}
+    let clearFloats = *float32(&clear)
+    clearFloats[0] = 1.0F
+    clearFloats[1] = 1.0F
+    clearFloats[2] = 1.0F
+    clearFloats[3] = 1.0F
+    var subresource = VkImageSubresourceRange{
+      aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
+      baseMipLevel: 0u,
+      levelCount: 1u,
+      baseArrayLayer: 0u,
+      layerCount: 1u,
+    }
+    let clearImage = dispatch.vkCmdClearColorImage
+    clearImage(
+      commandBuffer,
+      fallbackImage,
+      VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      &clear,
+      1u,
+      &subresource
+    )
+    VulkanTransitions.RecordImage(
+      commandBuffer,
+      dispatch.vkCmdPipelineBarrier2,
+      fallbackImage,
+      VulkanTransitions.ColorSubresourceRange(),
+      VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
+      VkConstants.VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+      VkConstants.VK_ACCESS_2_SHADER_SAMPLED_READ_BIT
+    )
+  }
+
+  private func DisposeFallbackDescriptors() {
+    if fallbackStrokePool != VkDescriptorPool.Null {
+      let stalePool = fallbackStrokePool
+      fallbackStrokePool = VkDescriptorPool.Null
+      let destroyPool = dispatch.vkDestroyDescriptorPool
+      try { destroyPool(device, stalePool, nil) } catch (cleanup Exception) { }
+      if let accounting = objectAccounting {
+        if fallbackStrokeSetAccounted {
+          try { accounting.Release() } catch (cleanup Exception) { }
+          fallbackStrokeSetAccounted = false
+        }
+        if fallbackStrokePoolAccounted {
+          try { accounting.Release() } catch (cleanup Exception) { }
+          fallbackStrokePoolAccounted = false
+        }
+      }
+      fallbackStrokeDescriptorSet = VkDescriptorSet.Null
+    }
+    if fallbackStrokeBuffer != VkBuffer.Null {
+      let staleBuffer = fallbackStrokeBuffer
+      fallbackStrokeBuffer = VkBuffer.Null
+      let destroyBuffer = dispatch.vkDestroyBuffer
+      try { destroyBuffer(device, staleBuffer, nil) } catch (cleanup Exception) { }
+      if fallbackStrokeBufferAccounted {
+        if let accounting = objectAccounting {
+          try { accounting.Release() } catch (cleanup Exception) { }
+        }
+        fallbackStrokeBufferAccounted = false
+      }
+    }
+    if let strokeAlloc = fallbackStrokeAllocation {
+      fallbackStrokeAllocation = nil
+      try { frameAllocator.Release(strokeAlloc) } catch (cleanup Exception) { }
+    }
+    if fallbackImagePool != VkDescriptorPool.Null {
+      let stalePool = fallbackImagePool
+      fallbackImagePool = VkDescriptorPool.Null
+      let destroyPool = dispatch.vkDestroyDescriptorPool
+      try { destroyPool(device, stalePool, nil) } catch (cleanup Exception) { }
+      if let accounting = objectAccounting {
+        if fallbackImageSetAccounted {
+          try { accounting.Release() } catch (cleanup Exception) { }
+          fallbackImageSetAccounted = false
+        }
+        if fallbackImagePoolAccounted {
+          try { accounting.Release() } catch (cleanup Exception) { }
+          fallbackImagePoolAccounted = false
+        }
+      }
+      fallbackImageDescriptorSet = VkDescriptorSet.Null
+    }
+    if fallbackSampler != VkSampler.Null {
+      let staleSampler = fallbackSampler
+      fallbackSampler = VkSampler.Null
+      let destroySampler = dispatch.vkDestroySampler
+      try { destroySampler(device, staleSampler, nil) } catch (cleanup Exception) { }
+      if fallbackSamplerAccounted {
+        if let accounting = objectAccounting {
+          try { accounting.Release() } catch (cleanup Exception) { }
+        }
+        fallbackSamplerAccounted = false
+      }
+    }
+    if fallbackImageView != VkImageView.Null {
+      let staleView = fallbackImageView
+      fallbackImageView = VkImageView.Null
+      let destroyView = dispatch.vkDestroyImageView
+      try { destroyView(device, staleView, nil) } catch (cleanup Exception) { }
+      if fallbackImageViewAccounted {
+        if let accounting = objectAccounting {
+          try { accounting.Release() } catch (cleanup Exception) { }
+        }
+        fallbackImageViewAccounted = false
+      }
+    }
+    if fallbackImage != VkImage.Null {
+      let staleImage = fallbackImage
+      fallbackImage = VkImage.Null
+      let destroyImage = dispatch.vkDestroyImage
+      try { destroyImage(device, staleImage, nil) } catch (cleanup Exception) { }
+      if fallbackImageAccounted {
+        if let accounting = objectAccounting {
+          try { accounting.Release() } catch (cleanup Exception) { }
+        }
+        fallbackImageAccounted = false
+      }
+    }
+    if let imgAlloc = fallbackImageAllocation {
+      fallbackImageAllocation = nil
+      try { frameAllocator.Release(imgAlloc) } catch (cleanup Exception) { }
+    }
   }
 
   deinit{
