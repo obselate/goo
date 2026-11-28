@@ -123,6 +123,10 @@ public partial class Window {
       let native = createNativeHost()
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
+      contentScale = ResolveContentScale(native.LogicalWidth, native.LogicalHeight,
+        native.FramebufferWidth, native.FramebufferHeight, native.DisplayScale, native.PixelDensity)
+      if minWidth != 0 || minHeight != 0 { applyMinimumSize(minWidth, minHeight) }
+      if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       if iconPng != nil || iconPngs.Length != 0 { native.SetIconPng(iconPng, iconPngs) }
       if !focusable { native.SetFocusable(false) }
       if topmost && (native.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
@@ -133,8 +137,6 @@ public partial class Window {
       native.SetFrameTheme(frameTheme)
       native.SetContentUnderTitlebar(contentUnderTitlebar)
       native.TitlebarControlsChanged += RebuildAllCells
-      if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(nativeMinWidth, nativeMinHeight) }
-      if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       initializingGraphics = true
       let still = LayerShell?.StillImage == true
       if still && Root != nil { throw InvalidOperationException("A still-image layer window does not have a root cell") }
@@ -165,7 +167,7 @@ public partial class Window {
       ownsStartupReport = false
       x = native.X
       y = native.Y
-      input.SetUiScale(float32(UiScale))
+      input.SetUiScale(float32(NativeScale))
       native.TransferPost = Post
       native.NativeDragPost = postNativeDragStart
       input.Attach(native)
@@ -968,6 +970,26 @@ public partial class Window {
       LayoutOrigin.Current = LayoutCause.Environment
       try {
       let framebufferValid = newFramebufferWidth > 0 && newFramebufferHeight > 0
+      let nextContentScale = ResolveContentScale(logicalWidth, logicalHeight,
+        newFramebufferWidth, newFramebufferHeight, host?.DisplayScale ?? 0.0F, host?.PixelDensity ?? 0.0F)
+      if nextContentScale != contentScale {
+        contentScale = nextContentScale
+        input.ChangeUiScale(node, resolver, float32(NativeScale))
+        if embeddedHost == nil {
+          applyMinimumSize(minWidth, minHeight)
+          host?.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight))
+        }
+        pendingReconcileEffects = combineEffects(pendingReconcileEffects,
+          ReconcileEffects.Layout | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility)
+        accessibility?.MarkDirty()
+        MetricSubscriptions.MarkWindowDirty(this)
+        MetricSubscriptions.MarkElementsDirty(this)
+        if let children = family?.Children {
+          for child in children {
+            if !child.uiScaleSet { child.invalidateUiScale() }
+          }
+        }
+      }
       HandleResize(logicalWidth, logicalHeight, framebufferValid)
       if let target = windowTarget {
         if !target.Resize(newFramebufferWidth, newFramebufferHeight) { return false }
@@ -994,6 +1016,28 @@ public partial class Window {
   }
 }
 
+internal func ResolveContentScale(width int32, height int32, fbWidth int32, fbHeight int32,
+  displayScale float32, pixelDensity float32 = 0.0F) float64 {
+  if !(displayScale > 0.0F) || !Single.IsFinite(displayScale) {
+    return 1.0
+  }
+  let density = if pixelDensity > 0.0F && Single.IsFinite(pixelDensity) {
+    float64(pixelDensity)
+  } else if width > 0 && fbWidth > 0 {
+    float64(fbWidth) / float64(width)
+  } else {
+    1.0
+  }
+  if !(density > 0.0) || !Double.IsFinite(density) {
+    return 1.0
+  }
+  let ratio = float64(displayScale) / density
+  if Math.Abs(ratio - 1.0) < 0.01 {
+    return 1.0
+  }
+  return Math.Clamp(ratio, 0.5, 4.0)
+}
+
 internal func DpiScale(width int32, height int32, fbWidth int32, fbHeight int32,
   displayScale float32 = 0.0F) Vector2 {
   if width <= 0 || height <= 0 || fbWidth <= 0 || fbHeight <= 0 {
@@ -1004,15 +1048,22 @@ internal func DpiScale(width int32, height int32, fbWidth int32, fbHeight int32,
 }
 
 internal func ResolveWindowMetrics(width int32, height int32, fbWidth int32, fbHeight int32,
-  displayScale float32) WindowMetrics {
+  displayScale float32, pixelDensity float32 = 0.0F) WindowMetrics {
   var scaleX = width > 0 && fbWidth > 0 ? float64(fbWidth) / float64(width) : 0.0
   var scaleY = height > 0 && fbHeight > 0 ? float64(fbHeight) / float64(height) : 0.0
-  if scaleX > 0.0 && scaleY > 0.0 && displayScale > 0.0F && Single.IsFinite(displayScale)
-    && Math.Abs(float64(fbWidth) - float64(width) * float64(displayScale)) < 1.0
-    && Math.Abs(float64(fbHeight) - float64(height) * float64(displayScale)) < 1.0 {
-      scaleX = float64(displayScale)
-      scaleY = float64(displayScale)
-    }
+  if scaleX > 0.0 && scaleY > 0.0 && displayScale > 0.0F && Single.IsFinite(displayScale) {
+    if Math.Abs(float64(fbWidth) - float64(width) * float64(displayScale)) < 1.0
+      && Math.Abs(float64(fbHeight) - float64(height) * float64(displayScale)) < 1.0 {
+        scaleX = float64(displayScale)
+        scaleY = float64(displayScale)
+      } else {
+        let content = ResolveContentScale(width, height, fbWidth, fbHeight, displayScale, pixelDensity)
+        if content != 1.0 {
+          scaleX *= content
+          scaleY *= content
+        }
+      }
+  }
   return WindowMetrics{
     NativeWidth: width,
     NativeHeight: height,

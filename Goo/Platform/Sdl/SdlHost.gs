@@ -33,6 +33,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var hitTestEnabled bool
   private var pointerButtons PointerButtons
   private var pixelDensity float32
+  private var lastDisplayScale float32
   private var pixelDensityChange bool
   private let touchPointers Dictionary[TouchContactKey, int64] =
   Dictionary[TouchContactKey, int64]()
@@ -101,6 +102,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if LogicalWidth > 0 && FramebufferWidth > 0 {
           pixelDensity = float32(FramebufferWidth) / float32(LogicalWidth)
         }
+        lastDisplayScale = DisplayScale
         RefreshPosition()
         RefreshDisplayPacing(true)
       } catch (e Exception) {
@@ -141,6 +143,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public prop FramebufferWidth int32{ get; private set }
   public prop FramebufferHeight int32{ get; private set }
   public prop DisplayScale float32{ get -> SDL.GetWindowDisplayScale(window) }
+  public prop PixelDensity float32{ get -> SDL.GetWindowPixelDensity(window) }
   public prop X int32{ get; private set }
   public prop Y int32{ get; private set }
   public prop IsClosing bool{ get; private set }
@@ -682,16 +685,32 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         role.Attach(display, surface, ReadWaylandOutput(role.Output))
       }
     } else {
-      let requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
-      var bounds = requested
+      var requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
+      var scaledMinWidth = minWidth
+      var scaledMinHeight = minHeight
       var displayId = SDL.GetPrimaryDisplay()
       if positionSet {
         let rect = SDLRect{ X: x, Y: y, W: width, H: height }
         displayId = SDL.GetDisplayForRect(in rect)
       }
+      let displayContentScale = SDL.GetDisplayContentScale(displayId)
+      let mode = SDL.GetDesktopDisplayMode(displayId)
+      let modeDensity = !mode.IsNull && mode.PixelDensity > 0.0F ? mode.PixelDensity : 1.0F
+      let initialContentScale = ResolveContentScale(1, 1, 1, 1, displayContentScale, modeDensity)
+      if initialContentScale != 1.0 {
+        requested = ElementRect{
+          X: requested.X,
+          Y: requested.Y,
+          Width: Math.Max(1.0, Math.Round(requested.Width * initialContentScale)),
+          Height: Math.Max(1.0, Math.Round(requested.Height * initialContentScale)),
+        }
+        if scaledMinWidth > 0 { scaledMinWidth = Math.Max(1, int32(Math.Round(float64(scaledMinWidth) * initialContentScale))) }
+        if scaledMinHeight > 0 { scaledMinHeight = Math.Max(1, int32(Math.Round(float64(scaledMinHeight) * initialContentScale))) }
+      }
+      var bounds = requested
       let usable = ReadDisplay(displayId)?.UsableBounds
       if let area = usable {
-        bounds = ConstrainInitialBounds(requested, minWidth, minHeight, positionSet, area)
+        bounds = ConstrainInitialBounds(requested, scaledMinWidth, scaledMinHeight, positionSet, area)
       }
       let properties = SDL.CreateProperties()
       if properties == 0u { ThrowSdl("SDL_CreateProperties") }
@@ -887,7 +906,13 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let framebufferHeight = FramebufferHeight
     RefreshMetrics()
     RefreshDisplayPacing(false)
-    if logicalWidth != LogicalWidth || logicalHeight != LogicalHeight ||
+    let currentDisplayScale = DisplayScale
+    let displayScaleChanged = MathF.Abs(currentDisplayScale - lastDisplayScale) > 0.001F
+    if displayScaleChanged {
+      lastDisplayScale = currentDisplayScale
+      pixelDensityChange = true
+    }
+    if displayScaleChanged || logicalWidth != LogicalWidth || logicalHeight != LogicalHeight ||
     framebufferWidth != FramebufferWidth || framebufferHeight != FramebufferHeight{
       RaiseMetrics()
       if layerWindow != nil { Exposed?.Invoke() }

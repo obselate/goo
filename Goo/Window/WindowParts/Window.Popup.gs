@@ -16,8 +16,8 @@ public partial class Window {
       if let available = PopupAvailableSize { return available() }
       let display = host?.GetCurrentDisplay()
       let area = display?.UsableBounds ?? display?.Bounds
-      return LayoutSize((area?.Width ?? float64(NativeWidth)) / float64(UiScale),
-        (area?.Height ?? float64(NativeHeight)) / float64(UiScale))
+      return LayoutSize((area?.Width ?? float64(NativeWidth)) / NativeScale,
+        (area?.Height ?? float64(NativeHeight)) / NativeScale)
     }
   }
   internal prop NativePopupPlacement PortalPlacement { get -> popupPlacement }
@@ -60,7 +60,7 @@ public partial class Window {
         if !OperatingSystem.IsMacOS() { nativePointer = Point{X: float64(px), Y: float64(py)} }
         return hitTest(px, py)
       }, parent, popup?.Kind ?? PopupKind.Menu,
-      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, float32(UiScale), LayerShell,
+      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, float32(NativeScale), LayerShell,
       scaledSize(minWidth), scaledSize(minHeight), ownsVulkanPresentation: true, lockSurface: LockSurface)
   }
 
@@ -80,7 +80,7 @@ public partial class Window {
       return embedded.UpdatePlacement(anchor, width, height, popupPlacement)
     }
     guard let native = host as SdlHost? else { return WindowOperationResult.Closed }
-    return native.UpdatePopup(anchor, Math.Max(1, scaledSize(size.Width)), Math.Max(1, scaledSize(size.Height)), popupPlacement, float32(UiScale))
+    return native.UpdatePopup(anchor, Math.Max(1, scaledSize(size.Width)), Math.Max(1, scaledSize(size.Height)), popupPlacement, float32(NativeScale))
   }
 
   private func resolvePopupPlacement(placement PortalPlacement) PortalPlacement {

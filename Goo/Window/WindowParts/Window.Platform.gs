@@ -17,7 +17,7 @@ public partial class Window {
       pendingMetrics = true
       MetricSubscriptions.ReportWindowMetrics(this,
         ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
-          host?.DisplayScale ?? 0.0F))
+          host?.DisplayScale ?? 0.0F, host?.PixelDensity ?? 0.0F))
     }
 
   internal func hitTest(x int32, y int32) WindowHitResult {
@@ -38,12 +38,11 @@ public partial class Window {
         }
       }
     }
-    let layoutX = float32(float64(px) / UiScale)
-    let layoutY = float32(float64(py) / UiScale)
+    let layoutX = float32(float64(px) / NativeScale)
+    let layoutY = float32(float64(py) / NativeScale)
     let info = input.HitInfo(n, layoutX, layoutY)
     if !decorated && resizable && state == WindowState.Normal {
-      let displayScale = float64(host?.DisplayScale ?? 0.0F)
-      let scale = UiScale * (displayScale > 0.0 ? displayScale / float64(dpi.X) : 1.0)
+      let scale = NativeScale
       let outsideBorder = host?.OutsideResizeBorder == true
       let cornerSquare = resizeBand * scale
       let corner = Math.Max(2.0 * resizeBand, 16.0) * scale

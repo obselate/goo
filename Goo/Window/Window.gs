@@ -427,8 +427,8 @@ public partial class Window {
   }
 
   private prop CurrentSize LayoutSize {
-    get -> requestedSize ?? LayoutSize(float64(host?.LogicalWidth ?? width) / float64(EffectiveUiScale),
-      float64(host?.LogicalHeight ?? height) / float64(EffectiveUiScale))
+    get -> requestedSize ?? LayoutSize(float64(host?.LogicalWidth ?? width) / NativeScale,
+      float64(host?.LogicalHeight ?? height) / NativeScale)
   }
 
   /// Gets the observed client width in native logical units.

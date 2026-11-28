@@ -7,9 +7,18 @@ import System.Numerics
 public partial class Window {
   private var uiScale float64 = 1.0
   private var uiScaleSet bool
+  private var contentScale float64 = 1.0
 
   private prop EffectiveUiScale float64 {
     get -> if uiScaleSet { uiScale } else { family?.Owner?.EffectiveUiScale ?? 1.0 }
+  }
+
+  internal prop EffectiveContentScale float64 {
+    get -> if host != nil { contentScale } else { family?.Owner?.EffectiveContentScale ?? contentScale }
+  }
+
+  internal prop NativeScale float64 {
+    get -> EffectiveUiScale * EffectiveContentScale
   }
 
   /// Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set.
@@ -28,17 +37,17 @@ public partial class Window {
 
   /// Gets the display scale multiplied by UiScale, the factor used to snap layout positions and translation-only transforms to device pixels on both axes.
   /// Reads in Build and retained builders track display-scale and UiScale changes.
-  public prop PixelScale float64 { get -> TrackWindowValue(&trackedPixelScale, float64(dpi.X) * EffectiveUiScale) }
+  public prop PixelScale float64 { get -> TrackWindowValue(&trackedPixelScale, float64(dpi.X) * NativeScale) }
 
-  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(float64(host?.LogicalWidth ?? width) / EffectiveUiScale) }
-  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(float64(host?.LogicalHeight ?? height) / EffectiveUiScale) }
-  internal prop RenderScale Vector2 { get -> dpi * float32(EffectiveUiScale) }
+  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(float64(host?.LogicalWidth ?? width) / NativeScale) }
+  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(float64(host?.LogicalHeight ?? height) / NativeScale) }
+  internal prop RenderScale Vector2 { get -> dpi * float32(NativeScale) }
 
   private func invalidateUiScale() {
     let previous = LayoutOrigin.Current
     LayoutOrigin.Current = LayoutCause.Environment
     try {
-    input.ChangeUiScale(node, resolver, float32(EffectiveUiScale))
+    input.ChangeUiScale(node, resolver, float32(NativeScale))
     pendingReconcileEffects = combineEffects(pendingReconcileEffects,
       ReconcileEffects.Layout | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility)
     accessibility?.MarkDirty()
@@ -59,5 +68,5 @@ public partial class Window {
     } finally { LayoutOrigin.Current = previous }
   }
 
-  private func scaledSize(value float64) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Round(value * float64(EffectiveUiScale))))
+  private func scaledSize(value float64) int32 -> int32(Math.Min(float64(Int32.MaxValue), Math.Round(value * NativeScale)))
 }
