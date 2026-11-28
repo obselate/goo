@@ -184,17 +184,13 @@ internal unsafe partial class VulkanWindowTarget {
     if let atlas = staleTextAtlas {
       try { atlas.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
     }
-    if let atlas = clipMaskAtlas {
-      try { atlas.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
-      clipMaskAtlasAbandoned = true
-    }
     let staleRenderer = primitiveRenderer
     primitiveRenderer = nil
     if let renderer = staleRenderer {
       try { renderer.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
     }
-    clipMaskFrameStats = VulkanClipMaskFrameStats{}
-    clipMaskFrameTotals = VulkanClipMaskFrameTotals{}
+    clipMaskFrameStats = VulkanScissorTableStats{}
+    clipMaskFrameTotals = VulkanScissorTableTotals{}
     let staleLayerPool = layerPool
     layerPool = nil
     if let pool = staleLayerPool {
@@ -310,29 +306,6 @@ internal unsafe partial class VulkanWindowTarget {
     frameFailed = false
     recoveryPending = false
     forceFullRedraw = true
-  }
-
-  private func RebuildClipMaskAtlasAfterDeviceRecovery() {
-    if clipMaskAtlasAbandoned {
-      guard let atlas = clipMaskAtlas else {
-        throw InvalidOperationException("Vulkan clip mask atlas was lost during recovery")
-      }
-      guard let allocator = memoryAllocator else {
-        throw InvalidOperationException("Vulkan memory allocator is unavailable during recovery")
-      }
-      guard let activeRuntime = runtime else {
-        throw InvalidOperationException("Vulkan shared runtime is unavailable during recovery")
-      }
-      atlas.Rebuild(
-        device,
-        dispatch,
-        allocator,
-        clipMaskFormatSupport,
-        windowObjectAccounting,
-        activeRuntime.Runtime.Generation)
-      clipMaskAtlasAbandoned = false
-      clipMaskRedrawPending = true
-    }
   }
 
   internal func FinishDeviceRecovery() {

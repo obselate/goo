@@ -69,10 +69,7 @@ internal class VulkanTextResidentRangeMatcher {
 }
 
 internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
-  internal var Buffers VulkanFrameBuffers
-  internal var Lifecycle VulkanFrameSlotLifecycle
-  internal var PreparedByteCount VkDeviceSize
-  internal var PreparedRecordCount int32
+  internal let Table VulkanGpuTableSlot
   internal var CandidateIds []uint64
   internal var CandidateVersions []uint64
   internal var CandidateFirstInstances []int32
@@ -87,21 +84,11 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
   internal var HistoryClipChains []int32
   internal var HistorySegmentCount int32
   internal var HistoryTopologyKey uint64
-  internal var HistoryBufferGeneration uint64
-  internal var HistoryValid bool
-  internal var PreparedRanges []VkBufferCopy
-  internal var PreparedRangeCount int32
-  internal var disposed bool
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     nativeAllocator VulkanMemoryAllocator, nativeObjectAccounting VulkanObjectAccounting?) {
-      Buffers = VulkanFrameBuffers{
-        Device: nativeDevice,
-        Dispatch: nativeDispatch,
-        Allocator: nativeAllocator,
-        ObjectAccounting: nativeObjectAccounting,
-      }
-      Lifecycle = VulkanFrameSlotLifecycle{}
+      Table = VulkanGpuTableSlot(
+        nativeDevice, nativeDispatch, nativeAllocator, nativeObjectAccounting, true)
       CandidateIds = [0]uint64
       CandidateVersions = [0]uint64
       CandidateFirstInstances = [0]int32
@@ -112,24 +99,33 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
       HistoryFirstInstances = [0]int32
       HistoryRecordCounts = [0]int32
       HistoryClipChains = [0]int32
-      PreparedRanges = [0]VkBufferCopy
     }
 
+  internal prop Buffers VulkanFrameBuffers { get -> Table.Buffers }
+  internal prop PreparedByteCount VkDeviceSize {
+    get -> Table.PreparedByteCount
+    set -> Table.PreparedByteCount = value
+  }
+  internal prop PreparedRecordCount int32 {
+    get -> Table.PreparedElementCount
+    set -> Table.PreparedElementCount = value
+  }
+  internal prop HistoryBufferGeneration uint64 {
+    get -> Table.HistoryBufferGeneration
+    set -> Table.HistoryBufferGeneration = value
+  }
+  internal prop HistoryValid bool {
+    get -> Table.HistoryValid
+    set -> Table.HistoryValid = value
+  }
+  internal prop PreparedRanges []VkBufferCopy { get -> Table.PreparedRanges }
+  internal prop PreparedRangeCount int32 {
+    get -> Table.PreparedRangeCount
+    set -> Table.PreparedRangeCount = value
+  }
+
   internal func EnsureCapacity(required VkDeviceSize, completedSubmissionSerial uint64) {
-    if Lifecycle.LastUseSerial > completedSubmissionSerial {
-      throw InvalidOperationException("Vulkan text frame slot is still in flight")
-    }
-    if Lifecycle.Prepared || Lifecycle.Recorded {
-      throw InvalidOperationException("Vulkan text frame slot has prepared work")
-    }
-    try {
-      if Buffers.EnsureStagedCapacity(required, 128uL) {
-        InvalidateHistory()
-      }
-    } catch (error Exception) {
-      InvalidateHistory()
-      rethrow
-    }
+    Table.EnsureCapacity(required, 128uL, completedSubmissionSerial)
   }
 
   internal func EnsureSegmentCapacity(segmentCount int32) {
@@ -198,7 +194,7 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
     ref historyIndex)
 
   internal func EnsureRangeCapacity(rangeCount int32) {
-    PreparedRanges = GrowArray(PreparedRanges, PreparedRanges.Length, rangeCount, 8)
+    Table.EnsureRangeCapacity(rangeCount)
   }
 
   internal func FlushRanges() uint64 {
@@ -216,42 +212,25 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
       }
       index = index + 1
     }
-    Lifecycle.FlushPrepared = true
+    var lifecycle = Table.Lifecycle
+    lifecycle.FlushPrepared = true
+    Table.Lifecycle = lifecycle
     return flushes
   }
 
   internal func DestroyBuffers() {
-    Buffers.Destroy()
-    PreparedByteCount = 0uL
-    PreparedRecordCount = 0
-    Lifecycle.FlushPrepared = false
-    PreparedRangeCount = 0
-    Lifecycle.Recorded = false
-    Lifecycle.RecordedCommandBuffer = VkCommandBuffer.Null
+    Table.DestroyBuffers()
     InvalidateHistory()
   }
 
   internal func InvalidateHistory() {
+    Table.InvalidateHistory()
     HistorySegmentCount = 0
     HistoryTopologyKey = 0uL
-    HistoryBufferGeneration = 0uL
-    HistoryValid = false
   }
 
   public func Dispose() {
-    if disposed {
-      return
-    }
-    if Lifecycle.Prepared || Lifecycle.Recorded || Lifecycle.Submitted
-      || Lifecycle.LastUseSerial != 0uL {
-        throw InvalidOperationException("Vulkan text frame slot is in use")
-      }
-    disposed = true
-    DestroyBuffers()
-  }
-
-  deinit{
-    try { Dispose() } catch (cleanup Exception) { }
+    Table.Dispose()
   }
 }
 
@@ -363,7 +342,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     }
 
   internal func Prepare(frame SceneFrame, slotIndex int32,
-    completedSubmissionSerial uint64) VulkanTextFrameStats{
+    completedSubmissionSerial uint64, clipChainOverrides ([]int32)? = nil) VulkanTextFrameStats{
       EnsureOpen()
       if frame == nil {
         throw ArgumentNullException("frame")
@@ -376,10 +355,10 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       }
       Collect(completedSubmissionSerial)
       let slot = slots[slotIndex]
-      if slot.Lifecycle.Prepared || slot.Lifecycle.Recorded {
+      if slot.Table.Lifecycle.Prepared || slot.Table.Lifecycle.Recorded {
         throw InvalidOperationException("Vulkan text frame slot already has prepared work")
       }
-      if slot.Lifecycle.LastUseSerial > completedSubmissionSerial {
+      if slot.Table.Lifecycle.LastUseSerial > completedSubmissionSerial {
         throw InvalidOperationException("Vulkan text frame slot is still in flight")
       }
       if frame.DrawRefCount < 0 || frame.DrawRefCount > frame.DrawRefs.Length
@@ -405,12 +384,15 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           uint64(drawRef.Index))
         slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey,
           uint64(drawRef.Flags))
-        slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey,
-          uint64(drawRef.ClipChainId))
-        if drawRef.Kind == SceneDrawKind.CachedTextSegment {
+        let effectiveClipChain = if drawRef.Kind == SceneDrawKind.CachedTextSegment {
           if drawRef.Index < 0 || drawRef.Index >= frame.CachedTextSegmentCount {
             throw ArgumentOutOfRangeException("cached text segment index")
           }
+          if let overrides = clipChainOverrides { overrides[drawRef.Index] } else { drawRef.ClipChainId }
+        } else { drawRef.ClipChainId }
+        slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey,
+          uint64(effectiveClipChain))
+        if drawRef.Kind == SceneDrawKind.CachedTextSegment {
           let referenceIndex = drawRef.Index
           var reference = frame.CachedTextSegments[referenceIndex]
           let segment = ValidateSegment(drawRef, reference, frame)
@@ -426,7 +408,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
           slot.CandidateVersions[candidateIndex] = segment.Version
           slot.CandidateFirstInstances[candidateIndex] = recordCount
           slot.CandidateRecordCounts[candidateIndex] = segment.RecordCount
-          slot.CandidateClipChains[candidateIndex] = drawRef.ClipChainId
+          slot.CandidateClipChains[candidateIndex] = effectiveClipChain
           slot.CandidateSegmentCount = nextSegmentCount
           slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey, segment.Id)
           slot.CandidateTopologyKey = MixTopology(slot.CandidateTopologyKey,
@@ -484,7 +466,8 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
             dirtyRecordCount = AddInt32(dirtyRecordCount, segment.RecordCount,
               "dirty text record count")
             CopySegmentRecords(slot, segment,
-              slot.CandidateFirstInstances[textIndex], segment.RecordCount, drawRef.ClipChainId)
+              slot.CandidateFirstInstances[textIndex], segment.RecordCount,
+              slot.CandidateClipChains[textIndex])
             if rangeStart < 0 {
               rangeStart = slot.CandidateFirstInstances[textIndex]
             }
@@ -506,12 +489,12 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       let retainedReuse = uint64(recordCount - dirtyRecordCount)
       let mappedWrites = if dirtyRecordCount > 0 { 1uL } else { 0uL }
       let flushes = if slot.PreparedRangeCount > 0 { slot.FlushRanges() } else {
-        slot.Lifecycle.FlushPrepared = true
+        slot.Table.Lifecycle.FlushPrepared = true
         0uL
       }
       UpdateDescriptor(slotIndex, backingBytes)
-      slot.Lifecycle.Begin()
-      slot.Lifecycle.FlushPrepared = true
+      slot.Table.Lifecycle.Begin()
+      slot.Table.Lifecycle.FlushPrepared = true
       slot.PreparedByteCount = logicalBytes
       slot.PreparedRecordCount = recordCount
       preparedSlot = slotIndex
@@ -552,7 +535,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
         MappedWrites: mappedWrites,
         Flushes: flushes,
         RetainedReuse: retainedReuse,
-        LastUseSerial: slot.Lifecycle.LastUseSerial,
+        LastUseSerial: slot.Table.Lifecycle.LastUseSerial,
         Prepared: true,
         TotalSegmentCount: totalSegmentCount,
         TotalRunCount: totalRunCount,
@@ -583,11 +566,11 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       throw InvalidOperationException("Vulkan text frame data is not prepared")
     }
     let slot = slots[preparedSlot]
-    if !slot.Lifecycle.Prepared {
+    if !slot.Table.Lifecycle.Prepared {
       throw InvalidOperationException("Vulkan text frame slot is not prepared")
     }
-    if slot.Lifecycle.Recorded {
-      if slot.Lifecycle.RecordedCommandBuffer != commandBuffer {
+    if slot.Table.Lifecycle.Recorded {
+      if slot.Table.Lifecycle.RecordedCommandBuffer != commandBuffer {
         throw InvalidOperationException("Vulkan text frame upload belongs to another command buffer")
       }
       return
@@ -597,7 +580,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
         slot.PreparedRangeCount, preparedBytes,
         VkConstants.VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT)
     }
-    slot.Lifecycle.Record(commandBuffer)
+    slot.Table.Lifecycle.Record(commandBuffer)
   }
 
   internal func FlushBeforeSubmit() VkResult {
@@ -606,8 +589,8 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       return VkConstants.VK_SUCCESS
     }
     let slot = slots[preparedSlot]
-    if !slot.Lifecycle.Prepared || !slot.Lifecycle.Recorded
-      || !slot.Lifecycle.FlushPrepared{
+    if !slot.Table.Lifecycle.Prepared || !slot.Table.Lifecycle.Recorded
+      || !slot.Table.Lifecycle.FlushPrepared{
         throw InvalidOperationException("Vulkan text frame upload is not ready for submit")
       }
     return VkConstants.VK_SUCCESS
@@ -623,7 +606,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       if commandBuffer == VkCommandBuffer.Null || pipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan text descriptor binding arguments are invalid")
       }
-      if preparedSlot < 0 || !slots[preparedSlot].Lifecycle.Prepared {
+      if preparedSlot < 0 || !slots[preparedSlot].Table.Lifecycle.Prepared {
         throw InvalidOperationException("Vulkan text frame data is not prepared")
       }
       descriptors.Bind(preparedSlot, commandBuffer, pipelineLayout, setIndex)
@@ -634,9 +617,9 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     if slotIndex < 0 || slotIndex >= slotCount || submissionSerial == 0uL {
       throw ArgumentOutOfRangeException("submissionSerial")
     }
-    if preparedSlot != slotIndex || !slots[slotIndex].Lifecycle.Prepared
-      || !slots[slotIndex].Lifecycle.Recorded
-      || !slots[slotIndex].Lifecycle.FlushPrepared{
+    if preparedSlot != slotIndex || !slots[slotIndex].Table.Lifecycle.Prepared
+      || !slots[slotIndex].Table.Lifecycle.Recorded
+      || !slots[slotIndex].Table.Lifecycle.FlushPrepared{
         throw InvalidOperationException("Vulkan text frame slot has no submitted work")
       }
   }
@@ -645,7 +628,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     ValidateSubmission(slotIndex, submissionSerial)
     let slot = slots[slotIndex]
     CommitHistory(slot)
-    slot.Lifecycle.AcceptSubmission(submissionSerial)
+    slot.Table.Lifecycle.AcceptSubmission(submissionSerial)
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
@@ -661,9 +644,9 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       throw ArgumentOutOfRangeException("submissionSerial")
     }
     let slot = slots[slotIndex]
-    if preparedSlot == slotIndex && slot.Lifecycle.Prepared {
+    if preparedSlot == slotIndex && slot.Table.Lifecycle.Prepared {
       CommitHistory(slot)
-      slot.Lifecycle.AcceptSubmission(submissionSerial)
+      slot.Table.Lifecycle.AcceptSubmission(submissionSerial)
       preparedSlot = -1
       preparedBytes = 0uL
       preparedRecords = 0
@@ -676,7 +659,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     if preparedSlot >= 0 {
       throw InvalidOperationException("Vulkan text frame data belongs to another slot")
     }
-    if slot.Lifecycle.LastUseSerial != submissionSerial {
+    if slot.Table.Lifecycle.LastUseSerial != submissionSerial {
       throw InvalidOperationException("Vulkan text frame submission state is not recoverable")
     }
   }
@@ -685,7 +668,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     EnsureOpen()
     var index int32 = 0
     while index < slots.Length {
-      if slots[index].Lifecycle.Collect(completedSubmissionSerial) {
+      if slots[index].Table.Lifecycle.Collect(completedSubmissionSerial) {
         if lastStats.SlotIndex == index {
           lastStats.LastUseSerial = 0uL
         }
@@ -706,7 +689,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     if slot.PreparedRangeCount > 0 {
       slot.InvalidateHistory()
     }
-    slot.Lifecycle.Abort()
+    slot.Table.Lifecycle.Abort()
     slot.PreparedByteCount = 0uL
     slot.PreparedRecordCount = 0
     slot.PreparedRangeCount = 0
@@ -726,7 +709,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedRecords = 0
     var index int32 = 0
     while index < slots.Length {
-      slots[index].Lifecycle.Reset()
+      slots[index].Table.Lifecycle.Reset()
       slots[index].DestroyBuffers()
       index = index + 1
     }
@@ -746,8 +729,8 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     }
     var index int32 = 0
     while index < slots.Length {
-      if slots[index].Lifecycle.Submitted
-        || slots[index].Lifecycle.LastUseSerial != 0uL {
+      if slots[index].Table.Lifecycle.Submitted
+        || slots[index].Table.Lifecycle.LastUseSerial != 0uL {
           throw InvalidOperationException("Vulkan text frame data is still in flight")
         }
       index = index + 1
@@ -848,7 +831,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     }
 
   private func CommitHistory(slot VulkanTextFrameSlot) {
-    if !slot.Lifecycle.Prepared {
+    if !slot.Table.Lifecycle.Prepared {
       throw InvalidOperationException("Vulkan text frame slot has no candidate history")
     }
     var index int32 = 0

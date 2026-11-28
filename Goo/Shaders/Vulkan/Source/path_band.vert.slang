@@ -1,19 +1,14 @@
 #include "slang_compat.slang"
 [[vk::binding(0, 0)]] StructuredBuffer<uint> pathBandBuffer;
-#ifdef GOO_CLIP_MASK
-struct ClipMaskPushConstants
-{
-    float4 transform0; float4 transform1; float4 sampleStep; float4 borderRect;
-    float4 borderTransform0; float4 borderTransform1; uint4 params;
-};
-[[vk::push_constant]] ConstantBuffer<ClipMaskPushConstants> pc;
-#else
 struct PathBandPushConstants
 {
-    float4 transform0; float4 transform1; float4 sampleStep; float4 color; uint4 params;
+    float4 transform0;
+    float4 transform1;
+    float4 sampleStep;
+    float4 color;
+    uint4 params;
 };
 [[vk::push_constant]] ConstantBuffer<PathBandPushConstants> pc;
-#endif
 uint pathWord(uint relativeWord)
 {
     return pathBandBuffer[pc.params.x + relativeWord];
@@ -21,10 +16,8 @@ uint pathWord(uint relativeWord)
 struct PathBandVertexOutput
 {
     float4 position : SV_Position;
-#ifndef GOO_CLIP_MASK
     [[vk::location(0)]] float2 pathPosition;
     [[vk::location(2)]] nointerpolation uint clipDrawOrdinal;
-#endif
 };
 [shader("vertex")]
 PathBandVertexOutput main(
@@ -52,9 +45,7 @@ PathBandVertexOutput main(
     }
     PathBandVertexOutput output;
     output.position = float4(clip, 0.0, 1.0);
-#ifndef GOO_CLIP_MASK
     output.pathPosition = path;
     output.clipDrawOrdinal = instanceIndex;
-#endif
     return output;
 }

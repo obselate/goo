@@ -469,19 +469,8 @@ internal partial class VulkanSceneCompiler {
 
   private func TextClipSupported(node Node, axisAligned bool, clipDepth int32) bool {
     var supported = true
-    var marked = false
-    if !axisAligned {
-      MarkTextClipUnsupported(node, VulkanSceneUnsupportedPrimitive.RectClipNonAxisAligned)
-      marked = true
-      supported = false
-    }
     if clipDepth >= MaxRectClipDepth {
-      if marked {
-        RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.Content,
-          VulkanSceneUnsupportedPrimitive.RectClipDepth)
-      } else {
-        MarkTextClipUnsupported(node, VulkanSceneUnsupportedPrimitive.RectClipDepth)
-      }
+      MarkTextClipUnsupported(node, VulkanSceneUnsupportedPrimitive.RectClipDepth)
       supported = false
     }
     return supported

@@ -123,7 +123,7 @@ internal unsafe sealed class WebGpuWindowTarget : WindowRenderTarget {
         record.radii_w = value.RadiusBottomLeft
         record.params_x = SnapWidth(value.OpaqueBorderWidth * dpi.X) / dpi.X
         record.params_y = SnapWidth(value.OpaqueBorderHeight * dpi.Y) / dpi.Y
-        record.Geometry.transform1_w = 1.0F / MathF.Min(dpi.X, dpi.Y)
+        record.transform1_w = 1.0F / MathF.Min(dpi.X, dpi.Y)
         let color = PackColor(value.Color, value.Opacity)
         record.packedColors_x = color.Rgb
         record.packedColors_w = color.Alpha
@@ -142,7 +142,7 @@ internal unsafe sealed class WebGpuWindowTarget : WindowRenderTarget {
         record.params_y = bounds.Width
         record.params_z = bounds.Width + bounds.Height
         record.params_w = bounds.Width * 2.0F + bounds.Height
-        record.Geometry.transform1_w = 1.0F / MathF.Min(dpi.X, dpi.Y)
+        record.transform1_w = 1.0F / MathF.Min(dpi.X, dpi.Y)
         let top = PackColor(value.TopColor, 1.0F)
         let right = PackColor(value.RightColor, 1.0F)
         let bottom = PackColor(value.BottomColor, 1.0F)
@@ -160,10 +160,10 @@ internal unsafe sealed class WebGpuWindowTarget : WindowRenderTarget {
       } else {
         throw NotSupportedException("Unsupported browser scene draw: ${reference.Kind}")
       }
-      record.Geometry.rect_x = bounds.X
-      record.Geometry.rect_y = bounds.Y
-      record.Geometry.rect_z = bounds.Width
-      record.Geometry.rect_w = bounds.Height
+      record.rect_x = bounds.X
+      record.rect_y = bounds.Y
+      record.rect_z = bounds.Width
+      record.rect_w = bounds.Height
       var transform = PrimitiveTransform{ A: 1.0F, D: 1.0F }
       while transformIndex >= 0 {
         let value = frame.Transforms[transformIndex]
@@ -178,12 +178,12 @@ internal unsafe sealed class WebGpuWindowTarget : WindowRenderTarget {
         }
         transformIndex = value.ParentIndex
       }
-      record.Geometry.transform0_x = transform.A
-      record.Geometry.transform0_y = transform.C
-      record.Geometry.transform0_z = transform.TX
-      record.Geometry.transform1_x = transform.B
-      record.Geometry.transform1_y = transform.D
-      record.Geometry.transform1_z = transform.TY
+      record.transform0_x = transform.A
+      record.transform0_y = transform.C
+      record.transform0_z = transform.TX
+      record.transform1_x = transform.B
+      record.transform1_y = transform.D
+      record.transform1_z = transform.TY
       records[outputIndex] = record
       outputIndex++
     }

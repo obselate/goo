@@ -5,10 +5,11 @@ import System
 internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private func AllocateImageMemory(image VkImage, requirements VkMemoryRequirements,
     dedicatedRequirements VkMemoryDedicatedRequirements,
-    memoryPolicy VulkanMemoryPolicy) VulkanMemoryAllocation{
+    memoryPolicy VulkanMemoryPolicy, forceDedicated bool = false) VulkanMemoryAllocation{
       ValidateRequirements(requirements)
       let selection = SelectMemoryType(requirements.memoryTypeBits, memoryPolicy)
-      let dedicated = IsDedicated(requirements, dedicatedRequirements, VulkanMemoryResourceClass.Image)
+      let dedicated = forceDedicated
+        || IsDedicated(requirements, dedicatedRequirements, VulkanMemoryResourceClass.Image)
       EnsureLiveCapacity(requirements.size)
       EnsureActiveCapacity()
       let placement = AcquirePlacement(requirements, selection, VulkanMemoryResourceClass.Image, dedicated,

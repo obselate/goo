@@ -16,11 +16,12 @@ layout(push_constant) uniform HbGpuTextFramePushBlock
 {
     vec4 viewport;
     vec4 origin;
+    uvec4 scissor;
 } frameConstants;
 
 layout(location = 0) out vec2 v_texcoord;
 layout(location = 1) flat out uint v_glyphLoc;
-layout(location = 2) flat out uint v_clipChainId;
+layout(location = 2) flat out uvec2 v_clipChains;
 layout(location = 3) flat out vec4 v_effectAndOrigin;
 layout(location = 4) flat out vec4 v_foreground;
 
@@ -87,7 +88,7 @@ void main()
     gl_Position = transform * vec4(position, 0.0, 1.0);
     v_texcoord = texcoord;
     v_glyphLoc = instance.glyphInput.x;
-    v_clipChainId = instance.glyphInput.z;
+    v_clipChains = uvec2(instance.glyphInput.z, frameConstants.scissor.x);
     v_effectAndOrigin = vec4(
         uintBitsToFloat(instance.glyphInput.w),
         uintBitsToFloat(instance.glyphInput.y),

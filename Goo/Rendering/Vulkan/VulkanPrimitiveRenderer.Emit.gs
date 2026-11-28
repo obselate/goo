@@ -30,9 +30,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       throw ArgumentOutOfRangeException("clip parent index")
     }
     let transform = ResolveTransform(frame, value.TransformIndex)
-    if transform.B != 0.0F || transform.C != 0.0F {
-      throw NotSupportedException("Vulkan primitive renderer requires axis-aligned rectangular clips")
-    }
     return ResolveClip(value.Bounds, transform, extent)
   }
 
@@ -172,11 +169,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     opacity float32,
     transform PrimitiveTransform, phaseX float32, phaseY float32) {
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, bounds, transform, extent)
-      if radiusTopLeft > 0.0F || radiusTopRight > 0.0F
-        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F || transform.B != 0.0F || transform.C != 0.0F {
-          push.Geometry.transform1_w = 1.0F
-        }
+      FillTransform(&push, bounds, transform, extent)
+      let expand = radiusTopLeft > 0.0F || radiusTopRight > 0.0F
+        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F
+        || transform.B != 0.0F || transform.C != 0.0F
+      push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindSolid, expand)
       push.radii_x = radiusTopLeft
       push.radii_y = radiusTopRight
       push.radii_z = radiusBottomRight
@@ -188,8 +185,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let packed = PackColor(color, opacity)
       push.packedColors_x = packed.Rgb
       push.packedColors_w = packed.Alpha
-      if TryEmitOpaqueInterior(commandBuffer, bounds, transform, &push, color, opacity) { return }
-      BindAndDraw(commandBuffer, primitivePipelines.SolidPipeline, *void(&push))
+      BindAndDraw(commandBuffer, primitivePipelines.BatchedUiPipeline, *void(&push))
     }
 
   private func SnapBorderWidth(value float32) float32 ->
@@ -240,7 +236,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, shadowBounds, transform, extent)
+      FillTransform(&push, shadowBounds, transform, extent)
+      push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindShadow, false)
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
       push.radii_z = value.RadiusBottomRight
@@ -257,10 +254,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         guard let _ = preparedClipFrame else {
           throw InvalidOperationException("Vulkan masked shadow requires a prepared clip frame")
         }
-        if value.MaskIndex >= clipRegions.Length || value.MaskIndex >= frame.ClipMaskCount {
+        if value.MaskIndex >= frame.ClipMaskCount {
           throw ArgumentOutOfRangeException("shadow mask index")
         }
-        let region = clipRegions[value.MaskIndex]
         let scaleX = float32(physicalExtent.width) / float32(extent.width)
         let scaleY = float32(physicalExtent.height) / float32(extent.height)
         let shadowScale = MathF.Sqrt(scaleX * scaleY)
@@ -268,21 +264,29 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         push.params_y *= shadowScale
         push.params_z *= scaleX
         push.params_w *= scaleY
-        push.stopPositions_x = region.Mapping.ScaleX / scaleX
-        push.stopPositions_y = region.Mapping.ScaleY / scaleY
-        push.stopPositions_z = region.Mapping.OffsetX
-        push.stopPositions_w = region.Mapping.OffsetY
-        push.packedColors_y = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenWidth) * scaleX))
-        push.packedColors_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenHeight) * scaleY))
-        push.packedColorsExtra_y = region.Mapping.Layer * 2u | 1u
-        push.packedColorsExtra_z = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenX) * scaleX))
-        push.packedColorsExtra_w = uint32(BitConverter.SingleToInt32Bits(float32(region.ScreenY) * scaleY))
+        let mask = frame.ClipMasks[value.MaskIndex]
+        if mask.Stroke.Width > 0.0F && !mask.AnalyticBox {
+          let maskTransform = ResolveTransform(frame, mask.TransformIndex)
+          let matrix00 = maskTransform.A * mask.ScaleX
+          let matrix01 = maskTransform.C * mask.ScaleY
+          let matrix10 = maskTransform.B * mask.ScaleX
+          let matrix11 = maskTransform.D * mask.ScaleY
+          let determinant = matrix00 * matrix11 - matrix01 * matrix10
+          if MathF.Abs(determinant) > 0.0000001F {
+            let inverseDeterminant = 1.0F / MathF.Abs(determinant)
+            let padding = StrokePixelPadding(mask.Stroke)
+            push.stopPositions_z = (MathF.Abs(matrix11) + MathF.Abs(matrix01)) * inverseDeterminant * padding
+            push.stopPositions_w = (MathF.Abs(matrix10) + MathF.Abs(matrix00)) * inverseDeterminant * padding
+          }
+        }
+        let recordIndex = scissorTable.MaskRecordIndex(value.MaskIndex)
+        push.packedColorsExtra_y = (recordIndex << 1) | 1u
       } else {
         let scroll = frame.ScrollOffset(value.TransformIndex)
         push.stopPositions_x = currentDitherOffsetX + scroll.X
         push.stopPositions_y = currentDitherOffsetY + scroll.Y
       }
-      BindAndDraw(commandBuffer, primitivePipelines.ShadowPipeline, *void(&push))
+      BindAndDraw(commandBuffer, primitivePipelines.BatchedUiPipeline, *void(&push))
     }
 
   private func EmitBorder(
@@ -318,17 +322,17 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F
       let rotated = transform.B != 0.0F || transform.C != 0.0F
       if value.Style != uint32(int32(BorderStyle.Solid)) || rounded {
-        var push = AnalyticBorderPushConstants{}
-        FillTransform(&push.Geometry, bounds, transform, extent)
-        if rounded || rotated { push.Geometry.transform1_w = 1.0F }
-        push.widths_x = topWidth
-        push.widths_y = rightWidth
-        push.widths_z = bottomWidth
-        push.widths_w = leftWidth
-        push.radii_x = value.RadiusTopLeft
-        push.radii_y = value.RadiusTopRight
-        push.radii_z = value.RadiusBottomRight
-        push.radii_w = value.RadiusBottomLeft
+        var push = VulkanPrimitiveGpuRecord{}
+        FillTransform(&push, bounds, transform, extent)
+        push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindBorder, rounded || rotated)
+        push.radii_x = topWidth
+        push.radii_y = rightWidth
+        push.radii_z = bottomWidth
+        push.radii_w = leftWidth
+        push.stopPositions_x = value.RadiusTopLeft
+        push.stopPositions_y = value.RadiusTopRight
+        push.stopPositions_z = value.RadiusBottomRight
+        push.stopPositions_w = value.RadiusBottomLeft
         push.params_x = 0.0F
         push.params_y = bounds.Width
         push.params_z = bounds.Width + bounds.Height
@@ -345,7 +349,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         push.packedColorsExtra_y = left.Alpha
         push.packedColorsExtra_z = value.ClipOwnsOuterCoverage ? 1u : 0u
         push.packedColorsExtra_w = value.Style
-        BindAndDraw(commandBuffer, primitivePipelines.BorderPipeline, *void(&push))
+        BindAndDraw(commandBuffer, primitivePipelines.BatchedUiPipeline, *void(&push))
         return
       }
       let scroll = frame.ScrollOffset(value.TransformIndex)
@@ -408,11 +412,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, value.Bounds, transform, extent)
-      if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
-        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F || transform.B != 0.0F || transform.C != 0.0F {
-          push.Geometry.transform1_w = 1.0F
-        }
+      FillTransform(&push, value.Bounds, transform, extent)
+      let expand = value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F
+        || transform.B != 0.0F || transform.C != 0.0F
+      let scroll = frame.ScrollOffset(value.TransformIndex)
+      let ditherX = currentDitherOffsetX + scroll.X
+      let ditherY = currentDitherOffsetY + scroll.Y
+      push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindLinearGradient, expand, ditherX)
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
       push.radii_z = value.RadiusBottomRight
@@ -424,10 +431,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = (value.EndX - value.Bounds.X) / width
       push.params_w = (value.EndY - value.Bounds.Y) / height
       FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
-      let scroll = frame.ScrollOffset(value.TransformIndex)
-      BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push), true,
-        scroll.X, scroll.Y)
-      WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
+      push.packedColorsExtra_y = PackGradientExtraY(push.packedColorsExtra_y, ditherY)
+      push.packedColorsExtra_w = 0u
+      let ownerRecordIndex = primitiveRecordCount
+      BindAndDraw(commandBuffer, primitivePipelines.BatchedUiPipeline, *void(&push))
+      if primitivePrepass && value.StopCount > 4 {
+        pendingGradientStops.Add(PendingGradientStops(ownerRecordIndex, value.StopStart, value.StopCount, value.Opacity))
+      }
     }
 
   private func EmitRadial(
@@ -452,11 +462,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, value.Bounds, transform, extent)
-      if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
-        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F || transform.B != 0.0F || transform.C != 0.0F {
-          push.Geometry.transform1_w = 1.0F
-        }
+      FillTransform(&push, value.Bounds, transform, extent)
+      let expand = value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F
+        || transform.B != 0.0F || transform.C != 0.0F
+      let scroll = frame.ScrollOffset(value.TransformIndex)
+      let ditherX = currentDitherOffsetX + scroll.X
+      let ditherY = currentDitherOffsetY + scroll.Y
+      push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindRadialGradient, expand, ditherX)
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
       push.radii_z = value.RadiusBottomRight
@@ -468,10 +481,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = MathF.Max(value.RadiusX / width, 0.0001F)
       push.params_w = MathF.Max(value.RadiusY / height, 0.0001F)
       FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
-      let scroll = frame.ScrollOffset(value.TransformIndex)
-      BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push), true,
-        scroll.X, scroll.Y)
-      WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
+      push.packedColorsExtra_y = PackGradientExtraY(push.packedColorsExtra_y, ditherY)
+      push.packedColorsExtra_w = 0u
+      let ownerRecordIndex = primitiveRecordCount
+      BindAndDraw(commandBuffer, primitivePipelines.BatchedUiPipeline, *void(&push))
+      if primitivePrepass && value.StopCount > 4 {
+        pendingGradientStops.Add(PendingGradientStops(ownerRecordIndex, value.StopStart, value.StopCount, value.Opacity))
+      }
     }
 
   private func EmitImage(
@@ -519,7 +535,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       let transform = ResolveTransform(frame, value.TransformIndex)
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, value.Bounds, transform, extent)
+      FillTransform(&push, value.Bounds, transform, extent)
       push.radii_x = value.Opacity
       push.params_x = value.SourceX
       push.params_y = value.SourceY
@@ -533,27 +549,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       } else {
         push.radii_y = 1.0F
       }
-      if !primitivePrepass {
-        EnsureDescriptorLayout(pipelineLayout)
-        let sameDescriptor = sampledDescriptorBound
-          && SameResourceId(sampledImageId, value.ImageId)
-          && SameResourceId(sampledSamplerId, value.SamplerId)
-          && sampledSamplerMode == samplerMode
-          && sampledGeneration == resourceGeneration
-        if !sameDescriptor {
-          FlushPendingPrimitiveDraw(commandBuffer)
-          imageResources!!.BindDescriptor(commandBuffer, pipelineLayout, value.ImageId,
-            value.SamplerId, samplerMode, resourceGeneration)
-          recordDescriptorChangeCount++
-          sampledDescriptorBound = true
-          sampledImageId = value.ImageId
-          sampledSamplerId = value.SamplerId
-          sampledSamplerMode = samplerMode
-          sampledGeneration = resourceGeneration
-        }
+      push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindSampledImage, false)
+      if primitivePrepass {
+        WritePrepassRecord(*void(&push))
+        return
       }
-      BindPrimitiveAndDraw(commandBuffer, primitivePipelines.SampledPipeline,
-        pipelineLayout, *void(&push), 1u)
+      QueueSampledImageDraw(commandBuffer, value.ImageId, value.SamplerId, samplerMode)
     }
 
   private func EmitLayer(
@@ -590,7 +591,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      FillTransform(&push, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      push.transform1_w = PackBatchedUiHeader(VulkanShaderAbi.GooUiKindSampledImage, false)
       push.radii_x = value.Opacity
       push.radii_y = 1.0F
       let targetWidth = float32(value.ExtentWidth)
@@ -605,33 +607,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         push.packedColors_x = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.width)))
         push.packedColors_y = uint32(BitConverter.SingleToInt32Bits(0.5F / float32(source.Extent.height)))
       }
-      DrawSampledTarget(commandBuffer, &push, target)
-    }
-
-  private func DrawSampledTarget(
-    commandBuffer VkCommandBuffer,
-    push * VulkanPrimitiveGpuRecord,
-    target VulkanOffscreenLayerTarget?) {
-      if !primitivePrepass {
-        FlushPendingPrimitiveDraw(commandBuffer)
-        EnsureDescriptorLayout(pipelineLayout)
-        var descriptorSet = target!!.DescriptorSet
-        let bindDescriptors = dispatch.vkCmdBindDescriptorSets
-        bindDescriptors(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
-          pipelineLayout, 0u, 1u, &descriptorSet, 0u, nil)
-        recordDescriptorChangeCount++
-        sampledDescriptorBound = false
-        sampledImageId = ResourceId{}
-        sampledSamplerId = ResourceId{}
-        sampledSamplerMode = VulkanImageSamplerMode.Nearest
-        sampledGeneration = 0uL
-        pathDescriptorBound = false
-        pathAtlasId = ResourceId{}
-        textDescriptorBound = false
-        textAtlasId = ResourceId{}
+      if primitivePrepass {
+        WritePrepassRecord(*void(&push))
+        return
       }
-      BindPrimitiveAndDraw(commandBuffer, primitivePipelines.SampledPipeline,
-        pipelineLayout, *void(push), 1u)
+      QueueSampledTargetDraw(commandBuffer, target!!)
     }
 
   private func EmitShaderEffectLayer(
@@ -679,9 +659,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         && (backdrop == nil || backdrop.DescriptorSet == VkDescriptorSet.Null) {
           throw InvalidOperationException("Vulkan shader effect backdrop is unavailable")
         }
-      let effectPipeline = primitivePipelines.ResolveShaderEffectPipeline(program)
+      let effectPipeline = primitivePipelines.ResolveShaderEffectPipeline(program, completedLayerSerial + 1uL)
+      if !primitivePrepass && !usedEffectPrograms.Contains(program.Program) {
+        usedEffectPrograms.Add(program.Program)
+      }
       var primitive = VulkanPrimitiveGpuRecord{}
-      FillTransform(&primitive.Geometry, value.Bounds,
+      FillTransform(&primitive, value.Bounds,
         PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
       primitive.radii_x = value.Opacity
       let targetWidth = float32(value.ExtentWidth)
@@ -690,10 +673,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       primitive.params_y = (reference.Y - value.OriginY) / targetHeight
       primitive.params_z = reference.Width / targetWidth
       primitive.params_w = reference.Height / targetHeight
-      primitive.EffectUvOffsetX = (value.Bounds.X - reference.X) / reference.Width
-      primitive.EffectUvOffsetY = (value.Bounds.Y - reference.Y) / reference.Height
-      primitive.EffectUvScaleX = value.Bounds.Width / reference.Width
-      primitive.EffectUvScaleY = value.Bounds.Height / reference.Height
+      primitive.stopPositions_y = (value.Bounds.X - reference.X) / reference.Width
+      primitive.stopPositions_z = (value.Bounds.Y - reference.Y) / reference.Height
+      primitive.stopPositions_w = value.Bounds.Width / reference.Width
+      primitive.radii_y = value.Bounds.Height / reference.Height
       primitive.packedColorsExtra_w = primitiveFrameData.EffectDataWordOffset
       +effect.DataWordOffset
       primitive.stopPositions_x = effect.ElapsedSeconds
@@ -726,6 +709,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
           0u, 128u, *void(&parameters))
         sampledDescriptorBound = false
+        sampledTarget = nil
         sampledImageId = ResourceId{}
         sampledSamplerId = ResourceId{}
         sampledSamplerMode = VulkanImageSamplerMode.Nearest
@@ -757,7 +741,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw NotSupportedException("Vulkan blend mode is unavailable")
       }
       var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      FillTransform(&push, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
       push.radii_x = value.Opacity
       let targetWidth = float32(value.ExtentWidth)
       let targetHeight = float32(value.ExtentHeight)
@@ -791,6 +775,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
         recordDescriptorChangeCount++
         sampledDescriptorBound = false
+        sampledTarget = nil
         sampledImageId = ResourceId{}
         sampledSamplerId = ResourceId{}
         sampledSamplerMode = VulkanImageSamplerMode.Nearest
@@ -801,7 +786,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         textAtlasId = ResourceId{}
       }
       let pipeline = preservesBackdrop
-        ? primitivePipelines.ClipCompositePipeline : primitivePipelines.BlendPipeline
+        ? primitivePipelines.BlendReplacePipeline : primitivePipelines.BlendPipeline
       BindPrimitiveAndDraw(commandBuffer, pipeline,
         blendPipelineLayout, *void(&push), 3u)
     }
@@ -812,6 +797,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     value CachedTextSegmentRefRecord,
     drawClipChainId int32,
     frame SceneFrame) {
+      let rectOnlyScissor = ActiveRectOnlyScissorChainId()
       if primitivePrepass {
         return
       }
@@ -841,7 +827,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         let firstInstance = uint32(globalFirst)
         let instanceCount = uint32(run.InstanceCount)
-        if CanAppendTextDraw(selectedPipeline, run.AtlasId, firstInstance, scroll.PixelX, scroll.PixelY) {
+        if CanAppendTextDraw(selectedPipeline, run.AtlasId, firstInstance,
+          scroll.PixelX, scroll.PixelY, rectOnlyScissor) {
           AppendTextDraw(instanceCount)
         } else {
           FlushPendingTextDraw(commandBuffer)
@@ -859,6 +846,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           framePush.origin_y = currentOriginY * scaleY
           framePush.origin_z = -scroll.PixelX * scaleX
           framePush.origin_w = -scroll.PixelY * scaleY
+          framePush.scissor_x = rectOnlyScissor
           let pushConstants = dispatch.vkCmdPushConstants
           pushConstants(commandBuffer, textPipelineLayout,
             uint32(VkConstants.VK_SHADER_STAGE_VERTEX_BIT),
@@ -878,7 +866,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             activePipeline = selectedPipeline
           }
           BeginTextDraw(selectedPipeline, run.AtlasId, firstInstance,
-            instanceCount, scroll.PixelX, scroll.PixelY)
+            instanceCount, scroll.PixelX, scroll.PixelY, rectOnlyScissor)
         }
         runIndex = runIndex + 1
       }
@@ -984,7 +972,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
 
   private func FillTransform(
-    push * VulkanPrimitiveGeometry,
+    push * VulkanPrimitiveGpuRecord,
     bounds ConservativeBounds,
     transform PrimitiveTransform,
     extent VkExtent2D) {
@@ -1005,9 +993,60 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push -> transform1_w = 0.0F
     }
 
+  private func ActiveScissorChainId() uint32 {
+    if forceZeroScissor {
+      return 0u
+    }
+    return scissorTable.ResolveChainId(
+      activeRectClipStack[clipDepth - 1],
+      currentDrawClipChainId,
+      currentOriginX,
+      currentOriginY,
+      activeExtent,
+      physicalExtent
+    )
+  }
+
+  private func ActiveRectOnlyScissorChainId() uint32 {
+    if forceZeroScissor {
+      return 0u
+    }
+    return scissorTable.ResolveChainId(
+      activeRectClipStack[clipDepth - 1],
+      0,
+      currentOriginX,
+      currentOriginY,
+      activeExtent,
+      physicalExtent
+    )
+  }
+
+  private func PackBatchedUiHeader(kind uint32, expandQuad bool, ditherX float32 = 0.0F) float32 {
+    let quantizedX = Math.Clamp(int32(MathF.Round(ditherX * 16.0F)), -134217728, 134217727)
+    let bits = (expandQuad ? 1u : 0u) | ((kind & 7u) << 1) | (uint32(quantizedX) << 4)
+    return BitConverter.UInt32BitsToSingle(bits)
+  }
+
+  private func PackGradientExtraY(fourthAlpha uint32, ditherY float32) uint32 {
+    let quantizedY = Math.Clamp(int32(MathF.Round(ditherY * 16.0F)), -2097152, 2097151)
+    return (fourthAlpha & 0x3ffu) | (uint32(quantizedY) << 10)
+  }
+
+  private func FlushPendingGradientStops(frame SceneFrame) {
+    if !primitivePrepass || pendingGradientStops.Count == 0 {
+      return
+    }
+    for item in pendingGradientStops {
+      let auxStart = primitiveRecordCount
+      primitiveFrameData.PatchRecordWord(item.OwnerRecordIndex, 31, uint32(auxStart))
+      WriteGradientStopRecords(frame, item.StopStart, item.StopCount, item.Opacity)
+    }
+    pendingGradientStops.Clear()
+  }
+
   private func GradientRecordCount(count int32) uint64 -> if count <= 4 { 1uL } else { 1uL + (uint64(count) + 3uL) / 4uL }
 
-  // Long gradients store packed stop groups after their draw record in the same SSBO.
+  // Long gradients store packed stop groups after all primary draw records in the same SSBO.
   private func WriteGradientStopRecords(frame SceneFrame, start int32, count int32, opacity float32) {
     if !primitivePrepass || count <= 4 { return }
     var offset int32 = 0
@@ -1052,14 +1091,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push -> packedColorsExtra_x = packedFourth.Rgb
       push -> packedColorsExtra_y = packedFourth.Alpha
       push -> packedColorsExtra_z = uint32(count)
-      push -> packedColorsExtra_w = if count > 4 { uint32(primitiveRecordCount + 1) } else { 0u }
+      push -> packedColorsExtra_w = 0u
     }
 
-  private func BindAndDraw(commandBuffer VkCommandBuffer, pipeline VkPipeline, pushData * void,
-    gradient bool = false, scrollX float32 = 0.0F, scrollY float32 = 0.0F
-  ) {
-    BindPrimitiveAndDraw(commandBuffer, pipeline, pipelineLayout, pushData, 1u, gradient,
-      scrollX, scrollY)
+  private func WritePrepassRecord(pushData * void) {
+    let primitiveWords = *uint32(nint(pushData))
+    primitiveWords[PrimitiveClipDrawOrdinalWord] = ActiveScissorChainId()
+    primitiveFrameData.WriteRecord(primitiveRecordCount, pushData)
+    primitiveRecordCount = primitiveRecordCount + 1
+  }
+
+  private func BindAndDraw(commandBuffer VkCommandBuffer, pipeline VkPipeline, pushData * void) {
+    BindPrimitiveAndDraw(commandBuffer, pipeline, pipelineLayout, pushData, 1u)
   }
 
   private func BindPrimitiveAndDraw(
@@ -1067,22 +1110,68 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     pipeline VkPipeline,
     layout VkPipelineLayout,
     pushData * void,
-    clipSetIndex uint32,
-    gradient bool = false, scrollX float32 = 0.0F, scrollY float32 = 0.0F
+    clipSetIndex uint32
   ) {
       if pushData == nil {
         throw ArgumentNullException("pushData")
       }
       if primitivePrepass {
-        let primitiveWords = *uint32(nint(pushData))
-        primitiveWords[PrimitiveClipDrawOrdinalWord] = currentDrawOrdinal
-        primitiveFrameData.WriteRecord(primitiveRecordCount, pushData)
-        primitiveRecordCount = primitiveRecordCount + 1
+        WritePrepassRecord(pushData)
         return
       }
-      QueuePrimitiveDraw(commandBuffer, pipeline, layout, clipSetIndex, gradient,
-        currentDitherOffsetX + scrollX, currentDitherOffsetY + scrollY)
+      QueuePrimitiveDraw(commandBuffer, pipeline, layout, clipSetIndex, layout == pipelineLayout)
     }
+
+  private func EnsureFallbackSampledDescriptor(commandBuffer VkCommandBuffer, layout VkPipelineLayout) {
+    var descriptorSet = fallbackImageDescriptorSet
+    let bindDescriptors = dispatch.vkCmdBindDescriptorSets
+    bindDescriptors(
+      commandBuffer,
+      VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
+      layout,
+      0u,
+      1u,
+      &descriptorSet,
+      0u,
+      nil
+    )
+    sampledDescriptorBound = true
+    sampledTarget = nil
+    sampledImageId = ResourceId{}
+    sampledSamplerId = ResourceId{}
+    sampledSamplerMode = VulkanImageSamplerMode.Nearest
+    sampledGeneration = 0uL
+    recordDescriptorChangeCount++
+  }
+
+  private func EnsureBatchedStrokeDescriptor(commandBuffer VkCommandBuffer, layout VkPipelineLayout) {
+    if strokeDescriptorBound {
+      return
+    }
+    var boundStroke = false
+    if let strokeData = pathStrokeFrameData {
+      if strokeData.HasStrokes {
+        strokeData.Bind(commandBuffer, layout, 3u)
+        boundStroke = true
+      }
+    }
+    if !boundStroke {
+      var descriptorSet = fallbackStrokeDescriptorSet
+      let bindDescriptors = dispatch.vkCmdBindDescriptorSets
+      bindDescriptors(
+        commandBuffer,
+        VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
+        layout,
+        3u,
+        1u,
+        &descriptorSet,
+        0u,
+        nil
+      )
+    }
+    strokeDescriptorBound = true
+    recordDescriptorChangeCount++
+  }
 
   private func EnsurePrimitiveDescriptor(commandBuffer VkCommandBuffer, layout VkPipelineLayout) {
     if primitiveDescriptorBound && primitiveDescriptorLayout == layout
@@ -1112,6 +1201,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     textInstanceDescriptorLayout = VkPipelineLayout.Null
     textInstanceDescriptorSlot = -1
     sampledDescriptorBound = false
+    sampledTarget = nil
     sampledImageId = ResourceId{}
     sampledSamplerId = ResourceId{}
     sampledSamplerMode = VulkanImageSamplerMode.Nearest
@@ -1124,26 +1214,20 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     && left.LogicalId == right.LogicalId
     && left.Version == right.Version
 
-  private func PushClip(commandBuffer VkCommandBuffer, clip PrimitiveClip) {
+  private func PushClip(clipIndex int32) {
     if clipDepth >= clipStack.Length {
       throw InvalidOperationException("Vulkan primitive clip stack capacity exceeded")
     }
-    let combined = Intersect(clipStack[clipDepth - 1], clip)
-    clipStack[clipDepth] = combined
+    clipStack[clipDepth] = clipStack[clipDepth - 1]
+    activeRectClipStack[clipDepth] = clipIndex
     clipDepth = clipDepth + 1
-    if !primitivePrepass {
-      SetScissor(commandBuffer, combined)
-    }
   }
 
-  private func PopClip(commandBuffer VkCommandBuffer) {
+  private func PopClip() {
     if clipDepth <= 1 {
       throw InvalidOperationException("Vulkan primitive clip stack underflow")
     }
     clipDepth = clipDepth - 1
-    if !primitivePrepass {
-      SetScissor(commandBuffer, clipStack[clipDepth - 1])
-    }
   }
 
   private func ResolveClip(

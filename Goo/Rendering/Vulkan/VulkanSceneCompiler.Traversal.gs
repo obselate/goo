@@ -441,21 +441,7 @@ internal partial class VulkanSceneCompiler {
             clipCount = clipCount + 1
             childClipDepth = context.ParentRectClipDepth + 1
           }
-          if !roundedOverflowClip && !axisAligned {
-            MarkUnsupported(node, VulkanSceneUnsupportedKind.Clip,
-              VulkanSceneUnsupportedField.OverflowX,
-              VulkanSceneUnsupportedPrimitive.RectClipNonAxisAligned)
-            RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.OverflowY,
-              VulkanSceneUnsupportedPrimitive.RectClipNonAxisAligned)
-            if hasRadius {
-              RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.BorderRadius,
-                VulkanSceneUnsupportedPrimitive.RectClipRounded)
-            }
-            if depthExceeded || pathDepthExceeded {
-              RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.ClipDepth,
-                VulkanSceneUnsupportedPrimitive.RectClipDepth)
-            }
-          } else if !roundedOverflowClip && hasRadius {
+          if !roundedOverflowClip && hasRadius {
             MarkUnsupported(node, VulkanSceneUnsupportedKind.Clip,
               VulkanSceneUnsupportedField.BorderRadius,
               VulkanSceneUnsupportedPrimitive.RectClipRounded)

@@ -559,12 +559,14 @@ internal partial class SceneFrame {
   internal func AddClipMask(value ClipMaskRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    if value.AtlasWordCount == 0u || !value.PathId.IsValid || !value.AtlasId.IsValid {
+    if !value.AnalyticBox && (value.AtlasWordCount == 0u || !value.PathId.IsValid || !value.AtlasId.IsValid) {
       throw ArgumentOutOfRangeException("clip mask resources")
     }
     let index = AppendRecord(&clipMasks, &clipMaskCount, value)
-    AppendResourceIfValid(value.PathId)
-    AppendResourceIfValid(value.AtlasId)
+    if !value.AnalyticBox {
+      AppendResourceIfValid(value.PathId)
+      AppendResourceIfValid(value.AtlasId)
+    }
     return index
   }
 

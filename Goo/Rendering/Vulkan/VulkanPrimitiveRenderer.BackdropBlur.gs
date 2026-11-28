@@ -164,7 +164,13 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         activeExtent = extent
         physicalExtent = extent
         if primitivePrepass {
-            EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect, bounds)
+            let previousForceZero = forceZeroScissor
+            forceZeroScissor = true
+            try {
+                EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect, bounds)
+            } finally {
+                forceZeroScissor = previousForceZero
+            }
             return nil
         }
         guard let pool = layerPool else {
@@ -172,6 +178,8 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         }
         guard let target = destination ?? pool.Acquire(extent.width, extent.height, completedLayerSerial,
             allowBucketAllocation: true) else { return nil }
+        let previousForceZero = forceZeroScissor
+        forceZeroScissor = true
         try {
             target.TransitionToColorAttachment(commandBuffer)
             BeginLayerRendering(commandBuffer, extent, target.ImageView, false)
@@ -187,6 +195,8 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         } catch (error Exception) {
             pool.ReleaseForReuse(target)
             rethrow
+        } finally {
+            forceZeroScissor = previousForceZero
         }
     }
 }

@@ -95,9 +95,10 @@ func RunBackdropBlurSmoke() {
     Require(PrimitiveNear(pixel(120.0, 32.0), uint8(0), uint8(0), uint8(0), 2),
       "Backdrop blur changed a far pixel: " + PrimitivePixelText(pixel(120.0, 32.0)))
     Require(PrimitiveNear(pixel(82.0, 10.0), uint8(255), uint8(255), uint8(255), 0)
-        && PrimitiveNear(pixel(86.0, 10.0), uint8(0), uint8(0), uint8(0), 0),
+        && PrimitiveNear(pixel(85.0, 10.0), uint8(0), uint8(0), uint8(0), 0)
+        && PrimitiveNear(pixel(86.0, 10.0), uint8(0), uint8(0), uint8(0), 4),
       "Backdrop blur ignored BorderRadius: " + PrimitivePixelText(pixel(82.0, 10.0))
-      +" " + PrimitivePixelText(pixel(86.0, 10.0)))
+      + " " + PrimitivePixelText(pixel(85.0, 10.0)) + " " + PrimitivePixelText(pixel(86.0, 10.0)))
     Require(PrimitiveNear(pixel(83.0, 60.0), uint8(255), uint8(255), uint8(255), 0)
         && PrimitiveNear(pixel(84.0, 60.0), uint8(0), uint8(0), uint8(0), 0),
       "Backdrop blur painted outside its box: " + PrimitivePixelText(pixel(83.0, 60.0))
@@ -115,7 +116,7 @@ func RunBackdropBlurSmoke() {
     guard let target = WindowReadbackTestFixture.CaptureTarget(opened) else {
       throw InvalidOperationException("Backdrop blur target is unavailable")
     }
-    target.ResetRenderResourcesForTest(int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight) * 5L)
+    target.ResetRenderResourcesForTest(int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight) * 1L)
     WindowReadbackTestFixture.SetForceFullRedraw(opened, true)
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)

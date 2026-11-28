@@ -31,7 +31,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private let primitiveState VulkanSharedPrimitiveState
   private let pathAtlas VulkanPathAtlas
   private let pathResources VulkanPathResources
-  private let clipMaskAtlas VulkanClipMaskAtlas
   private let textAtlases VulkanTextAtlasSet?
   private let colorGlyphAtlas VulkanColorGlyphAtlas?
   private let resourceGeneration uint64
@@ -147,7 +146,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     nativePrimitiveState VulkanSharedPrimitiveState?,
     nativePathAtlas VulkanPathAtlas,
     nativePathResources VulkanPathResources,
-    nativeClipMaskAtlas VulkanClipMaskAtlas,
     nativeTextAtlases VulkanTextAtlasSet?,
     nativeObjectAccounting VulkanObjectAccounting?,
     nativeDiagnostics VulkanDiagnostics?,
@@ -209,9 +207,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if nativePathResources.Atlas != nativePathAtlas {
         throw ArgumentException("nativePathResources atlas does not match nativePathAtlas", "nativePathResources")
       }
-      if nativeClipMaskAtlas == nil {
-        throw ArgumentNullException("nativeClipMaskAtlas")
-      }
       if expectedGeneration == 0uL
         || sharedImages.Generation != expectedGeneration
         || sharedState.Generation != expectedGeneration
@@ -235,7 +230,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       primitiveState = sharedState
       pathAtlas = nativePathAtlas
       pathResources = nativePathResources
-      clipMaskAtlas = nativeClipMaskAtlas
       textAtlases = nativeTextAtlases
       colorGlyphAtlas = nativeColorGlyphAtlas
       resourceGeneration = expectedGeneration
@@ -367,7 +361,14 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if textAtlasIndex != textAtlasCount {
       throw InvalidOperationException("text atlas count mismatch")
     }
-    let pathCount = frame.AnalyticPathBandCount + frame.ClipMaskCount
+    var pathCount = frame.AnalyticPathBandCount
+    var maskIndex int32 = 0
+    while maskIndex < frame.ClipMaskCount {
+      if !frame.ClipMasks[maskIndex].AnalyticBox && frame.ClipMasks[maskIndex].PathId.IsValid {
+        pathCount++
+      }
+      maskIndex++
+    }
     if reservedPathIds.Length < pathCount {
       reservedPathIds = [pathCount]ResourceId
     }
@@ -377,10 +378,12 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       pathIds[pathIndex] = frame.AnalyticPathBands[pathIndex].PathId
       pathIndex = pathIndex + 1
     }
-    var maskIndex int32 = 0
+    maskIndex = 0
     while maskIndex < frame.ClipMaskCount {
-      pathIds[pathIndex] = frame.ClipMasks[maskIndex].PathId
-      pathIndex = pathIndex + 1
+      if !frame.ClipMasks[maskIndex].AnalyticBox && frame.ClipMasks[maskIndex].PathId.IsValid {
+        pathIds[pathIndex] = frame.ClipMasks[maskIndex].PathId
+        pathIndex = pathIndex + 1
+      }
       maskIndex = maskIndex + 1
     }
     var reservedCount int32 = 0
@@ -487,7 +490,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
           colorGlyphAtlas?.RecordUploads(commandBuffer)
         }
         renderer.RecordPrimitiveFrameUpload(commandBuffer)
-        renderer.RecordClipMasks(commandBuffer, extent)
         if !retainPreviousFrame || partialRepeat.IsEmpty {
           BeginRendering(clearColor, VkRect2D{ extent: extent })
           renderingActive = true
@@ -530,7 +532,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
             +resetResult.ToString())
         }
         imageLayout = previousLayout
-        try { clipMaskAtlas.InvalidateRecordedLayouts() } catch (cleanup Exception) { }
         if let renderer = primitiveRenderer {
           try { renderer.Abort(ClipFrameSlot) } catch (cleanup Exception) { }
         }
@@ -648,7 +649,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if resetResult == VkConstants.VK_ERROR_DEVICE_LOST || DeviceLossDetected {
         try { AbandonAfterDeviceLoss() } catch (cleanup Exception) { }
       } else {
-        try { clipMaskAtlas.InvalidateRecordedLayouts() } catch (cleanup Exception) { }
         if let renderer = primitiveRenderer {
           renderer.Abort(ClipFrameSlot)
         }
@@ -661,7 +661,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       throw InvalidOperationException("vkResetCommandBuffer failed after offscreen submit failure: "
         +resetResult.ToString())
     }
-    try { clipMaskAtlas.InvalidateRecordedLayouts() } catch (cleanup Exception) { }
     if let renderer = primitiveRenderer {
       try { renderer.Abort(ClipFrameSlot) } catch (cleanup Exception) { }
     }
@@ -694,7 +693,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       throw InvalidOperationException("vkResetCommandBuffer failed while aborting offscreen work: "
         +result.ToString())
     }
-    try { clipMaskAtlas.InvalidateRecordedLayouts() } catch (cleanup Exception) { }
     if let renderer = primitiveRenderer {
       renderer.Abort(ClipFrameSlot)
     }
@@ -1480,8 +1478,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         pathAtlas,
         textAtlases,
         objectAccounting,
-        allocator,
-        clipMaskAtlas)
+        allocator)
       layerPool = VulkanOffscreenLayerPool(
         device,
         dispatch,

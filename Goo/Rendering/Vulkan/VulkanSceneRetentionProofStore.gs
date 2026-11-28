@@ -190,6 +190,7 @@ internal class VulkanSceneRetentionProofStore {
             Kind: reference.Kind,
             Flags: reference.Flags,
             ClipChainId: reference.ClipChainId,
+            ClipChainDigest: frame.ClipChainContentDigest(reference.ClipChainId),
             Solid: SolidBoxRecord{},
             Rounded: RoundedBoxRecord{},
             Border: PerEdgeBorderRecord{},

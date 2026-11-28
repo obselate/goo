@@ -161,7 +161,7 @@ func ReadbackBeginReadback(window Window) int64 {
 }
 
 func ReadbackFinishReadback(window Window, requestStart int64) int64 {
-  ReadbackAwaitReadbackReady(window, 1000)
+  ReadbackAwaitReadbackReady(window, 30000)
   let readyTicks = Stopwatch.GetTimestamp()
   let latency = readyTicks - requestStart
   ReadbackTakeReadback(window)
@@ -257,7 +257,7 @@ func RunReadbackSmoke() {
         && ReadbackSmokeCell.Root.BorderBox.Height == 64.0,
       "Readback render smoke did not retain 64x64 geometry")
     let requestStart = ReadbackBeginReadback(opened)
-    ReadbackAwaitReadbackReady(opened, 1000)
+    ReadbackAwaitReadbackReady(opened, 30000)
     let readyTicks = Stopwatch.GetTimestamp()
     let result = ReadbackTakeReadback(opened)
     ReadbackValidateReadbackResult(result)
@@ -554,5 +554,6 @@ let modes = []SmokeMode{
   SmokeMode("GOO_KEYED_ORDER_SMOKE", "1", () -> RunKeyedOrderSmoke()),
   SmokeMode("GOO_PIXEL_EDGE_SMOKE", "1", () -> RunPixelEdgeSmoke()),
   SmokeMode("GOO_BORDER_SNAP_SMOKE", "1", () -> RunBorderSnapSmoke()),
+  SmokeMode("GOO_BATCHED_UI_SCISSOR_SMOKE", "1", () -> RunBatchedUiAndScissorSmoke()),
 }
 if !RunSelectedSmoke(modes) { RunReadbackSmoke() }

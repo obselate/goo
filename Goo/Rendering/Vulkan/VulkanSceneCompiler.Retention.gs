@@ -714,7 +714,8 @@ internal partial class VulkanSceneCompiler {
         let reference = frame.DrawRefs[current.FirstDraw + drawIndex]
         let retained = draws[prior.ProofDrawStart + drawIndex]
         if reference.Kind != retained.Kind || reference.Flags != retained.Flags
-          || reference.ClipChainId != retained.ClipChainId{
+          || reference.ClipChainId != retained.ClipChainId
+          || frame.ClipChainContentDigest(reference.ClipChainId) != retained.ClipChainDigest{
             return false
           }
         if reference.Kind == SceneDrawKind.SolidBox {

@@ -161,7 +161,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     }
 
   internal func AllocateImage(image VkImage,
-    memoryPolicy VulkanMemoryPolicy) VulkanMemoryAllocation{
+    memoryPolicy VulkanMemoryPolicy, forceDedicated bool = false) VulkanMemoryAllocation{
       if image == VkImage.Null {
         throw ArgumentOutOfRangeException("image")
       }
@@ -186,7 +186,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       let getImageMemoryRequirements2 = deviceDispatch.vkGetImageMemoryRequirements2
       getImageMemoryRequirements2(device, &requirementsInfo, &requirements)
       return AllocateImageMemory(image, requirements.memoryRequirements, dedicatedRequirements,
-        memoryPolicy)
+        memoryPolicy, forceDedicated)
     }
 
   internal func AllocateBuffer(buffer VkBuffer,

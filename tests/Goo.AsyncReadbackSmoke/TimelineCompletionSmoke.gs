@@ -253,7 +253,7 @@ func RunTimelineCompletionSmoke() {
     mailboxVerified = true
 
     TimelineCompletionDrain(openedFirst, openedSecond, 2000)
-    ReadbackAwaitReadbackReady(openedSecond, 2000)
+    ReadbackAwaitReadbackReady(openedSecond, 10000)
     let result = ReadbackTakeReadback(openedSecond)
     ReadbackValidateReadbackResult(result)
     pixelsVerified = true

@@ -289,15 +289,8 @@ internal unsafe partial class VulkanWindowTarget {
       try { pool.Dispose() } catch (cleanup Exception) { }
       layerPool = nil
     }
-    if let atlas = clipMaskAtlas {
-      try { atlas.RetireAll(uint64.MaxValue) } catch (cleanup Exception) { }
-      try { atlas.Dispose() } catch (cleanup Exception) { }
-      clipMaskAtlas = nil
-    }
-    clipMaskRedrawPending = false
     clipMaskFrameStarted = false
     clipMaskFramePrepared = false
-    clipMaskAtlasAbandoned = false
     if let colorAtlas = colorGlyphAtlas {
       try { colorAtlas.Collect(uint64.MaxValue) } catch (cleanup Exception) { }
       try { colorAtlas.AbortUploads() } catch (cleanup Exception) { }

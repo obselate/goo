@@ -120,7 +120,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         0u, PathPushConstantSize, *void(&push))
       EnsureClipDescriptor(commandBuffer, layout)
       let draw = dispatch.vkCmdDraw
-      draw(commandBuffer, 6u, 1u, 0u, currentDrawOrdinal)
+      draw(commandBuffer, 6u, 1u, 0u, ActiveScissorChainId())
       RecordImmediateDraw()
     }
 

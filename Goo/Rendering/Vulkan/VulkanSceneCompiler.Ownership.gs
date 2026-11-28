@@ -95,8 +95,6 @@ internal partial class VulkanSceneCompiler {
   private func ForgetOwner(owner VulkanSceneOwnerId) {
     owner.ClearCachedState()
     ForgetRange(owner)
-    roundedOverflowPaths.Remove(owner)
-    backdropBlurPaths.Remove(owner)
     textScene?.ForgetOwner(owner)
   }
 

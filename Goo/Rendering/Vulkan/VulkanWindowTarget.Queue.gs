@@ -604,7 +604,6 @@ internal unsafe partial class VulkanWindowTarget {
       CaptureDiagnosticWsi()
       clipMaskFrameStarted = false
       clipMaskFramePrepared = false
-      clipMaskRedrawPending = false
       if !recoveryPending && presentResult == VkConstants.VK_SUCCESS {
         forceFullRedraw = false
       }

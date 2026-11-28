@@ -39,16 +39,15 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         let ay = bounds.Height * orientationTransform.B
         let bx = bounds.Width * orientationTransform.C
         let by = bounds.Height * orientationTransform.D
-        let geometry = &(push -> Geometry)
-        geometry -> rect_x = 0.0F
-        geometry -> rect_y = 0.0F
-        geometry -> rect_z = 1.0F
-        geometry -> rect_w = 1.0F
-        geometry -> transform0_x = 2.0F * (parent.A * ax + parent.C * ay) / float32(extent.width)
-        geometry -> transform0_y = 2.0F * (parent.A * bx + parent.C * by) / float32(extent.width)
-        geometry -> transform0_z = 2.0F * (parent.A * originX + parent.C * originY + parent.TX) / float32(extent.width) - 1.0F
-        geometry -> transform1_x = 2.0F * (parent.B * ax + parent.D * ay) / float32(extent.height)
-        geometry -> transform1_y = 2.0F * (parent.B * bx + parent.D * by) / float32(extent.height)
-        geometry -> transform1_z = 2.0F * (parent.B * originX + parent.D * originY + parent.TY) / float32(extent.height) - 1.0F
+        push -> rect_x = 0.0F
+        push -> rect_y = 0.0F
+        push -> rect_z = 1.0F
+        push -> rect_w = 1.0F
+        push -> transform0_x = 2.0F * (parent.A * ax + parent.C * ay) / float32(extent.width)
+        push -> transform0_y = 2.0F * (parent.A * bx + parent.C * by) / float32(extent.width)
+        push -> transform0_z = 2.0F * (parent.A * originX + parent.C * originY + parent.TX) / float32(extent.width) - 1.0F
+        push -> transform1_x = 2.0F * (parent.B * ax + parent.D * ay) / float32(extent.height)
+        push -> transform1_y = 2.0F * (parent.B * bx + parent.D * by) / float32(extent.height)
+        push -> transform1_z = 2.0F * (parent.B * originX + parent.D * originY + parent.TY) / float32(extent.height) - 1.0F
     }
 }

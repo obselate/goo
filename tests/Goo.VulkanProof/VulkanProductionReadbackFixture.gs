@@ -125,8 +125,7 @@ internal partial class VulkanWindowTarget {
     }
     guard let currentAllocator = memoryAllocator,
     let currentImages = imageResources,
-    let currentPaths = pathResources,
-    let currentClipAtlas = clipMaskAtlas else {
+    let currentPaths = pathResources else {
       throw InvalidOperationException("Vulkan production readback resources are unavailable")
     }
     guard let readbackLease = VulkanSharedRuntime.TryAcquire() else {
@@ -151,7 +150,6 @@ internal partial class VulkanWindowTarget {
         activeRuntime.Runtime.PrimitiveState,
         currentPaths.Atlas,
         currentPaths,
-        currentClipAtlas,
         textAtlas,
         objectAccounting,
         diagnostics,

@@ -1099,8 +1099,6 @@ internal unsafe partial class VulkanWindowTarget {
     var physicalProperties = VkPhysicalDeviceProperties{}
     let getPhysicalDeviceProperties = instanceDispatch.vkGetPhysicalDeviceProperties
     getPhysicalDeviceProperties(physicalDevice, &physicalProperties)
-    clipMaskFormatSupport = QueryClipMaskFormatSupport(
-      physicalProperties.limits.maxImageArrayLayers)
     let maxAtlasBytes = uint64(physicalProperties.limits.maxTexelBufferElements) * 8uL
     let atlasByteSize = ResolveTextAtlasByteSize(maxAtlasBytes)
     let atlasMaxByteSize = ResolveTextAtlasMaxByteSize(maxAtlasBytes, atlasByteSize)
@@ -1117,27 +1115,6 @@ internal unsafe partial class VulkanWindowTarget {
     textScene = VulkanTextScene(textAtlas!!, colorGlyphAtlas)
     if let currentDiagnostics = diagnostics {
       textAtlasDiagnosticsToken = currentDiagnostics.RegisterTextAtlasContribution()
-    }
-    RebuildClipMaskAtlasAfterDeviceRecovery()
-  }
-
-  private func QueryClipMaskFormatSupport(maximumArrayLayers uint32) VulkanClipMaskFormatSupport {
-    let getFormatProperties = instanceDispatch.vkGetPhysicalDeviceFormatProperties
-    var r8Properties = VkFormatProperties{}
-    var rgba8Properties = VkFormatProperties{}
-    getFormatProperties(physicalDevice, VkConstants.VK_FORMAT_R8_UNORM, &r8Properties)
-    getFormatProperties(physicalDevice, VkConstants.VK_FORMAT_R8G8B8A8_UNORM, &rgba8Properties)
-    let sampledImage = uint32(VkConstants.VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
-    let colorAttachment = uint32(VkConstants.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
-    let linearFilter = uint32(VkConstants.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
-    return VulkanClipMaskFormatSupport{
-      MaxImageArrayLayers: maximumArrayLayers,
-      R8UnormSampledImage: (r8Properties.optimalTilingFeatures & sampledImage) != 0u,
-      R8UnormColorAttachment: (r8Properties.optimalTilingFeatures & colorAttachment) != 0u,
-      R8UnormLinearFilter: (r8Properties.optimalTilingFeatures & linearFilter) != 0u,
-      Rgba8UnormSampledImage: (rgba8Properties.optimalTilingFeatures & sampledImage) != 0u,
-      Rgba8UnormColorAttachment: (rgba8Properties.optimalTilingFeatures & colorAttachment) != 0u,
-      Rgba8UnormLinearFilter: (rgba8Properties.optimalTilingFeatures & linearFilter) != 0u,
     }
   }
 

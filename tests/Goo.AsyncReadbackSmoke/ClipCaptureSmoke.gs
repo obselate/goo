@@ -60,20 +60,14 @@ func RunClipCaptureSmoke() {
       "Clip capture scene did not mount nested clip paths")
 
     let first = ClipCaptureReadback(opened, metrics)
-    let growth = WindowReadbackTestFixture.VerifyClipMaskAtlasGrowth(opened)
-    Require(growth.ActiveLayerCount == 32u
-        && growth.MaximumLayerCount == 32u
-        && growth.UniqueLayerMask == uint32.MaxValue
-        && growth.IncrementalGrowth
-        && growth.ResolutionReduced
-        && growth.ScreenMappingPreserved
-        && growth.ResizeGenerationPreserved
-        && growth.ResizeContentMatched
-        && growth.PressureGenerationPreserved
-        && growth.ShrinkQualityRecovered
-        && growth.PressureFailureCount == 1uL
-        && growth.CompletedRegionsReclaimed,
-      "Clip mask atlas growth and failure recovery did not qualify")
+    let retention = WindowReadbackTestFixture.VerifyScissorTableRetention(opened)
+    Require(retention.HighCardinalitySupported
+        && retention.ChainCount >= 40u
+        && retention.EntryCount >= 40u
+        && retention.CapacityBytes > 0uL
+        && retention.RetainedUnchanged
+        && retention.InvalidatedOnChange,
+      "Analytic scissor table retention and high-cardinality validation failed")
     ReadbackRequestReadbackUntilAccepted(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
     let submissionDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
@@ -130,7 +124,7 @@ func RunClipCaptureSmoke() {
     "Clip capture emitted unsupported-scene diagnostics")
   Require(DiagnosticCounter(diagnostics, "readbackCount") == 2uL,
     "Clip capture diagnostics did not record two readbacks")
-  Console.WriteLine("clip-capture-submission-gate: captures=2 atlas_layers=32 atlas_resolution_reduced=1 atlas_completed_reclaimed=1 submission_ready=1 live_frames=4 pixels=validated close=1")
+  Console.WriteLine("clip-capture-submission-gate: captures=2 scissor_chains=40 scissor_retained=1 submission_ready=1 live_frames=4 pixels=validated close=1")
   RunRenderBudgetPressureSmoke()
 }
 
@@ -145,9 +139,9 @@ func AwaitHiddenResources(window Window) {
   }
   Require(!target.RetirementWorkPending && target.CurrentPresentGeneration == 0uL,
     "Hide retained the swapchain")
-  let atlas = target.ClipAtlasStatsForTest()
-  Require(atlas.ActiveLayerCount == 0u && atlas.ResidentBytes == 0uL,
-    "Hide retained clip atlas layers")
+  let scissor = target.ScissorTableStatsForTest()
+  Require(!target.HasPrimitiveRendererForTest && scissor.Capacity == 0uL,
+    "Hide retained scissor table resources")
 }
 
 func RunHideResourcesSmoke() {
@@ -171,12 +165,13 @@ func RunHideResourcesSmoke() {
       throw InvalidOperationException("Visible target is unavailable")
     }
     let generation = target.CurrentPresentGeneration
-    let layers = target.ClipAtlasStatsForTest().ActiveLayerCount
-    Require(layers > 0u, "Visible clip atlas has no layers")
+    let scissorBytes = target.ScissorTableStatsForTest().Capacity
+    Require(target.HasPrimitiveRendererForTest && scissorBytes > 0uL,
+      "Visible scissor table has no allocated capacity")
     window.State = WindowState.Minimized
     WindowReadbackTestFixture.PollQueueCompletion(window)
     Require(target.CurrentPresentGeneration == generation
-        && target.ClipAtlasStatsForTest().ActiveLayerCount == layers,
+        && target.ScissorTableStatsForTest().Capacity == scissorBytes,
       "Minimize released visible resources")
     window.State = WindowState.Normal
     ReadbackRequestReadbackUntilAccepted(window,
@@ -609,18 +604,16 @@ func RunRenderBudgetPressureSmoke() {
     WindowReadbackTestFixture.SetForceFullRedraw(window, true)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
-    Require(target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolPressureFailureCount] > 0uL
-        && target.ClipAtlasStatsForTest().PressureFailureCount > 0uL,
-      "Render budget scene did not exceed both budgets")
+    Require(target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolPressureFailureCount] > 0uL,
+      "Render budget scene did not exceed layer budget")
     Require(target.LayerResolutionShiftForTest() > 0, "Render budget frame did not reduce layer resolution")
     Require(target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolResolutionShift]
         == uint64(target.LayerResolutionShiftForTest()),
       "Render budget frame did not report the layer resolution shift")
-    let pressureGeneration = target.ClipAtlasStatsForTest().Generation
     for frameIndex in 0 ... 4 {
       WindowReadbackTestFixture.ForceRender(window, 0.0)
-      Require(target.ClipAtlasStatsForTest().Generation == pressureGeneration,
-        "Steady clip budget pressure replaced the atlas generation")
+      Require(target.LayerResolutionShiftForTest() > 0,
+        "Steady budget pressure lost reduced layer resolution")
     }
     WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
     let frame = ClipCaptureReadback(window, metrics)

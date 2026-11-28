@@ -21,7 +21,7 @@ internal shared class EffectAbi {
         Descriptor(0, 0, "combined-image-sampler", 1, nil, "2d", false),
         Descriptor(1, 0, "combined-image-sampler", 1, nil, "2d", false),
         Descriptor(2, 0, "storage-buffer", 1, 128, nil, nil),
-        Descriptor(3, 0, "combined-image-sampler", 1, nil, "2d", true),
+        Descriptor(3, 0, "storage-buffer", 1, 4, nil, nil),
         Descriptor(3, 1, "storage-buffer", 1, 4, nil, nil)
     }
     private let DataDescriptor Descriptor = Descriptor(4, 0, "storage-buffer", 1, 4, nil, nil)

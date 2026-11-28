@@ -1189,6 +1189,8 @@ internal shared class Program {
     private const ShaderDirectory string = "Goo/Shaders/Vulkan/Source"
     private const ProductionDirectory string = "Goo/Shaders/Vulkan"
     private const ManifestName string = "shader-manifest.json"
+    private const GeneratedAbiPath string = "Goo/Rendering/Vulkan/VulkanShaderAbi.Generated.gs"
+    private const GeneratedAbiFileName string = "VulkanShaderAbi.Generated.gs"
     private const HarfBuzzTag string = "14.3.1"
     private const HarfBuzzCommit string = "ab5ecbb83985034a76214ac0b2b833dcd590d774"
     private const HarfBuzzAssemblyKind string = "harfbuzz-hb-gpu-glsl"
@@ -1283,7 +1285,7 @@ internal shared class Program {
             throw InvalidOperationException("Manifest is not canonical: $manifestPath")
         }
         let compilerPath = FindTool(manifest.Toolchain.Compiler.Executable, "SLANG_SDK")
-        let compatibilityCompilerPath = FindTool(manifest.Toolchain.CompatibilityCompiler.Executable, "VULKAN_SDK")
+        let compatibilityCompilerPath = FindTool(manifest.Toolchain.CompatibilityCompiler.Executable, "SLANG_SDK")
         let validatorPath = FindTool(manifest.Toolchain.Validator.Executable, "VULKAN_SDK")
         RequireCompilerVersion(compilerPath, manifest)
         RequireCompatibilityCompilerVersion(compatibilityCompilerPath, manifest)
@@ -1300,15 +1302,15 @@ internal shared class Program {
                 compatibilityCompilerPath,
                 validatorPath
             )
-            let hostPackings = BuildHostPackings(manifest, builtShaders)
+            let (hostPackings, generatedAbiBytes) = BuildHostPackings(manifest, builtShaders)
             let generatedManifest = BuildGeneratedManifest(manifest, builtShaders, hostPackings)
             let generatedManifestBytes = Encoding.UTF8.GetBytes(generatedManifest)
             if mode == "generate" {
-                WriteProduction(productionRoot, builtShaders, generatedManifestBytes)
+                WriteProduction(repositoryRoot, productionRoot, builtShaders, generatedManifestBytes, generatedAbiBytes)
                 Console.WriteLine("Generated ${builtShaders.Count} shaders and $manifestPath")
                 return 0
             }
-            CheckProduction(productionRoot, builtShaders, generatedManifestBytes)
+            CheckProduction(repositoryRoot, productionRoot, builtShaders, generatedManifestBytes, generatedAbiBytes)
             Console.WriteLine("Checked ${builtShaders.Count} shaders and $manifestPath")
             return 0
         } finally {
@@ -1378,12 +1380,11 @@ internal shared class Program {
             if isGlslAssembly {
                 selectedCompilerPath = compatibilityCompilerPath
                 compilerArguments = List[string](manifest.CompatibilityCompileFlags){
-                    "-I",
-                    shaderRoot,
-                    "-fshader-stage=${shader.Stage}",
+                    "-stage",
+                    shader.Stage,
+                    temporarySource,
                     "-o",
-                    temporaryOutput,
-                    temporarySource
+                    temporaryOutput
                 }
             } else {
                 selectedCompilerPath = compilerPath
@@ -1456,11 +1457,13 @@ internal shared class Program {
             var partText = StrictUtf8.GetString(partBytes)
             if part.Path == HarfBuzzFragmentPath {
                 const declaration = "uniform isamplerBuffer hb_gpu_atlas;"
-                let qualified = "layout(set=${assembly.AtlasSet},binding=${assembly.AtlasBinding}) uniform isamplerBuffer hb_gpu_atlas;"
-                if CountOccurrences(partText, declaration) != 1 {
+                const fetch = "  return texelFetch (hb_gpu_atlas, offset);"
+                let qualified = "[[vk::binding(${assembly.AtlasBinding}, ${assembly.AtlasSet})]] Buffer<ivec4> hb_gpu_atlas;"
+                if CountOccurrences(partText, declaration) != 1 || CountOccurrences(partText, fetch) != 1 {
                     throw InvalidOperationException("HarfBuzz atlas declaration is not unique: ${part.Path}")
                 }
                 partText = partText.Replace(declaration, qualified, StringComparison.Ordinal)
+                partText = partText.Replace(fetch, "  return hb_gpu_atlas.Load(offset);", StringComparison.Ordinal)
                 partBytes = StrictUtf8.GetBytes(partText)
             }
             if part.Path == HarfBuzzPaintFragmentPath {
@@ -1507,44 +1510,37 @@ internal shared class Program {
         output.AddRange(StrictUtf8.GetBytes(value))
     }
 
-    private func BuildHostPackings(manifest Manifest, builtShaders IReadOnlyList[BuiltShader]) List[
-        HostPackingArtifact
-    ] {
-        let artifacts = List[HostPackingArtifact]()
-        let artifactsByPath = Dictionary[string, HostPackingArtifact](StringComparer.Ordinal)
-        let AddArtifact = (
+    private func BuildHostPackings(manifest Manifest, builtShaders IReadOnlyList[BuiltShader]) (
+        List[HostPackingArtifact],
+        []uint8
+    ) {
+        let packings = List[HostPacking]()
+        let structsByName = Dictionary[string, (int32, IReadOnlyList[PushConstantMember])](StringComparer.Ordinal)
+        let orderedStructs = List[(string, int32, IReadOnlyList[PushConstantMember])]()
+        let RegisterStruct = (
             packing HostPacking,
             packingSize int32,
             packingMembers IReadOnlyList[PushConstantMember]
         ) -> {
-            let text = StringBuilder()
-            AppendLf(text, "package Goo.Vulkan.Generated")
-            AppendLf(text)
-            AppendLf(text, "import System.Runtime.InteropServices")
-            AppendLf(text)
-            text.Append("@StructLayout(LayoutKind.Explicit, Size: ").Append(packingSize).Append(")\n")
-            text.Append("unsafe struct ").Append(packing.TypeName).Append(" {\n")
-            for var index = 0; index < packingMembers.Count; index++ {
-                let expectedMember = packingMembers[index]
-                AppendHostMember(text, expectedMember.Name, expectedMember.Offset, expectedMember.Type)
-            }
-            AppendLf(text, "}")
-            let bytes = Encoding.UTF8.GetBytes(text.ToString())
-            if artifactsByPath.TryGetValue(packing.Path, out var existing) {
+            Require(packing.Path == GeneratedAbiFileName, "hostPacking[${packing.TypeName}].path", GeneratedAbiFileName)
+            packings.Add(packing)
+            if structsByName.TryGetValue(packing.TypeName, out var existing) {
                 Require(
-                    existing.Packings[0].TypeName == packing.TypeName,
-                    "hostPacking[${packing.Path}].typeName",
-                    existing.Packings[0].TypeName
+                    existing.Item1 == packingSize,
+                    "hostPacking[${packing.TypeName}].size",
+                    existing.Item1.ToString()
                 )
-                Require(existing.Bytes.AsSpan().SequenceEqual(bytes), "hostPacking[${packing.Path}].bytes", "identical")
-                existing.Packings.Add(packing)
+                RequireMembersEqual(
+                    existing.Item2,
+                    packingMembers,
+                    "hostPacking[${packing.TypeName}].members"
+                )
                 return
             }
-            let artifact = HostPackingArtifact(packing, bytes)
-            artifactsByPath.Add(packing.Path, artifact)
-            artifacts.Add(artifact)
+            structsByName.Add(packing.TypeName, (packingSize, packingMembers))
+            orderedStructs.Add((packing.TypeName, packingSize, packingMembers))
         }
-        AddArtifact(
+        RegisterStruct(
             manifest.TextInstanceRecord.HostPacking,
             manifest.TextInstanceRecord.Stride,
             manifest.TextInstanceRecord.Members
@@ -1578,9 +1574,64 @@ internal shared class Program {
                 packingMembers = pipeline.PushConstants.Members
                 Require(packingMembers.Count > 0, "pipeline[${pipeline.Id}].hostPacking.members", "non-empty")
             }
-            AddArtifact(pipeline.HostPacking, packingSize, packingMembers)
+            RegisterStruct(pipeline.HostPacking, packingSize, packingMembers)
         }
-        return artifacts
+        let text = StringBuilder()
+        AppendLf(text, "// <auto-generated> Generated by tools/Goo.ShaderGen. Do not edit manually. </auto-generated>")
+        AppendLf(text, "package Goo")
+        AppendLf(text)
+        AppendLf(text, "import System.Runtime.InteropServices")
+        AppendLf(text)
+        AppendLf(text, "internal shared class VulkanShaderAbi {")
+        AppendLf(text, "    const GooScissorChainWords int32 = 16")
+        AppendLf(text, "    const GooScissorMaxDepth int32 = 10")
+        AppendLf(text, "    const GooScissorChainFlagForceZero uint32 = 2u")
+        AppendLf(text, "    const GooScissorRecordWords int32 = 24")
+        AppendLf(text, "    const GooScissorKindZero uint32 = 0u")
+        AppendLf(text, "    const GooScissorKindRoundedBox uint32 = 1u")
+        AppendLf(text, "    const GooScissorKindPathBand uint32 = 2u")
+        AppendLf(text, "    const GooUiKindSolid uint32 = 0u")
+        AppendLf(text, "    const GooUiKindShadow uint32 = 1u")
+        AppendLf(text, "    const GooUiKindBorder uint32 = 2u")
+        AppendLf(text, "    const GooUiKindLinearGradient uint32 = 3u")
+        AppendLf(text, "    const GooUiKindRadialGradient uint32 = 4u")
+        AppendLf(text, "    const GooUiKindSampledImage uint32 = 5u")
+        AppendLf(text, "}")
+        for (typeName, packingSize, packingMembers) in orderedStructs {
+            AppendLf(text)
+            text.Append("@StructLayout(LayoutKind.Explicit, Size: ").Append(packingSize).Append(")\n")
+            text.Append("internal unsafe struct ").Append(typeName).Append(" {\n")
+            for var index = 0; index < packingMembers.Count; index++ {
+                let expectedMember = packingMembers[index]
+                AppendHostMember(text, expectedMember.Name, expectedMember.Offset, expectedMember.Type)
+            }
+            AppendLf(text, "}")
+        }
+        let bytes = Encoding.UTF8.GetBytes(text.ToString())
+        let artifacts = List[HostPackingArtifact]()
+        if packings.Count > 0 {
+            let artifact = HostPackingArtifact(packings[0], bytes)
+            for var index = 1; index < packings.Count; index++ {
+                artifact.Packings.Add(packings[index])
+            }
+            artifacts.Add(artifact)
+        }
+        return (artifacts, bytes)
+    }
+
+    private func RequireMembersEqual(
+        expected IReadOnlyList[PushConstantMember],
+        actual IReadOnlyList[PushConstantMember],
+        path string
+    ) {
+        if actual.Count != expected.Count {
+            throw InvalidOperationException("$path count must be ${expected.Count}")
+        }
+        for var index = 0; index < expected.Count; index++ {
+            Require(actual[index].Name == expected[index].Name, "$path[$index].name", expected[index].Name)
+            Require(actual[index].Offset == expected[index].Offset, "$path[$index].offset", expected[index].Offset.ToString())
+            Require(actual[index].Type == expected[index].Type, "$path[$index].type", expected[index].Type)
+        }
     }
 
     private func AppendHostMember(text StringBuilder, name string, offset int32, type string) {
@@ -1622,7 +1673,7 @@ internal shared class Program {
         }
         for var index = 0; index < suffixes.Length; index++ {
             text
-                .Append("  @FieldOffset(")
+                .Append("    @FieldOffset(")
                 .Append(offset + index * 4)
                 .Append(") var ")
                 .Append(name)
@@ -1638,9 +1689,11 @@ internal shared class Program {
     }
 
     private func WriteProduction(
+        repositoryRoot string,
         productionRoot string,
         builtShaders IReadOnlyList[BuiltShader],
-        generatedManifestBytes[]uint8
+        generatedManifestBytes[]uint8,
+        generatedAbiBytes[]uint8
     ) {
         Directory.CreateDirectory(productionRoot)
         for builtShader in builtShaders {
@@ -1649,12 +1702,17 @@ internal shared class Program {
             File.WriteAllBytes(outputPath, builtShader.Output)
         }
         File.WriteAllBytes(Path.Combine(productionRoot, ManifestName), generatedManifestBytes)
+        let abiPath = ResolveRepositoryPath(repositoryRoot, GeneratedAbiPath, "generated ABI")
+        Directory.CreateDirectory(Path.GetDirectoryName(abiPath)!!)
+        File.WriteAllBytes(abiPath, generatedAbiBytes)
     }
 
     private func CheckProduction(
+        repositoryRoot string,
         productionRoot string,
         builtShaders IReadOnlyList[BuiltShader],
-        generatedManifestBytes[]uint8
+        generatedManifestBytes[]uint8,
+        generatedAbiBytes[]uint8
     ) {
         RequireByteMatch(
             generatedManifestBytes,
@@ -1665,6 +1723,11 @@ internal shared class Program {
             let productionPath = ResolveChildPath(productionRoot, builtShader.Spec.Output, "production output")
             RequireByteMatch(builtShader.Output, productionPath, "production shader")
         }
+        RequireByteMatch(
+            generatedAbiBytes,
+            ResolveRepositoryPath(repositoryRoot, GeneratedAbiPath, "generated ABI"),
+            "generated Vulkan shader ABI"
+        )
     }
 
     private func RequireByteMatch(expectedBytes[]uint8, actualPath string, description string) {
@@ -1690,10 +1753,10 @@ internal shared class Program {
         )
         RequireTool(
             manifest.Toolchain.CompatibilityCompiler,
-            "google/shaderc",
-            "2026.3",
-            "ef2c68b4871a3c399a0808321b51379847a54673",
-            "glslc",
+            "shader-slang/slang",
+            "2026.16",
+            "2c6ca521d2c38e7ab67c63293351bc88eb747340",
+            "slangc",
             "toolchain.compatibilityCompiler"
         )
         RequireTool(
@@ -1731,7 +1794,21 @@ internal shared class Program {
         )
         RequireSequence(
             manifest.CompatibilityCompileFlags,
-            []string{"--target-env=vulkan1.3", "--target-spv=spv1.6", "-std=450core", "-O", "-Werror"},
+            []string{
+                "-allow-glsl",
+                "-lang",
+                "glsl",
+                "-entry",
+                "main",
+                "-target",
+                "spirv",
+                "-capability",
+                "SPIRV_1_6",
+                "-matrix-layout-row-major",
+                "-O2",
+                "-diagnostic-color",
+                "never"
+            },
             "compatibilityCompileFlags"
         )
         RequirePrimitiveRecord(manifest.PrimitiveRecord)
@@ -1791,7 +1868,7 @@ internal shared class Program {
                 AssemblyPart{Path: HarfBuzzVertexPath, Sha256: HarfBuzzVertexSha256},
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-                    Sha256: "91b6487213513c606f312e8eafcc1ae9cb501f7d7d0e812a5a26e8a330300557"
+                    Sha256: "30412a28b8aa5e71328eb5d964be28183abb17f6e91d9d2ea862ad0f96f06c92"
                 }
             }
         )
@@ -1803,7 +1880,7 @@ internal shared class Program {
                 AssemblyPart{Path: HarfBuzzDrawFragmentPath, Sha256: HarfBuzzDrawFragmentSha256},
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl",
-                    Sha256: "892f76421162819caae0db0d0a29aa6b50e3fbdacfa82926b79d423cb27e0274"
+                    Sha256: "8141b1a0774ac80d4acc3e8c73c3a27dd8d51a29aea9b7fcf5599f24a427ec5d"
                 },
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_draw.frag.wrapper.glsl",
@@ -1820,7 +1897,7 @@ internal shared class Program {
                 AssemblyPart{Path: HarfBuzzPaintFragmentPath, Sha256: HarfBuzzPaintFragmentSha256},
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl",
-                    Sha256: "892f76421162819caae0db0d0a29aa6b50e3fbdacfa82926b79d423cb27e0274"
+                    Sha256: "8141b1a0774ac80d4acc3e8c73c3a27dd8d51a29aea9b7fcf5599f24a427ec5d"
                 },
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_paint.frag.wrapper.glsl",
@@ -1828,69 +1905,41 @@ internal shared class Program {
                 }
             }
         )
-        if manifest.Shaders.Count != 18 {
-            throw InvalidOperationException("shaders must contain exactly eighteen entries")
+        if manifest.Shaders.Count != 11 {
+            throw InvalidOperationException("shaders must contain exactly eleven entries")
         }
         RequireShader(manifest.Shaders[0], "analytic_vertex", "vertex", "analytic.vert.slang", "analytic.vert.spv")
         RequireShader(
             manifest.Shaders[1],
-            "analytic_solid_fragment",
-            "fragment",
-            "analytic_solid.frag.slang",
-            "analytic_solid.frag.spv"
+            "batched_ui_vertex",
+            "vertex",
+            "batched_ui.vert.slang",
+            "batched_ui.vert.spv"
         )
         RequireShader(
             manifest.Shaders[2],
-            "analytic_shadow_fragment",
+            "batched_ui_fragment",
             "fragment",
-            "analytic_shadow.frag.slang",
-            "analytic_shadow.frag.spv"
+            "batched_ui.frag.slang",
+            "batched_ui.frag.spv"
         )
         RequireShader(
             manifest.Shaders[3],
-            "analytic_border_fragment",
-            "fragment",
-            "analytic_border.frag.slang",
-            "analytic_border.frag.spv"
-        )
-        RequireShader(
-            manifest.Shaders[4],
-            "analytic_linear4_fragment",
-            "fragment",
-            "analytic_linear4.frag.slang",
-            "analytic_linear4.frag.spv"
-        )
-        RequireShader(
-            manifest.Shaders[5],
-            "analytic_radial4_fragment",
-            "fragment",
-            "analytic_radial4.frag.slang",
-            "analytic_radial4.frag.spv"
-        )
-        RequireShader(
-            manifest.Shaders[6],
-            "analytic_sampled_image_fragment",
-            "fragment",
-            "analytic_sampled_image.frag.slang",
-            "analytic_sampled_image.frag.spv"
-        )
-        RequireShader(
-            manifest.Shaders[7],
             "analytic_blend_fragment",
             "fragment",
             "analytic_blend.frag.slang",
             "analytic_blend.frag.spv"
         )
-        RequireShader(manifest.Shaders[8], "path_band_vertex", "vertex", "path_band.vert.slang", "path_band.vert.spv")
+        RequireShader(manifest.Shaders[4], "path_band_vertex", "vertex", "path_band.vert.slang", "path_band.vert.spv")
         RequireShader(
-            manifest.Shaders[9],
+            manifest.Shaders[5],
             "path_band_fragment",
             "fragment",
             "path_band.frag.slang",
             "path_band.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[10],
+            manifest.Shaders[6],
             "hb_gpu_vertex",
             "vertex",
             "hb_gpu.vert.wrapper.glsl",
@@ -1898,7 +1947,7 @@ internal shared class Program {
             "hb_gpu_vertex"
         )
         RequireShader(
-            manifest.Shaders[11],
+            manifest.Shaders[7],
             "hb_gpu_draw_fragment",
             "fragment",
             "hb_gpu_draw.frag.wrapper.glsl",
@@ -1906,177 +1955,52 @@ internal shared class Program {
             "hb_gpu_draw_fragment"
         )
         RequireShader(
-            manifest.Shaders[12],
+            manifest.Shaders[8],
             "hb_gpu_paint_fragment",
             "fragment",
             "hb_gpu_paint.frag.wrapper.glsl",
             "hb_gpu_paint.frag.spv",
             "hb_gpu_paint_fragment"
         )
-        RequireShader(manifest.Shaders[13], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv")
         RequireShader(
-            manifest.Shaders[14],
-            "clip_mask_fragment",
-            "fragment",
-            "clip_mask.frag.slang",
-            "clip_mask.frag.spv"
-        )
-        RequireShader(
-            manifest.Shaders[15],
+            manifest.Shaders[9],
             "path_stroke_fragment",
             "fragment",
             "path_stroke.frag.slang",
             "path_stroke.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[16],
-            "stroke_mask_fragment",
-            "fragment",
-            "stroke_mask.frag.slang",
-            "stroke_mask.frag.spv"
-        )
-        RequireShader(
-            manifest.Shaders[17],
+            manifest.Shaders[10],
             "path_stroke_compute",
             "compute",
             "path_stroke.comp.slang",
             "path_stroke.comp.spv"
         )
-        if manifest.Pipelines.Count != 14 {
-            throw InvalidOperationException("pipelines must contain exactly fourteen entries")
+        if manifest.Pipelines.Count != 7 {
+            throw InvalidOperationException("pipelines must contain exactly seven entries")
+        }
+        let primitiveMembers = []PushConstantMember{
+            PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
+            PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
+            PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
+            PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
+            PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
+            PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
+            PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
+            PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
         }
         RequirePipeline(
             manifest.Pipelines[0],
-            "analytic_solid",
-            "AnalyticSolidPushConstants.Generated.gs",
-            "AnalyticSolidPushConstants",
+            "batched_ui",
+            GeneratedAbiFileName,
+            "VulkanPrimitiveGpuRecord",
             0,
-            []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
-            },
+            primitiveMembers,
             Array.Empty[string](),
             "source-over-premultiplied-srgb",
-            "rgb11-11-10-alpha10-premultiplied-srgb",
-            "analytic_vertex",
-            "analytic_solid_fragment",
-            "vec2",
-            "uv",
-            AnalyticDescriptors()
-        )
-        RequirePipeline(
-            manifest.Pipelines[1],
-            "analytic_shadow",
-            "AnalyticSolidPushConstants.Generated.gs",
-            "AnalyticSolidPushConstants",
-            0,
-            []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
-            },
-            Array.Empty[string](),
-            "source-over-premultiplied-srgb",
-            "rgb11-11-10-alpha10-premultiplied-srgb",
-            "analytic_vertex",
-            "analytic_shadow_fragment",
-            "vec2",
-            "uv",
-            AnalyticDescriptors()
-        )
-        RequirePipeline(
-            manifest.Pipelines[2],
-            "analytic_border",
-            "AnalyticBorderPushConstants.Generated.gs",
-            "AnalyticBorderPushConstants",
-            0,
-            []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "widths", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
-            },
-            Array.Empty[string](),
-            "source-over-premultiplied-srgb",
-            "rgb11-11-10-alpha10-premultiplied-srgb",
-            "analytic_vertex",
-            "analytic_border_fragment",
-            "vec2",
-            "uv",
-            AnalyticDescriptors()
-        )
-        RequirePipeline(
-            manifest.Pipelines[3],
-            "analytic_linear4",
-            "AnalyticLinear4PushConstants.Generated.gs",
-            "AnalyticLinear4PushConstants",
-            8,
-            []PushConstantMember{
-                PushConstantMember{Name: "ditherOffset", Offset: 0, Type: "vec2"}
-            },
-            []string{"fragment"},
-            "source-over-premultiplied-srgb",
-            "rgb11-11-10-alpha10-premultiplied-srgb",
-            "analytic_vertex",
-            "analytic_linear4_fragment",
-            "vec2",
-            "uv",
-            AnalyticDescriptors()
-        )
-        RequirePipeline(
-            manifest.Pipelines[4],
-            "analytic_radial4",
-            "AnalyticRadial4PushConstants.Generated.gs",
-            "AnalyticRadial4PushConstants",
-            8,
-            []PushConstantMember{
-                PushConstantMember{Name: "ditherOffset", Offset: 0, Type: "vec2"}
-            },
-            []string{"fragment"},
-            "source-over-premultiplied-srgb",
-            "rgb11-11-10-alpha10-premultiplied-srgb",
-            "analytic_vertex",
-            "analytic_radial4_fragment",
-            "vec2",
-            "uv",
-            AnalyticDescriptors()
-        )
-        RequirePipeline(
-            manifest.Pipelines[5],
-            "analytic_sampled_image",
-            "SampledImagePushConstants.Generated.gs",
-            "SampledImagePushConstants",
-            0,
-            []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
-            },
-            Array.Empty[string](),
-            "source-over-premultiplied-srgb",
-            "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-srgb",
-            "analytic_vertex",
-            "analytic_sampled_image_fragment",
+            "batched-ui-premultiplied-srgb",
+            "batched_ui_vertex",
+            "batched_ui_fragment",
             "vec2",
             "uv",
             []Descriptor{
@@ -2087,13 +2011,7 @@ internal shared class Program {
                     Count: 1,
                     Stages: List[string]{"fragment"}
                 },
-                Descriptor{
-                    Set: 1,
-                    Binding: 0,
-                    Type: "combined-image-sampler",
-                    Count: 1,
-                    Stages: List[string]{"fragment"}
-                },
+                Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 1, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{
                     Set: 2,
@@ -2101,25 +2019,17 @@ internal shared class Program {
                     Type: "storage-buffer",
                     Count: 1,
                     Stages: List[string]{"vertex", "fragment"}
-                }
+                },
+                Descriptor{Set: 3, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
             }
         )
         RequirePipeline(
-            manifest.Pipelines[6],
+            manifest.Pipelines[1],
             "analytic_blend",
-            "SampledImagePushConstants.Generated.gs",
-            "SampledImagePushConstants",
+            GeneratedAbiFileName,
+            "VulkanPrimitiveGpuRecord",
             0,
-            []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform0", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "radii", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "stopPositions", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "packedColors", Offset: 96, Type: "uvec4"},
-                PushConstantMember{Name: "packedColorsExtra", Offset: 112, Type: "uvec4"}
-            },
+            primitiveMembers,
             Array.Empty[string](),
             "source-over-premultiplied-srgb",
             "premultiplied-srgb-source-over-css-blend",
@@ -2149,29 +2059,24 @@ internal shared class Program {
                     Count: 1,
                     Stages: List[string]{"vertex", "fragment"}
                 },
-                Descriptor{
-                    Set: 3,
-                    Binding: 0,
-                    Type: "combined-image-sampler",
-                    Count: 1,
-                    Stages: List[string]{"fragment"}
-                },
+                Descriptor{Set: 3, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 3, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
             }
         )
+        let pathBandMembers = []PushConstantMember{
+            PushConstantMember{Name: "transform0", Offset: 0, Type: "vec4"},
+            PushConstantMember{Name: "transform1", Offset: 16, Type: "vec4"},
+            PushConstantMember{Name: "sampleStep", Offset: 32, Type: "vec4"},
+            PushConstantMember{Name: "color", Offset: 48, Type: "vec4"},
+            PushConstantMember{Name: "params", Offset: 64, Type: "uvec4"}
+        }
         RequirePipeline(
-            manifest.Pipelines[7],
+            manifest.Pipelines[2],
             "path_band",
-            "PathBandPushConstants.Generated.gs",
+            GeneratedAbiFileName,
             "PathBandPushConstants",
             80,
-            []PushConstantMember{
-                PushConstantMember{Name: "transform0", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "sampleStep", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "color", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 64, Type: "uvec4"}
-            },
+            pathBandMembers,
             []string{"vertex", "fragment"},
             "source-over-premultiplied-srgb",
             "path-band-premultiplied-srgb",
@@ -2187,73 +2092,33 @@ internal shared class Program {
                     Count: 1,
                     Stages: List[string]{"vertex", "fragment"}
                 },
-                Descriptor{
-                    Set: 1,
-                    Binding: 0,
-                    Type: "combined-image-sampler",
-                    Count: 1,
-                    Stages: List[string]{"fragment"}
-                },
+                Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 1, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
             }
         )
         RequireHbGpuPipeline(
-            manifest.Pipelines[8],
+            manifest.Pipelines[3],
             "hb_gpu_draw",
-            "HbGpuTextFrameConstants.Generated.gs",
+            GeneratedAbiFileName,
             "HbGpuTextFrameConstants",
             "hb_gpu_vertex",
             "hb_gpu_draw_fragment"
         )
         RequireHbGpuPipeline(
-            manifest.Pipelines[9],
+            manifest.Pipelines[4],
             "hb_gpu_paint",
-            "HbGpuTextFrameConstants.Generated.gs",
+            GeneratedAbiFileName,
             "HbGpuTextFrameConstants",
             "hb_gpu_vertex",
             "hb_gpu_paint_fragment"
         )
         RequirePipeline(
-            manifest.Pipelines[10],
-            "clip_mask",
-            "ClipMaskPushConstants.Generated.gs",
-            "ClipMaskPushConstants",
-            112,
-            []PushConstantMember{
-                PushConstantMember{Name: "transform0", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "transform1", Offset: 16, Type: "vec4"},
-                PushConstantMember{Name: "sampleStep", Offset: 32, Type: "vec4"},
-                PushConstantMember{Name: "borderRect", Offset: 48, Type: "vec4"},
-                PushConstantMember{Name: "borderTransform0", Offset: 64, Type: "vec4"},
-                PushConstantMember{Name: "borderTransform1", Offset: 80, Type: "vec4"},
-                PushConstantMember{Name: "params", Offset: 96, Type: "uvec4"}
-            },
-            []string{"vertex", "fragment"},
-            "disabled",
-            "clip-mask-r8-coverage",
-            "clip_mask_vertex",
-            "clip_mask_fragment",
-            "vec2",
-            "pathPosition",
-            []Descriptor{
-                Descriptor{
-                    Set: 0,
-                    Binding: 0,
-                    Type: "storage-buffer",
-                    Count: 1,
-                    Stages: List[string]{"vertex", "fragment"}
-                }
-            },
-            false,
-            "r8-unorm"
-        )
-        RequirePipeline(
-            manifest.Pipelines[11],
+            manifest.Pipelines[5],
             "path_stroke",
-            "PathBandPushConstants.Generated.gs",
+            GeneratedAbiFileName,
             "PathBandPushConstants",
             80,
-            manifest.Pipelines[7].PushConstants.Members,
+            pathBandMembers,
             []string{"vertex", "fragment"},
             "source-over-premultiplied-srgb",
             "path-band-premultiplied-srgb",
@@ -2269,45 +2134,12 @@ internal shared class Program {
                     Count: 1,
                     Stages: List[string]{"vertex", "fragment"}
                 },
-                Descriptor{
-                    Set: 1,
-                    Binding: 0,
-                    Type: "combined-image-sampler",
-                    Count: 1,
-                    Stages: List[string]{"fragment"}
-                },
+                Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 1, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 2, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
             }
         )
-        RequirePipeline(
-            manifest.Pipelines[12],
-            "stroke_mask",
-            "ClipMaskPushConstants.Generated.gs",
-            "ClipMaskPushConstants",
-            112,
-            manifest.Pipelines[10].PushConstants.Members,
-            []string{"vertex", "fragment"},
-            "disabled",
-            "clip-mask-r8-coverage",
-            "clip_mask_vertex",
-            "stroke_mask_fragment",
-            "vec2",
-            "pathPosition",
-            []Descriptor{
-                Descriptor{
-                    Set: 0,
-                    Binding: 0,
-                    Type: "storage-buffer",
-                    Count: 1,
-                    Stages: List[string]{"vertex", "fragment"}
-                },
-                Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
-            },
-            false,
-            "r8-unorm"
-        )
-        let metrics = manifest.Pipelines[13]
+        let metrics = manifest.Pipelines[6]
         Require(metrics.Id == "path_stroke_metrics", "pipeline.path_stroke_metrics.id", "path_stroke_metrics")
         Require(
             metrics.Topology == "compute" && metrics.VertexInput == "none",
@@ -2339,7 +2171,7 @@ internal shared class Program {
             "pipeline.path_stroke_metrics.descriptors"
         )
         Require(
-            metrics.HostPacking.Path == "StrokeMetricPushConstants.Generated.gs"
+            metrics.HostPacking.Path == GeneratedAbiFileName
             && metrics.HostPacking.TypeName == "StrokeMetricPushConstants",
             "pipeline.path_stroke_metrics.hostPacking",
             "StrokeMetricPushConstants"
@@ -2421,13 +2253,7 @@ internal shared class Program {
                     Count: 1,
                     Stages: List[string]{"fragment"}
                 },
-                Descriptor{
-                    Set: 1,
-                    Binding: 0,
-                    Type: "combined-image-sampler",
-                    Count: 1,
-                    Stages: List[string]{"fragment"}
-                },
+                Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 1, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
                 Descriptor{Set: 2, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"vertex"}}
             },
@@ -2455,51 +2281,51 @@ internal shared class Program {
             hostPackingTypeName
         )
         Require(pipeline.PushConstants.Offset == 0, "pipeline[$id].pushConstants.offset", "0")
-        Require(pipeline.PushConstants.Size == 32, "pipeline[$id].pushConstants.size", "32")
+        Require(pipeline.PushConstants.Size == 48, "pipeline[$id].pushConstants.size", "48")
         RequireSequence(pipeline.PushConstants.Stages, []string{"vertex"}, "pipeline[$id].pushConstants.stages")
         RequireMembers(
             pipeline.PushConstants,
             []PushConstantMember{
                 PushConstantMember{Name: "viewport", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "origin", Offset: 16, Type: "vec4"}
+                PushConstantMember{Name: "origin", Offset: 16, Type: "vec4"},
+                PushConstantMember{Name: "scissor", Offset: 32, Type: "uvec4"}
             },
             "pipeline[$id].pushConstants.members"
         )
         if pipeline.Stages.Count != 2 {
             throw InvalidOperationException("pipeline[$id].stages must contain exactly two entries")
         }
+        let hbGpuInterface = []InterfaceLocation{
+            InterfaceLocation{Location: 0, Type: "vec2", Name: "v_texcoord"},
+            InterfaceLocation{Location: 1, Type: "uint", Name: "v_glyphLoc"},
+            InterfaceLocation{Location: 2, Type: "uvec2", Name: "v_clipChains"},
+            InterfaceLocation{Location: 3, Type: "vec4", Name: "v_effectAndOrigin"},
+            InterfaceLocation{Location: 4, Type: "vec4", Name: "v_foreground"}
+        }
+        let hbGpuFragmentInputs = if fragmentShader == "hb_gpu_paint_fragment" {
+            []InterfaceLocation{
+                InterfaceLocation{Location: 0, Type: "vec2", Name: "v_texcoord"},
+                InterfaceLocation{Location: 1, Type: "uint", Name: "v_glyphLoc"},
+                InterfaceLocation{Location: 2, Type: "uvec2", Name: "v_clipChains"},
+                InterfaceLocation{Location: 4, Type: "vec4", Name: "v_foreground"}
+            }
+        } else {
+            hbGpuInterface
+        }
         RequirePipelineStage(
             pipeline.Stages[0],
             vertexShader,
             "vertex",
             Array.Empty[InterfaceLocation](),
-            []InterfaceLocation{
-                InterfaceLocation{Location: 0, Type: "vec2", Name: "v_texcoord"},
-                InterfaceLocation{Location: 1, Type: "uint", Name: "v_glyphLoc"},
-                InterfaceLocation{Location: 2, Type: "uint", Name: "v_clipChainId"},
-                InterfaceLocation{Location: 3, Type: "vec4", Name: "v_effectAndOrigin"},
-                InterfaceLocation{Location: 4, Type: "vec4", Name: "v_foreground"}
-            }
+            hbGpuInterface
         )
         RequirePipelineStage(
             pipeline.Stages[1],
             fragmentShader,
             "fragment",
-            []InterfaceLocation{
-                InterfaceLocation{Location: 0, Type: "vec2", Name: "v_texcoord"},
-                InterfaceLocation{Location: 1, Type: "uint", Name: "v_glyphLoc"},
-                InterfaceLocation{Location: 2, Type: "uint", Name: "v_clipChainId"},
-                InterfaceLocation{Location: 3, Type: "vec4", Name: "v_effectAndOrigin"},
-                InterfaceLocation{Location: 4, Type: "vec4", Name: "v_foreground"}
-            },
+            hbGpuFragmentInputs,
             []InterfaceLocation{InterfaceLocation{Location: 0, Type: "vec4", Name: "outColor"}}
         )
-    }
-
-    private func AnalyticDescriptors()[]Descriptor -> []Descriptor{
-        Descriptor{Set: 1, Binding: 0, Type: "combined-image-sampler", Count: 1, Stages: List[string]{"fragment"}},
-        Descriptor{Set: 1, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
-        Descriptor{Set: 2, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"vertex", "fragment"}}
     }
 
     private func RequirePrimitiveRecord(record PrimitiveRecord) {
@@ -2540,9 +2366,9 @@ internal shared class Program {
             "textInstanceRecord.members"
         )
         Require(
-            record.HostPacking.Path == "HbGpuTextInstanceRecord.Generated.gs",
+            record.HostPacking.Path == GeneratedAbiFileName,
             "textInstanceRecord.hostPacking.path",
-            "HbGpuTextInstanceRecord.Generated.gs"
+            GeneratedAbiFileName
         )
         Require(
             record.HostPacking.TypeName == "HbGpuTextInstanceRecord",
@@ -2595,7 +2421,7 @@ internal shared class Program {
         colorFormat string = "swapchain-UNORM-sRGB"
     ) {
         Require(pipeline.Id == id, "pipeline[$id].id", id)
-        let bufferedPrimitive = vertexShader == "analytic_vertex"
+        let bufferedPrimitive = vertexShader == "analytic_vertex" || vertexShader == "batched_ui_vertex"
         let topology = if bufferedPrimitive {
             "triangle-strip"
         } else {
@@ -2656,7 +2482,13 @@ internal shared class Program {
         }
         let vertexOutputs IReadOnlyList[InterfaceLocation] = if clipAware {
             (
-                if bufferedPrimitive {
+                if vertexShader == "batched_ui_vertex" {
+                    []InterfaceLocation{
+                        InterfaceLocation{Location: 0, Type: interfaceType, Name: interfaceName},
+                        InterfaceLocation{Location: 2, Type: "uint", Name: "scissorChainId"},
+                        InterfaceLocation{Location: 3, Type: "uint", Name: "primitiveRecordOrdinal"}
+                    }
+                } else if bufferedPrimitive {
                     []InterfaceLocation{
                         InterfaceLocation{Location: 0, Type: interfaceType, Name: interfaceName},
                         InterfaceLocation{Location: 2, Type: "uint", Name: "gooClipDrawOrdinal"},
@@ -2669,8 +2501,6 @@ internal shared class Program {
                     }
                 }
             )
-        } else if vertexShader == "clip_mask_vertex" {
-            Array.Empty[InterfaceLocation]()
         } else {
             []InterfaceLocation{InterfaceLocation{Location: 0, Type: interfaceType, Name: interfaceName}}
         }
@@ -2869,16 +2699,17 @@ internal shared class Program {
             if hasTextInstanceRecord {
                 RequireTextInstanceRecordReflection(reflection, manifest.TextInstanceRecord, shader.Id)
             }
-                if pipeline.Stages[0].Shader == "analytic_vertex" && expectedDescriptors.Any(
-                    (value Descriptor) -> value.Set == manifest
-                        .PrimitiveRecord
-                        .Set &&
-                        value.Binding == manifest
-                        .PrimitiveRecord
-                        .Binding
-                ) {
-                    RequirePrimitiveRecordReflection(reflection, manifest.PrimitiveRecord, shader.Id)
-                }
+            if (pipeline.Stages[0].Shader == "analytic_vertex" || pipeline.Stages[0].Shader == "batched_ui_vertex") &&
+                expectedDescriptors.Any(
+                (value Descriptor) -> value.Set == manifest
+                    .PrimitiveRecord
+                    .Set &&
+                    value.Binding == manifest
+                    .PrimitiveRecord
+                    .Binding
+            ) {
+                RequirePrimitiveRecordReflection(reflection, manifest.PrimitiveRecord, shader.Id)
+            }
                 let hasPushConstants = pipeline.PushConstants.Stages.Contains(shader.Stage, StringComparer.Ordinal)
             if !hasPushConstants {
                 if reflection.PushConstant != nil {
@@ -3121,15 +2952,12 @@ internal shared class Program {
     }
 
     private func RequireCompatibilityCompilerVersion(compilerPath string, manifest Manifest) {
-        let result = RunTool(compilerPath, []string{"--version"})
+        let result = RunTool(compilerPath, []string{"-version"})
         RequireSuccess(compilerPath, result)
-        let lines = result.StandardOutput.Split([]char{'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries)
+        let output = (result.StandardOutput + result.StandardError).Trim()
         Require(
-            lines.Length > 0 &&
-                lines[
-                0
-            ].Trim() == "shaderc v${manifest.Toolchain.CompatibilityCompiler.Version} v${manifest.Toolchain.CompatibilityCompiler.Version}",
-            "glslc.version",
+            output == manifest.Toolchain.CompatibilityCompiler.Version,
+            "slangc.compatibility.version",
             manifest.Toolchain.CompatibilityCompiler.Version
         )
     }

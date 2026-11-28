@@ -110,7 +110,6 @@ internal class ProfilerSmokeTrace {
     internal var GpuSupported bool
     internal var GpuAvailable bool
     internal var GpuFrameAvailable bool
-    internal var GpuClipAvailable bool
     internal var GpuPrimitiveUploadAvailable bool
     internal var GpuManyScopesAvailable bool
     internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
@@ -683,8 +682,9 @@ internal class ProfilerSmoke {
             let gpuDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
             var gpuFrames int32 = 0
             var submittedCount = trace.Submitted.Count
-            while trace.GpuSupported && !(trace.GpuAvailable && trace.GpuFrameAvailable && trace.GpuClipAvailable
-                && trace.GpuPrimitiveUploadAvailable && trace.GpuManyScopesAvailable) && Stopwatch.GetTimestamp() < gpuDeadline {
+            while trace.GpuSupported && !(trace.GpuAvailable && trace.GpuFrameAvailable
+                && trace.GpuPrimitiveUploadAvailable && trace.GpuManyScopesAvailable)
+                && Stopwatch.GetTimestamp() < gpuDeadline {
                 if gpuFrames < 3 && trace.Submitted.Count >= submittedCount {
                     window.Post(() -> {
                         root.Frame++
@@ -777,8 +777,8 @@ internal class ProfilerSmoke {
             Require(trace.Cutoff >= trace.LastCpuEnd, "CPU recording did not stop at its cutoff")
             Require(!trace.GpuSupported || trace.GpuSubmitted.Count > 0, "Submitted GPU stages are missing")
             Require(!trace.GpuSupported || trace.GpuFrameAvailable, "Whole-frame GPU timestamps did not resolve")
-            Require(!trace.GpuSupported || (trace.GpuClipAvailable && trace.GpuPrimitiveUploadAvailable),
-                "Clip mask and primitive upload GPU timestamps did not resolve")
+            Require(!trace.GpuSupported || trace.GpuPrimitiveUploadAvailable,
+                "Primitive and scissor upload GPU timestamps did not resolve")
             Require(!trace.GpuSupported || trace.GpuManyScopesAvailable,
                 "GPU timestamps did not resolve more than sixteen offscreen scopes")
             for stage in trace.GpuSubmitted {
@@ -978,8 +978,10 @@ internal class ProfilerSmoke {
                         Require(record.GetProperty("value0").GetUInt64() > 0uL
                             && record.GetProperty("value1").GetUInt64() == 0uL,
                             "Available GPU stage has no scopes or has omitted scopes")
-                        trace.GpuClipAvailable = trace.GpuClipAvailable
-                            || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.ClipPass.ToString()
+                        Require(
+                            record.GetProperty("eventId").GetString() != VulkanDiagnosticEventIds.ClipPass.ToString(),
+                            "Obsolete clip-mask GPU pass was emitted"
+                        )
                         trace.GpuPrimitiveUploadAvailable = trace.GpuPrimitiveUploadAvailable
                             || record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.PrimitiveUploadStage.ToString()
                         trace.GpuManyScopesAvailable = trace.GpuManyScopesAvailable

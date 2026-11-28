@@ -170,9 +170,15 @@ void shade()
     }
     float4 source = sourceTexture.Sample(sourceCoordinate);
     float4 backdrop = backdropTexture.Sample(backdropCoordinate);
+    float coverage = gooClipCoverage();
     if (pc.packedColorsExtra.z != 0u)
     {
-        outColor = lerp(backdrop, source, gooClipCoverage() * clamp(pc.radii.x, 0.0, 1.0));
+        outColor = lerp(backdrop, source, coverage * clamp(pc.radii.x, 0.0, 1.0));
+        return;
+    }
+    if (coverage <= 0.0)
+    {
+        outColor = float4(0.0);
         return;
     }
     float sourceAlpha = clamp(source.a * clamp(pc.radii.x, 0.0, 1.0), 0.0, 1.0);
@@ -183,7 +189,6 @@ void shade()
         clamp(sourceColor, 0.0, 1.0), pc.packedColorsExtra.w);
     float3 contribution = (1.0 - backdropAlpha) * source.rgb * clamp(pc.radii.x, 0.0, 1.0)
         + sourceAlpha * backdropAlpha * blended;
-    float coverage = gooClipCoverage();
     outColor = float4(contribution * coverage, sourceAlpha * coverage);
 }
 
