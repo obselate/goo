@@ -20,12 +20,21 @@ class TextEngineRetentionTests {
             TextStyleRange(TextRange(6, 4), Style{Color: Color.Rgb(40, 120, 240)}),
         }
         let richUnderlined = []TextStyleRange{
-            TextStyleRange(TextRange(0, 5), Style{Color: Color.Rgb(220, 40, 40), TextDecoration: TextDecoration.Underline}),
+            TextStyleRange(
+                TextRange(0, 5),
+                Style{Color: Color.Rgb(220, 40, 40), TextDecoration: TextDecoration.Underline}
+            ),
         }
-        let create = (wrapWidth float64, align TextAlign, rich []TextStyleRange, decorated []TextStyleRange, siblingTick Color) -> Container{
+        let create = (
+            wrapWidth float64,
+            align TextAlign,
+            rich[]TextStyleRange,
+            decorated[]TextStyleRange,
+            siblingTick Color
+        ) -> Container{
             Width: 320,
             Height: 320,
-            Container{ Key: "tick", Width: 8, Height: 8, BackgroundColor: siblingTick },
+            Container{Key: "tick", Width: 8, Height: 8, BackgroundColor: siblingTick},
             Text{
                 Key: "wrapped",
                 Content: "Alpha beta gamma delta epsilon zeta",
@@ -125,20 +134,22 @@ class TextEngineRetentionTests {
             let retiredRecordCapacity = retiredSegment.Records.Length
             NodeLifecycle.DisposeTree(root)
 
-            let replacement = reconciler.Mount(Container{
-                Width: 320,
-                Height: 160,
-                Text{
-                    Key: "freshWrapped",
-                    Content: "Alpha beta gamma delta",
-                    FontFamily: "TextEngineRetainFont",
-                    FontSize: 16,
-                    LineHeight: 1.25,
-                    Width: 180,
-                    Height: 120,
-                    TextWrap: TextWrap.Wrap,
-                },
-            })
+            let replacement = reconciler.Mount(
+                Container{
+                    Width: 320,
+                    Height: 160,
+                    Text{
+                        Key: "freshWrapped",
+                        Content: "Alpha beta gamma delta",
+                        FontFamily: "TextEngineRetainFont",
+                        FontSize: 16,
+                        LineHeight: 1.25,
+                        Width: 180,
+                        Height: 120,
+                        TextWrap: TextWrap.Wrap,
+                    },
+                }
+            )
             try {
                 layoutEngine.Calculate(replacement, 320.0F, 160.0F)
                 compiler.Compile(replacement, Color.Transparent, 320.0F, 160.0F)
@@ -180,7 +191,7 @@ class TextEngineRetentionTests {
         Assert.True(shapingWorkspace.GlyphCount >= 2)
 
         let workspace12 = VulkanTextProviderWorkspace([4096]uint8)
-        let res12 = font.EncodeGlyphInto(shapingWorkspace.GlyphBuffer[0].GlyphId, workspace12, 12)
+        let res12 = font.EncodeGlyphInto(shapingWorkspace.GlyphBuffer[0].GlyphId, workspace12, 768)
         Assert.Equal(VulkanTextProviderAbi.Success, res12.Status)
         Assert.True(res12.Count > 0)
         Assert.True(workspace12.GlyphExtents.Width > 0)
@@ -193,39 +204,77 @@ class TextEngineRetentionTests {
         Assert.True(workspace40.GlyphExtents.Width > 0)
         Assert.True(workspace40.GlyphExtents.Height < 0)
 
-        // Ensure 12px hinted extents didn't collapse by 64x compared to design units.
-        let ratio = float64(Math.Abs(workspace12.GlyphExtents.Height)) / float64(Math.Abs(workspace40.GlyphExtents.Height))
+        // Ensure 12px (768 in 26.6 fixed-point) hinted extents didn't collapse compared to design units.
+        let ratio = float64(Math.Abs(workspace12.GlyphExtents.Height)) / float64(
+            Math.Abs(workspace40.GlyphExtents.Height)
+        )
         Assert.InRange(ratio, 0.5, 1.5)
     }
 
     @Fact
     func TextFrameSlotResidentRangePreservationMatchesAppendAndSwap() {
-        let historyIds = []uint64{ 1uL, 2uL, 0uL, 0uL }
-        let historyVersions = []uint64{ 1uL, 1uL, 0uL, 0uL }
-        let historyFirsts = []int32{ 0, 5, 0, 0 }
-        let historyCounts = []int32{ 5, 7, 0, 0 }
-        let historyClips = []int32{ 0, 0, 0, 0 }
+        let historyIds = []uint64{1uL, 2uL, 0uL, 0uL}
+        let historyVersions = []uint64{1uL, 1uL, 0uL, 0uL}
+        let historyFirsts = []int32{0, 5, 0, 0}
+        let historyCounts = []int32{5, 7, 0, 0}
+        let historyClips = []int32{0, 0, 0, 0}
 
         // Append C(id=3, v=1, 12..16, clip=0): A and B reuse resident ranges, C is dirty.
-        let candIds = []uint64{ 1uL, 2uL, 3uL }
-        let candVersions = []uint64{ 1uL, 1uL, 1uL }
-        let candFirsts = []int32{ 0, 5, 12 }
-        let candCounts = []int32{ 5, 7, 4 }
-        let candClips = []int32{ 0, 0, 0 }
+        let candIds = []uint64{1uL, 2uL, 3uL}
+        let candVersions = []uint64{1uL, 1uL, 1uL}
+        let candFirsts = []int32{0, 5, 12}
+        let candCounts = []int32{5, 7, 4}
+        let candClips = []int32{0, 0, 0}
 
         var historyCursor int32 = 0
-        Assert.True(VulkanTextResidentRangeMatcher.MatchesCandidate(
-            historyIds, historyVersions, historyFirsts, historyCounts, historyClips, 2,
-            candIds[0], candVersions[0], candFirsts[0], candCounts[0], candClips[0], ref historyCursor
-        ))
-        Assert.True(VulkanTextResidentRangeMatcher.MatchesCandidate(
-            historyIds, historyVersions, historyFirsts, historyCounts, historyClips, 2,
-            candIds[1], candVersions[1], candFirsts[1], candCounts[1], candClips[1], ref historyCursor
-        ))
-        Assert.False(VulkanTextResidentRangeMatcher.MatchesCandidate(
-            historyIds, historyVersions, historyFirsts, historyCounts, historyClips, 2,
-            candIds[2], candVersions[2], candFirsts[2], candCounts[2], candClips[2], ref historyCursor
-        ))
+        Assert.True(
+            VulkanTextResidentRangeMatcher.MatchesCandidate(
+                historyIds,
+                historyVersions,
+                historyFirsts,
+                historyCounts,
+                historyClips,
+                2,
+                candIds[0],
+                candVersions[0],
+                candFirsts[0],
+                candCounts[0],
+                candClips[0],
+                ref historyCursor
+            )
+        )
+        Assert.True(
+            VulkanTextResidentRangeMatcher.MatchesCandidate(
+                historyIds,
+                historyVersions,
+                historyFirsts,
+                historyCounts,
+                historyClips,
+                2,
+                candIds[1],
+                candVersions[1],
+                candFirsts[1],
+                candCounts[1],
+                candClips[1],
+                ref historyCursor
+            )
+        )
+        Assert.False(
+            VulkanTextResidentRangeMatcher.MatchesCandidate(
+                historyIds,
+                historyVersions,
+                historyFirsts,
+                historyCounts,
+                historyClips,
+                2,
+                candIds[2],
+                candVersions[2],
+                candFirsts[2],
+                candCounts[2],
+                candClips[2],
+                ref historyCursor
+            )
+        )
 
         // Commit [A, B, C] to history, then swap B -> B'(v=2, same size 5..12) and change clip on A:
         historyIds[2] = 3uL
@@ -237,17 +286,53 @@ class TextEngineRetentionTests {
         candVersions[1] = 2uL
 
         historyCursor = 0
-        Assert.False(VulkanTextResidentRangeMatcher.MatchesCandidate(
-            historyIds, historyVersions, historyFirsts, historyCounts, historyClips, 3,
-            candIds[0], candVersions[0], candFirsts[0], candCounts[0], candClips[0], ref historyCursor
-        ))
-        Assert.False(VulkanTextResidentRangeMatcher.MatchesCandidate(
-            historyIds, historyVersions, historyFirsts, historyCounts, historyClips, 3,
-            candIds[1], candVersions[1], candFirsts[1], candCounts[1], candClips[1], ref historyCursor
-        ))
-        Assert.True(VulkanTextResidentRangeMatcher.MatchesCandidate(
-            historyIds, historyVersions, historyFirsts, historyCounts, historyClips, 3,
-            candIds[2], candVersions[2], candFirsts[2], candCounts[2], candClips[2], ref historyCursor
-        ))
+        Assert.False(
+            VulkanTextResidentRangeMatcher.MatchesCandidate(
+                historyIds,
+                historyVersions,
+                historyFirsts,
+                historyCounts,
+                historyClips,
+                3,
+                candIds[0],
+                candVersions[0],
+                candFirsts[0],
+                candCounts[0],
+                candClips[0],
+                ref historyCursor
+            )
+        )
+        Assert.False(
+            VulkanTextResidentRangeMatcher.MatchesCandidate(
+                historyIds,
+                historyVersions,
+                historyFirsts,
+                historyCounts,
+                historyClips,
+                3,
+                candIds[1],
+                candVersions[1],
+                candFirsts[1],
+                candCounts[1],
+                candClips[1],
+                ref historyCursor
+            )
+        )
+        Assert.True(
+            VulkanTextResidentRangeMatcher.MatchesCandidate(
+                historyIds,
+                historyVersions,
+                historyFirsts,
+                historyCounts,
+                historyClips,
+                3,
+                candIds[2],
+                candVersions[2],
+                candFirsts[2],
+                candCounts[2],
+                candClips[2],
+                ref historyCursor
+            )
+        )
     }
 }

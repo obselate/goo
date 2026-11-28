@@ -105,7 +105,7 @@ internal sealed class VulkanTextHinting : IDisposable {
         (first VulkanTextHintHorizontalEdge, second VulkanTextHintHorizontalEdge) -> first.Y.CompareTo(second.Y)
 
         private func CallbackTarget(context nint) VulkanTextHinting ->
-            cast[VulkanTextHinting](GCHandle.FromIntPtr(context).Target!!)
+        cast[VulkanTextHinting](GCHandle.FromIntPtr(context).Target!!)
 
         @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
         private func DrawMove(callbacks nint, data nint, state nint, x float32, y float32, context nint) {
@@ -118,14 +118,32 @@ internal sealed class VulkanTextHinting : IDisposable {
         }
 
         @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
-        private func DrawQuadratic(callbacks nint, data nint, state nint,
-            cx float32, cy float32, x float32, y float32, context nint) {
+        private func DrawQuadratic(
+            callbacks nint,
+            data nint,
+            state nint,
+            cx float32,
+            cy float32,
+            x float32,
+            y float32,
+            context nint
+        ) {
             CallbackTarget(context).Quadratic(callbacks, data, state, cx, cy, x, y, context)
         }
 
         @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvCdecl)})
-        private func DrawCubic(callbacks nint, data nint, state nint,
-            cx float32, cy float32, dx float32, dy float32, x float32, y float32, context nint) {
+        private func DrawCubic(
+            callbacks nint,
+            data nint,
+            state nint,
+            cx float32,
+            cy float32,
+            dx float32,
+            dy float32,
+            x float32,
+            y float32,
+            context nint
+        ) {
             CallbackTarget(context).Cubic(callbacks, data, state, cx, cy, dx, dy, x, y, context)
         }
 
@@ -145,7 +163,9 @@ internal sealed class VulkanTextHinting : IDisposable {
         && hb_font_get_glyph_extents(font, glyph, ref extents) != 0u
         && extents.YBearing > 0 && extents.YBearing <= value {
             float32(extents.YBearing)
-        } else { float32(value) }
+        } else {
+            float32(value)
+        }
         hb_ot_metrics_get_position_with_fallback(font, VulkanTextTag("cpht"), ref value)
         capHeight = float32(value)
         if xHeight > 0.0F && hb_font_get_nominal_glyph(font, uint32('o'), ref glyph) != 0u
@@ -184,7 +204,7 @@ internal sealed class VulkanTextHinting : IDisposable {
         if failed {
             return false
         }
-        let scale = float32(ppem) / units
+        let scale = float32(ppem) / (64.0F * units)
         designUnitsPerPixel = 1.0F / scale
         if segments.Count > 0 {
             var minimum = segments[0].Y
@@ -219,12 +239,23 @@ internal sealed class VulkanTextHinting : IDisposable {
         let zone = MathF.Min(units * 0.025F, 0.5F / scale)
         let xHeightPixels = if xHeightOvershoot > 0.0F {
             MathF.Floor(xHeightOvershoot * scale + 0.625F)
-        } else { MathF.Round(xHeight * scale, MidpointRounding.AwayFromZero) }
+        } else {
+            MathF.Round(xHeight * scale, MidpointRounding.AwayFromZero)
+        }
         for edge in edges {
             let anchor = Anchor(edge, zone)
-            let pixel = if anchor == xHeight { xHeightPixels }
-                else { MathF.Round(anchor * scale, MidpointRounding.AwayFromZero) }
-            fitted.Add(if fitted.Count == 0 { pixel } else { MathF.Max(pixel, fitted[fitted.Count - 1]) })
+            let pixel = if anchor == xHeight {
+                xHeightPixels
+            } else {
+                MathF.Round(anchor * scale, MidpointRounding.AwayFromZero)
+            }
+            fitted.Add(
+                if fitted.Count == 0 {
+                    pixel
+                } else {
+                    MathF.Max(pixel, fitted[fitted.Count - 1])
+                }
+            )
         }
         horizontalEdges.Sort(HorizontalHeightOrder)
         for i in 0 ... horizontalEdges.Count {
@@ -249,7 +280,10 @@ internal sealed class VulkanTextHinting : IDisposable {
                     fitted[upper] = MathF.Min(fitted[upper + 1], fitted[lower] + width)
                 } else if ink && !lowerFixed && !upperFixed {
                     let rounded = MathF.Max(1.0F, MathF.Round(width, MidpointRounding.AwayFromZero))
-                    let start = MathF.Round((first.Y + second.Y) * 0.5F * scale - rounded * 0.5F, MidpointRounding.AwayFromZero)
+                    let start = MathF.Round(
+                        (first.Y + second.Y) * 0.5F * scale - rounded * 0.5F,
+                        MidpointRounding.AwayFromZero
+                    )
                     fitted[lower] = MathF.Max(fitted[lower - 1], start)
                     fitted[upper] = MathF.Min(fitted[upper + 1], fitted[lower] + rounded)
                 } else if fitted[lower] == fitted[upper] && Anchor(first.Y, zone) != Anchor(second.Y, zone) {
@@ -348,9 +382,7 @@ internal sealed class VulkanTextHinting : IDisposable {
         let upper = ~index
         if upper < edges.Count {
             let weight = (y - edges[upper - 1]) / (edges[upper] - edges[upper - 1])
-            return (
-                fitted[upper - 1] + weight * (fitted[upper] - fitted[upper - 1])
-            ) * designUnitsPerPixel
+            return (fitted[upper - 1] + weight * (fitted[upper] - fitted[upper - 1])) * designUnitsPerPixel
         }
         let last = edges.Count - 1
         return y + fitted[last] * designUnitsPerPixel - edges[last]
@@ -533,6 +565,8 @@ internal sealed class VulkanTextHinting : IDisposable {
             hb_draw_funcs_destroy(funcs)
             funcs = nint(0)
         }
-        if callbackState.IsAllocated { callbackState.Free() }
+        if callbackState.IsAllocated {
+            callbackState.Free()
+        }
     }
 }
