@@ -80,4 +80,19 @@ class WindowsBackdropTaskbarTests {
             WindowsBackdrop.ComputeMaximizedWorkRect(monitor, dockedLeft, 1u | 8u)
         )
     }
+
+    @Fact
+    func ComputeNormalTopResizeHitDetectsTopEdgeAndCornersWithinVisibleBounds() {
+        let winRect = WindowsRect(100, 200, 2494, 1780)
+        let sideInset = 17
+        let topBand = 10
+        let cornerWidth = 32
+
+        Assert.Equal(nint(13), WindowsBackdrop.ComputeNormalTopResizeHit(winRect, sideInset, topBand, cornerWidth, 120, 200))
+        Assert.Equal(nint(12), WindowsBackdrop.ComputeNormalTopResizeHit(winRect, sideInset, topBand, cornerWidth, 500, 205))
+        Assert.Equal(nint(14), WindowsBackdrop.ComputeNormalTopResizeHit(winRect, sideInset, topBand, cornerWidth, 2460, 209))
+        Assert.Equal(nint(0), WindowsBackdrop.ComputeNormalTopResizeHit(winRect, sideInset, topBand, cornerWidth, 500, 210))
+        Assert.Equal(nint(0), WindowsBackdrop.ComputeNormalTopResizeHit(winRect, sideInset, topBand, cornerWidth, 105, 202))
+        Assert.Equal(nint(0), WindowsBackdrop.ComputeNormalTopResizeHit(winRect, sideInset, topBand, cornerWidth, 2490, 202))
+    }
 }

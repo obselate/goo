@@ -125,6 +125,17 @@ internal class WindowsBackdrop : NativeBackdrop {
       return WindowsRect(left, top, right, bottom)
     }
 
+    internal func ComputeNormalTopResizeHit(winRect WindowsRect, sideInset int32, topBand int32,
+      cornerWidth int32, px int32, py int32) nint {
+      if topBand <= 0 || py < winRect.Top || py >= winRect.Top + topBand { return nint(0) }
+      let visibleLeft = winRect.Left + Math.Max(0, sideInset)
+      let visibleRight = winRect.Right - Math.Max(0, sideInset)
+      if px < visibleLeft || px >= visibleRight { return nint(0) }
+      if px < visibleLeft + cornerWidth { return nint(13) }
+      if px >= visibleRight - cornerWidth { return nint(14) }
+      return nint(12)
+    }
+
     internal func SetFrameTheme(window nint, theme SystemTheme) {
       if window == nint(0) { return }
       var dark = theme == SystemTheme.Dark ? 1 : 0
@@ -325,6 +336,28 @@ internal class WindowsBackdrop : NativeBackdrop {
       } else if message == 0x84u && SizingFrame(window) {
         let hit = DefWindowProc(window, message, wparam, lparam)
         if hit >= nint(10) && hit <= nint(17) { return hit }
+        if hit == nint(1) && IsZoomed(window) == 0 {
+          let px = int32(int16(int64(lparam) & 0xffffL))
+          let py = int32(int16((int64(lparam) >> 16) & 0xffffL))
+          var winRect = default(WindowsRect)
+          if GetWindowRect(window, ref winRect) != 0 {
+            let dpi = if OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393) { GetDpiForWindow(window) } else { 96u }
+            let effectiveDpi = dpi == 0u ? 96u : dpi
+            let frameX = if OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393) {
+              GetSystemMetricsForDpi(32, effectiveDpi) + GetSystemMetricsForDpi(92, effectiveDpi)
+            } else {
+              GetSystemMetrics(32) + GetSystemMetrics(92)
+            }
+            let topBand = Math.Max(4, if OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393) {
+              GetSystemMetricsForDpi(33, effectiveDpi)
+            } else {
+              GetSystemMetrics(33)
+            })
+            let cornerWidth = Math.Max(topBand * 2, int32(Math.Round(16.0 * float64(effectiveDpi) / 96.0)))
+            let topHit = ComputeNormalTopResizeHit(winRect, frameX, topBand, cornerWidth, px, py)
+            if topHit != nint(0) { return topHit }
+          }
+        }
       } else if message == 0x24u && lparam != nint(0) && SizingFrame(window) {
         let result = DefSubclassProc(window, message, wparam, lparam)
         if TryGetMaximizedWorkRect(window, out var monitor, out var adjusted) {
@@ -341,13 +374,20 @@ internal class WindowsBackdrop : NativeBackdrop {
           return nint(0)
         }
         return result
-      } else if message == 0x83u && wparam != nuint(0) && SizingFrame(window) && IsZoomed(window) != 0 {
-        if TryGetMaximizedWorkRect(window, out var _, out var adjusted) {
-          Marshal.WriteInt32(lparam, 0, adjusted.Left)
-          Marshal.WriteInt32(lparam, 4, adjusted.Top)
-          Marshal.WriteInt32(lparam, 8, adjusted.Right)
-          Marshal.WriteInt32(lparam, 12, adjusted.Bottom)
-          return nint(0)
+      } else if message == 0x83u && wparam != nuint(0) && SizingFrame(window) {
+        if IsZoomed(window) != 0 {
+          if TryGetMaximizedWorkRect(window, out var _, out var adjusted) {
+            Marshal.WriteInt32(lparam, 0, adjusted.Left)
+            Marshal.WriteInt32(lparam, 4, adjusted.Top)
+            Marshal.WriteInt32(lparam, 8, adjusted.Right)
+            Marshal.WriteInt32(lparam, 12, adjusted.Bottom)
+            return nint(0)
+          }
+        } else {
+          let originalTop = Marshal.ReadInt32(lparam, 4)
+          let result = DefSubclassProc(window, message, wparam, lparam)
+          Marshal.WriteInt32(lparam, 4, originalTop)
+          return result
         }
       } else if message == 0x46u && lparam != nint(0) && IsTransparent(window) {
         let flagsOffset = nint.Size * 2 + 16
@@ -374,6 +414,10 @@ internal class WindowsBackdrop : NativeBackdrop {
     @DllImport("user32.dll") private func SetWindowPos(window nint, after nint, x int32, y int32, width int32, height int32, flags uint32) int32;
     @DllImport("user32.dll", EntryPoint: "DefWindowProcW") private func DefWindowProc(window nint, message uint32, wparam nuint, lparam nint) nint;
     @DllImport("user32.dll") private func IsZoomed(window nint) int32;
+    @DllImport("user32.dll") private func GetWindowRect(window nint, ref rect WindowsRect) int32;
+    @DllImport("user32.dll") private func GetDpiForWindow(window nint) uint32;
+    @DllImport("user32.dll") private func GetSystemMetricsForDpi(index int32, dpi uint32) int32;
+    @DllImport("user32.dll") private func GetSystemMetrics(index int32) int32;
     @DllImport("user32.dll") private func MonitorFromWindow(window nint, flags uint32) nint;
     @DllImport("user32.dll", EntryPoint: "GetMonitorInfoW") private func GetMonitorInfo(monitor nint, ref info WindowsMonitorInfo) int32;
     @DllImport("shell32.dll") private func SHAppBarMessage(message uint32, ref data WindowsAppBarData) nuint;
