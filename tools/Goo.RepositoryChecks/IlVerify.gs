@@ -8,25 +8,71 @@ import System.Text.Json.Nodes
 import System.Text.RegularExpressions
 
 internal shared partial class Checks {
+    private let GeneratedOrdinalPattern Regex = Regex(`(?<=[.+])(<(?:[^<>]|<[^<>]*>)*_)\d+>`)
+
+    private let IlOffsetPattern Regex = Regex(`\[offset 0x[0-9A-Fa-f]+\]`)
+
+    private let AnonymousTypeHashPattern Regex = Regex(`\bAnonymousType(\d+)_[0-9A-Fa-f]+\b`)
+
+    private func NormalizeIlDiagnostic(line string) string {
+        var normalized = GeneratedOrdinalPattern.Replace(line, "$1ordinal>")
+        normalized = IlOffsetPattern.Replace(normalized, "[offset]")
+        return AnonymousTypeHashPattern.Replace(normalized, "AnonymousType$1_hash")
+    }
+
+    private func HasConflictMarker(line string) bool ->
+    line.StartsWith("<<<<<<<", StringComparison.Ordinal) || line.StartsWith("=======", StringComparison.Ordinal) ||
+        line.StartsWith(">>>>>>>", StringComparison.Ordinal) || line.StartsWith("|||||||", StringComparison.Ordinal)
+
+    private func LoadIlBaseline(baselinePath string) HashSet[string] {
+        let baseline = HashSet[string](StringComparer.Ordinal)
+        var previous = ""
+        var hasPrevious = false
+        for raw in File.ReadAllLines(baselinePath) {
+            let line = raw.TrimEnd('\r')
+            Require(!HasConflictMarker(line), "Merge conflict marker in ilverify-baseline.txt: " + line)
+            Require(
+                line.StartsWith("[IL]: Error [", StringComparison.Ordinal),
+                "Invalid ilverify-baseline.txt entry: " + line
+            )
+            Require(
+                NormalizeIlDiagnostic(line) == line,
+                "Unnormalized ilverify-baseline.txt entry (run ilverify --update): " + line
+            )
+            Require(baseline.Add(line), "Duplicate ilverify-baseline.txt entry: " + line)
+            Require(
+                !hasPrevious || StringComparer.Ordinal.Compare(previous, line) < 0,
+                "Unsorted ilverify-baseline.txt entry: " + line
+            )
+            previous = line
+            hasPrevious = true
+        }
+        return baseline
+    }
+
     private func VerifyIl(arguments[]string) {
         let assemblies = List[string]()
         var assetsOverride = ""
+        var updateBaseline = false
         for var index = 0; index < arguments.Length; index++ {
             if arguments[index] == "--assets" {
                 index++
                 Require(index < arguments.Length && assetsOverride.Length == 0, "Expected one --assets path")
                 assetsOverride = Path.GetFullPath(arguments[index])
+            } else if arguments[index] == "--update" {
+                updateBaseline = true
             } else {
                 assemblies.Add(Path.GetFullPath(arguments[index]))
             }
         }
         Require(assemblies.Count > 0, "Expected at least one assembly")
-        let generatedOrdinal = Regex(`(?<=[.+])(<(?:[^<>]|<[^<>]*>)*_)\d+>`)
-        let baseline = File
-            .ReadAllLines(Path.Combine(Root, "tools/Goo.RepositoryChecks/ilverify-baseline.txt"))
-            .Select(line -> generatedOrdinal.Replace(line, "$1ordinal>"))
-            .GroupBy(line -> line, StringComparer.Ordinal)
-            .ToDictionary(group -> group.Key, group -> group.Count(), StringComparer.Ordinal)
+        let baselinePath = Path.Combine(Root, "tools/Goo.RepositoryChecks/ilverify-baseline.txt")
+        let baseline = if updateBaseline {
+            HashSet[string](StringComparer.Ordinal)
+        } else {
+            LoadIlBaseline(baselinePath)
+        }
+        let observed = HashSet[string](StringComparer.Ordinal)
         let started = Stopwatch.StartNew()
         var newDiagnostics = 0
         for assembly in assemblies {
@@ -149,14 +195,12 @@ internal shared partial class Checks {
                 if line.StartsWith("[IL]: Error [", StringComparison.Ordinal) {
                     let prefix = "[" + assembly + " : "
                     Require(line.Contains(prefix), "Unrecognized ILVerify diagnostic: " + line)
-                    let diagnostic = generatedOrdinal.Replace(
-                        line.Replace(prefix, "[" + Path.GetFileName(assembly) + " : "),
-                        "$1ordinal>"
+                    let diagnostic = NormalizeIlDiagnostic(
+                        line.Replace(prefix, "[" + Path.GetFileName(assembly) + " : ")
                     )
                     diagnosticCount++
-                    if baseline.GetValueOrDefault(diagnostic) > 0 {
-                        baseline[diagnostic]--
-                    } else {
+                    observed.Add(diagnostic)
+                    if !updateBaseline && !baseline.Contains(diagnostic) {
                         Console.Error.WriteLine(diagnostic)
                         newDiagnostics++
                     }
@@ -171,23 +215,15 @@ internal shared partial class Checks {
                 (process.ExitCode == 0 && diagnosticCount == 0 || process.ExitCode == 2 && diagnosticCount > 0) &&
                     found.Success &&
                     verified.Success &&
-                    found
-                    .Groups[1]
-                    .Value == verified
-                    .Groups[1]
-                    .Value,
+                    found.Groups[1].Value == verified.Groups[1].Value,
                 "ILVerify failed or did not verify every method in " + assembly + ":\n" + output
             )
             Console.WriteLine(
                 Path.GetFileName(assembly) +
                     ": " +
-                    verified
-                    .Groups[1]
-                    .Value +
+                    verified.Groups[1].Value +
                     "/" +
-                    found
-                    .Groups[1]
-                    .Value +
+                    found.Groups[1].Value +
                     " methods verified, " +
                     diagnosticCount.ToString() + " diagnostics"
             )
@@ -195,12 +231,38 @@ internal shared partial class Checks {
         Console.WriteLine(
             assemblies.Count.ToString() + " assemblies, " + newDiagnostics.ToString() +
                 " new diagnostics, " +
-                started
-                .Elapsed
-                .TotalSeconds
-                .ToString("F3") +
+                started.Elapsed.TotalSeconds.ToString("F3") +
                 " seconds"
         )
+        if updateBaseline {
+            let refreshedPrefixes = assemblies.Select(assembly -> "[" + Path.GetFileName(assembly) + " : ").ToArray()
+            let updated = HashSet[string](observed, StringComparer.Ordinal)
+            if File.Exists(baselinePath) {
+                for raw in File.ReadAllLines(baselinePath) {
+                    let existing = raw.TrimEnd('\r')
+                    Require(!HasConflictMarker(existing), "Merge conflict marker in ilverify-baseline.txt: " + existing)
+                    if !existing.StartsWith("[IL]: Error [", StringComparison.Ordinal) {
+                        continue
+                    }
+                    let normalized = NormalizeIlDiagnostic(existing)
+                    let isRefreshed = refreshedPrefixes.Any(
+                        prefix -> normalized.Contains(prefix, StringComparison.Ordinal)
+                    )
+                    if !isRefreshed {
+                        updated.Add(normalized)
+                    }
+                }
+            }
+            let sorted = updated.OrderBy(entry -> entry, StringComparer.Ordinal).ToArray()
+            let content = if sorted.Length == 0 {
+                ""
+            } else {
+                string.Join("\n", sorted) + "\n"
+            }
+            File.WriteAllText(baselinePath, content)
+            Console.WriteLine("Updated " + baselinePath + " (" + sorted.Length.ToString() + " entries)")
+            return
+        }
         Require(newDiagnostics == 0, "IL verification found new diagnostics")
     }
 }

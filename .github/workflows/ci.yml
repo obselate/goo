@@ -7,6 +7,7 @@ on:
     tags:
       - "v*"
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
@@ -38,47 +39,139 @@ jobs:
       lint: ${{ steps.paths.outputs.lint }}
       api: ${{ steps.paths.outputs.api }}
       plugin: ${{ steps.paths.outputs.plugin }}
+      plugin-changed: ${{ steps.paths.outputs.plugin-changed }}
       widgets-pin-changed: ${{ steps.paths.outputs.widgets-pin-changed }}
+      heavy: ${{ steps.paths.outputs.heavy }}
+      packaging: ${{ steps.paths.outputs.packaging }}
+      native-rebuild: ${{ steps.paths.outputs.native-rebuild }}
+      platform-host: ${{ steps.paths.outputs.platform-host }}
+      android-changed: ${{ steps.paths.outputs.android-changed }}
     steps:
       - id: paths
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
-            let full = context.eventName !== 'pull_request';
+            const isPr = context.eventName === 'pull_request';
+            const labels = context.payload.pull_request?.labels ?? [];
+            const hasFullLabel = labels.some(label => label.name === 'ci:full');
+            let full = !isPr || hasFullLabel;
+            let heavy = !isPr || hasFullLabel;
             let plugin = false;
+            let pluginChanged = false;
             let api = false;
             let widgetsPinChanged = false;
-            if (!full) {
+            let packaging = heavy;
+            let nativeRebuild = heavy;
+            let platformHost = heavy;
+            let androidChanged = heavy;
+            if (isPr) {
               const files = await github.paginate(github.rest.pulls.listFiles, {
                 ...context.repo, pull_number: context.issue.number, per_page: 100
               });
-              full = files.length !== context.payload.pull_request.changed_files;
-              widgetsPinChanged = full;
+              const truncated = files.length !== context.payload.pull_request.changed_files;
+              if (truncated) {
+                full = true;
+                heavy = true;
+                packaging = true;
+                nativeRebuild = true;
+                platformHost = true;
+                androidChanged = true;
+                widgetsPinChanged = true;
+              }
               for (const file of files) {
                 for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
-                  if (path === '.github/goo-widgets.commit') widgetsPinChanged = true;
-                  if (path.startsWith('tools/Goo.PluginMcp/')) plugin = true;
-                  if (path.startsWith('plugins/goo/')) plugin = true;
-                  else if ((path.startsWith('docs/') || !path.includes('/') || path.startsWith('changelog.d/')) &&
-                           path.endsWith('.md') && path !== 'docs/nuget-readme.md') {
+                  if (path === '.github/goo-widgets.commit') {
+                    widgetsPinChanged = true;
+                    packaging = true;
+                  }
+                  if (path.startsWith('tools/Goo.PluginMcp/') || path.startsWith('plugins/goo/')) {
+                    plugin = true;
+                    pluginChanged = true;
+                  } else if ((path.startsWith('docs/') || !path.includes('/') || path.startsWith('changelog.d/')) &&
+                             path.endsWith('.md') && path !== 'docs/nuget-readme.md') {
                     if (path.startsWith('docs/api')) api = true;
-                  } else if (!path.startsWith('integrations/vscode/')) full = true;
+                  } else if (!path.startsWith('integrations/vscode/')) {
+                    full = true;
+                  }
+
+                  if (path.startsWith('.github/scripts/build-sdl-') ||
+                      path.startsWith('.github/scripts/build-text-native-') ||
+                      path.startsWith('.github/patches/') ||
+                      path.startsWith('tools/Goo.TextNative/') ||
+                      path.startsWith('tests/NativeWindow/')) {
+                    nativeRebuild = true;
+                  }
+                  if (path.startsWith('Directory.Build.') ||
+                      path === '.github/workflows/ci.yml' ||
+                      path === '.github/RELEASING.md' ||
+                      path.startsWith('Goo.SoftwareRenderer/') ||
+                      path.startsWith('samples/interop/') ||
+                      path.startsWith('templates/') ||
+                      path.startsWith('Goo/Api/') ||
+                      path.startsWith('tests/Goo.ApiContractTests/') ||
+                      path.startsWith('tests/Goo.PackageSmoke/') ||
+                      path.startsWith('tools/Goo.ReleaseCheck/') ||
+                      /\.(gs|cs|fs)proj$/.test(path)) {
+                    packaging = true;
+                  }
+                  if (/(Mac|macOS|Windows|Win32)/.test(path) ||
+                      path.startsWith('Goo/Platform/') ||
+                      path.startsWith('Goo/Hosting/') ||
+                      path.startsWith('Goo/Accessibility/') ||
+                      path.startsWith('.github/scripts/fetch-') ||
+                      path.startsWith('tests/Goo.Notifications.WindowsSmoke/') ||
+                      /\.(mm|m|c|cpp|h|ps1)$/.test(path)) {
+                    platformHost = true;
+                  }
+                  if (/android/i.test(path)) {
+                    androidChanged = true;
+                  }
                 }
               }
+            } else {
+              plugin = true;
+              api = true;
+            }
+            if (!full) {
+              packaging = false;
+              nativeRebuild = false;
+              platformHost = false;
+              androidChanged = false;
+              widgetsPinChanged = false;
             }
             core.setOutput('full', full);
             core.setOutput('lint', full || plugin);
             core.setOutput('api', full || api);
             core.setOutput('plugin', full || plugin);
+            core.setOutput('plugin-changed', pluginChanged);
             core.setOutput('widgets-pin-changed', widgetsPinChanged);
+            core.setOutput('heavy', heavy);
+            core.setOutput('packaging', packaging);
+            core.setOutput('native-rebuild', nativeRebuild);
+            core.setOutput('platform-host', platformHost);
+            core.setOutput('android-changed', androidChanged);
 
   preflight:
     needs: changes
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - &widgets-pin
+        name: Read Goo.Widgets source pin
+        id: widgets-pin
+        shell: bash
+        run: echo "commit=$(cat .github/goo-widgets.commit)" >> "$GITHUB_OUTPUT"
+
+      - &widgets-checkout
+        name: Check out Goo.Widgets source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: obselate/goo-widgets
+          ref: ${{ steps.widgets-pin.outputs.commit }}
+          path: goo-widgets
 
       - &nuget-cache
         name: Restore NuGet packages
@@ -89,14 +182,16 @@ jobs:
 
       - uses: ./.github/actions/setup-goo-dotnet
 
-
       - name: Enforce G# formatting and lint
         if: needs.changes.outputs.lint == 'true'
         run: dotnet run --project tools/Goo.Repo -- check lint
 
-
       - name: Validate onboarding and release metadata
         run: dotnet run --project tools/Goo.Repo -- check metadata
+
+      - name: Verify generated documentation
+        if: needs.changes.outputs.api == 'true'
+        run: dotnet run --project tools/Goo.Repo -- check docs
 
       - name: Remind about a changelog fragment
         if: github.event_name == 'pull_request'
@@ -108,28 +203,306 @@ jobs:
             });
             if (!files.some(file => file.filename.startsWith('changelog.d/')))
               core.warning('No changelog.d/<branch-or-pr>.md fragment. Add one so the release notes include this change.');
-      - name: Compile core
+
+      - name: Compile core and shipped desktop assemblies
         if: needs.changes.outputs.full == 'true'
-        run: dotnet build Goo/Goo.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+        run: |
+          for project in \
+            Goo/Goo.gsproj \
+            Goo.Accessibility/Goo.Accessibility.gsproj \
+            Goo.Audio/Goo.Audio.gsproj \
+            tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.gsproj \
+            tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj \
+            tools/Goo.PluginMcp/Goo.PluginMcp.gsproj \
+            apps/Goo.DevTools/Goo.DevTools.gsproj \
+            templates/Goo.Templates/Goo.Templates.gsproj; do
+            dotnet build "$project" -c Release -m:4 -p:TreatWarningsAsErrors=true
+          done
+
+      - name: Verify shipped Release IL
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet tool restore
+          dotnet run --project tools/Goo.RepositoryChecks -c Release -- ilverify \
+            Goo/bin/Release/net10.0/Goo.dll \
+            Goo.Accessibility/bin/Release/net10.0/Goo.Accessibility.dll \
+            Goo.Audio/bin/Release/net10.0/Goo.Audio.dll \
+            tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll \
+            tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+            tools/Goo.PluginMcp/bin/Release/net10.0/Goo.PluginMcp.dll \
+            apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll \
+            goo-widgets/src/Goo.Widgets/bin/Release/net10.0/Goo.Widgets.dll \
+            templates/Goo.Templates/bin/Release/net10.0/Goo.Templates.dll
+
+  linux-unit:
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - *widgets-pin
+      - *widgets-checkout
+      - *nuget-cache
+      - uses: ./.github/actions/setup-goo-dotnet
+      - &linux-apt-update
+        name: Update Linux package lists
+        id: linux-apt
+        run: |
+          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
+          printf 'Types: deb\nURIs: mirror+file:/etc/apt/apt-mirrors.txt\nSuites: noble noble-updates noble-backports noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' \
+            | sudo tee /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
+            -o APT::Update::Error-Mode=any update
+          mkdir -p "$RUNNER_TEMP/goo-apt-archives"
+          sudo apt-get --print-uris --yes --no-install-recommends install $GOO_LINUX_APT_PACKAGES \
+            > "$RUNNER_TEMP/goo-apt-packages"
+          read -r key _ < <(sha256sum "$RUNNER_TEMP/goo-apt-packages")
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - &linux-apt-cache
+        name: Restore Linux package archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/goo-apt-archives/*.deb
+          key: apt-linux-x64-${{ steps.linux-apt.outputs.key }}
+
+      - &linux-dependencies
+        name: Install Linux build and Wayland dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
+            -o Dir::Cache::archives="$RUNNER_TEMP/goo-apt-archives" \
+            $GOO_LINUX_APT_PACKAGES
+
+      - &linux-glibc-native-cache
+        name: Restore glibc 2.27 native payloads
+        id: glibc-native
+        if: github.ref_type != 'tag'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            artifacts/native/libSDL3.so
+            artifacts/native/libSDL3.a
+            artifacts/native/text
+          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/test_sdl_*.py', 'tests/NativeWindow/*_harness.c', 'tools/Goo.TextNative/**') }}
+
+      - &linux-glibc-native-build
+        name: Build glibc 2.27 native payloads
+        if: steps.glibc-native.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p artifacts/native/text
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            -v "$PWD/artifacts/native:/out" \
+            ubuntu:18.04@sha256:dca176c9663a7ba4c1f0e710986f5a25e672842963d95b960191e2d9f7185ebe \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                binutils ca-certificates curl file g++-8 gcc-8 libdbus-1-dev \
+                libasound2-dev libpulse-dev \
+                libegl1-mesa-dev libexpat1-dev libffi-dev libfontconfig1-dev \
+                libibus-1.0-dev libwayland-dev libxkbcommon-dev libxml2-dev \
+                ninja-build patch pkg-config python3 python3-pip tar \
+                wayland-protocols xz-utils zlib1g-dev
+              update-ca-certificates
+              pip3 install --no-cache-dir meson==0.61.5
+              export CC=gcc-8 CXX=g++-8
+              /src/.github/scripts/build-sdl-linux-x64.sh /out/libSDL3.so /out/libSDL3.a
+              /src/.github/scripts/build-text-native-linux-x64.sh /out/text --static
+            '
+
+      - &linux-vulkan-driver
+        name: Pin Vulkan CPU driver
+        run: |
+          icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test "${#icds[@]}" -eq 1
+          test -f "${icds[0]}"
+          echo "VK_DRIVER_FILES=${icds[0]}" >> "$GITHUB_ENV"
+
+      - &linux-vulkan-layer-cache
+        name: Restore pinned Vulkan validation layer archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ runner.temp }}/goo-vulkan-validation-layer/vulkan-validationlayers_1.4.313.0~rc2-1lunarg24.04-1_amd64.deb
+          key: vulkan-validation-layer-linux-x64-${{ hashFiles('.github/scripts/install-vulkan-validation-layer-linux-x64.sh') }}
+
+      - &linux-vulkan-layer-install
+        name: Install pinned Vulkan validation layer
+        run: |
+          root="$RUNNER_TEMP/goo-vulkan-validation-layer"
+          .github/scripts/install-vulkan-validation-layer-linux-x64.sh "$root"
+          echo "VK_LAYER_PATH=$root/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" \
+            >> "$GITHUB_ENV"
+
+      - &linux-shader-toolchain-cache
+        name: Restore pinned shader toolchain
+        id: shader-toolchain
+        if: github.ref_type != 'tag'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ${{ runner.temp }}/goo-shader-toolchain/slang-2026.16
+            ${{ runner.temp }}/goo-shader-toolchain/vulkan-sdk-1.4.357.0
+          key: shader-toolchain-linux-x64-${{ hashFiles('.github/scripts/install-shader-toolchain-linux-x64.sh') }}
+
+      - &linux-shader-toolchain-install
+        name: Install pinned shader toolchain
+        if: steps.shader-toolchain.outputs.cache-hit != 'true'
+        run: .github/scripts/install-shader-toolchain-linux-x64.sh "$RUNNER_TEMP/goo-shader-toolchain"
+
+      - &linux-shader-toolchain
+        name: Select pinned shader toolchain
+        run: |
+          root="$RUNNER_TEMP/goo-shader-toolchain"
+          test "$("$root/slang-2026.16/bin/slangc" -version 2>&1)" = "2026.16"
+          "$root/vulkan-sdk-1.4.357.0/bin/spirv-val" --version 2>&1 \
+            | grep -F "SPIRV-Tools v2026.3 vulkan-sdk-1.4.357.0"
+          echo "SLANG_SDK=$root/slang-2026.16" >> "$GITHUB_ENV"
+          echo "VULKAN_SDK=$root/vulkan-sdk-1.4.357.0" >> "$GITHUB_ENV"
+
+      - name: Run shared gestures, core, image, and devtools checks
+        run: |
+          dotnet run --project tools/Goo.Repo -- check gestures
+          dotnet run --project tools/Goo.Repo -- check core
+          dotnet run --project tools/Goo.Repo -- check image
+          dotnet run --project tools/Goo.Repo -- check devtools
+          node --check integrations/vscode/extension.js
+
+  linux-render:
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - *nuget-cache
+      - uses: ./.github/actions/setup-goo-dotnet
+      - *linux-apt-update
+      - *linux-apt-cache
+      - *linux-dependencies
+      - *linux-glibc-native-cache
+      - *linux-glibc-native-build
+      - *linux-vulkan-driver
+      - *linux-vulkan-layer-cache
+      - *linux-vulkan-layer-install
+      - *linux-shader-toolchain-cache
+      - *linux-shader-toolchain-install
+      - *linux-shader-toolchain
+
+      - name: Build Vulkan render smoke assemblies
+        run: |
+          dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj \
+            -c Release -m:4 -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+          dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
+            -c Release -m:4 -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+          dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
+            -c Release -m:4 -p:GooGpuExperiments=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o "$RUNNER_TEMP/gpu-experiments-bin"
+
+      - name: Run batched Vulkan proof and readback smokes
+        run: |
+          export SDL_VIDEODRIVER=wayland
+          export LIBGL_ALWAYS_SOFTWARE=1
+          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          .github/scripts/with-headless-wayland.sh bash -c '
+            set -euo pipefail
+            for lane in GOO_VK_TEXT_E2E GOO_VK_TEXT_PAINT_E2E GOO_VK_TEXT_EFFECT_READBACK \
+                        GOO_VK_TEXT_PAINT_READBACK GOO_VK_IMAGE_READBACK; do
+              env "$lane=1" dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+            done
+          '
+          .github/scripts/run-linux-readback-smokes.sh \
+            --dll tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
+            --experiments-dll "$RUNNER_TEMP/gpu-experiments-bin/Goo.AsyncReadbackSmoke.dll"
+
+      - name: Verify NativeAOT GPU experiment canary
+        run: |
+          run="$RUNNER_TEMP/gpu-experiment-aot"
+          trap 'rm -rf "$run"' EXIT
+          dotnet publish tests/Goo.GpuExperimentSmoke/Goo.GpuExperimentSmoke.gsproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:IlcTreatWarningsAsErrors=true -o "$run/publish"
+          GOO_VK_DIAGNOSTICS=1 GOO_VK_GPU_EXPERIMENT=no-text \
+            GOO_GPU_EXPERIMENT_EXPECTED=NoText "$run/publish/Goo.GpuExperimentSmoke"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: linux-render-reports
+          if-no-files-found: ignore
+          path: artifacts/reports/
+
+  compile-windows:
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - *nuget-cache
+      - uses: ./.github/actions/setup-goo-dotnet
+      - name: Compile Windows host targets
+        run: |
+          dotnet build Goo.Accessibility/Goo.Accessibility.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.Notifications.WindowsSmoke/Goo.Notifications.WindowsSmoke.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+
+  compile-macos:
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - *nuget-cache
+      - uses: ./.github/actions/setup-goo-dotnet
+      - name: Compile macOS host targets
+        run: |
+          dotnet build Goo/Goo.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          dotnet build Goo.Accessibility/Goo.Accessibility.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+
+  compile-android:
+    needs: [changes, preflight]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - *widgets-pin
+      - *widgets-checkout
+      - *nuget-cache
+      - uses: ./.github/actions/setup-goo-dotnet
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android workload and SDK platform
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
+          dotnet workload install android
+      - name: Verify Android contracts, adapter build, and docs
+        run: |
+          dotnet run --project tools/Goo.Repo -- check docs-android
+          dotnet run --project tools/Goo.Repo -- check api
 
   quality:
     needs: [changes, preflight]
+    if: (needs.changes.outputs.full == 'true' && (needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true')) || (needs.changes.outputs.full != 'true' && needs.changes.outputs.api == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - &widgets-pin
-        name: Read Goo.Widgets source pin
-        id: widgets-pin
-        shell: bash
-        run: echo "commit=$(cat .github/goo-widgets.commit)" >> "$GITHUB_OUTPUT"
-      - &widgets-checkout
-        name: Check out Goo.Widgets source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: obselate/goo-widgets
-          ref: ${{ steps.widgets-pin.outputs.commit }}
-          path: goo-widgets
+      - *widgets-pin
+      - *widgets-checkout
       - *nuget-cache
       - uses: ./.github/actions/setup-goo-dotnet
 
@@ -207,7 +580,7 @@ jobs:
 
   plugin:
     needs: [changes, preflight, linux-x64]
-    if: ${{ !cancelled() && needs.changes.outputs.plugin == 'true' && needs.preflight.result == 'success' && (needs.linux-x64.result == 'success' || (needs.linux-x64.result == 'skipped' && needs.changes.outputs.full != 'true')) }}
+    if: ${{ !cancelled() && (needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true' || needs.changes.outputs.plugin-changed == 'true') && needs.preflight.result == 'success' && (needs.linux-x64.result == 'success' || (needs.linux-x64.result == 'skipped' && needs.changes.outputs.heavy != 'true' && needs.changes.outputs.packaging != 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -216,39 +589,11 @@ jobs:
       - *widgets-checkout
       - *nuget-cache
       - uses: ./.github/actions/setup-goo-dotnet
-      - &linux-apt-update
-        name: Update Linux package lists
-        id: linux-apt
-        run: |
-          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
-          sudo rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
-          printf 'Types: deb\nURIs: mirror+file:/etc/apt/apt-mirrors.txt\nSuites: noble noble-updates noble-backports noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' \
-            | sudo tee /etc/apt/sources.list.d/ubuntu.sources
-          sudo apt-get -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
-            -o APT::Update::Error-Mode=any update
-          mkdir -p "$RUNNER_TEMP/goo-apt-archives"
-          sudo apt-get --print-uris --yes --no-install-recommends install $GOO_LINUX_APT_PACKAGES \
-            > "$RUNNER_TEMP/goo-apt-packages"
-          read -r key _ < <(sha256sum "$RUNNER_TEMP/goo-apt-packages")
-          echo "key=$key" >> "$GITHUB_OUTPUT"
-
-      - &linux-apt-cache
-        name: Restore Linux package archives
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: ${{ runner.temp }}/goo-apt-archives/*.deb
-          key: apt-linux-x64-${{ steps.linux-apt.outputs.key }}
-
-      - &linux-dependencies
-        name: Install Linux build and Wayland dependencies
-        run: |
-          sudo apt-get install -y --no-install-recommends \
-            -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
-            -o Dir::Cache::archives="$RUNNER_TEMP/goo-apt-archives" \
-            $GOO_LINUX_APT_PACKAGES
+      - *linux-apt-update
+      - *linux-apt-cache
+      - *linux-dependencies
       - name: Download release candidates
-        if: needs.changes.outputs.full == 'true'
+        if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-candidates
@@ -270,7 +615,7 @@ jobs:
 
   macos-native:
     needs: [changes, preflight]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true' || needs.changes.outputs.native-rebuild == 'true' || needs.changes.outputs.platform-host == 'true' || needs.changes.outputs.android-changed == 'true' || needs.changes.outputs.widgets-pin-changed == 'true'
     runs-on: macos-15
     timeout-minutes: 15
 
@@ -308,7 +653,7 @@ jobs:
 
   macos-arm64:
     needs: [changes, macos-native]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.platform-host == 'true'
     runs-on: macos-15
     timeout-minutes: 45
 
@@ -528,7 +873,7 @@ jobs:
   macos-checks:
     name: macos-${{ matrix.lane }}
     needs: [changes, macos-native]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.platform-host == 'true'
     runs-on: macos-15
     timeout-minutes: 25
     strategy:
@@ -634,111 +979,30 @@ jobs:
 
   linux-build:
     needs: [changes, preflight]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true' || needs.changes.outputs.native-rebuild == 'true' || needs.changes.outputs.platform-host == 'true' || needs.changes.outputs.android-changed == 'true' || needs.changes.outputs.widgets-pin-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        if: needs.changes.outputs.full == 'true'
 
       - *nuget-cache
       - uses: ./.github/actions/setup-goo-dotnet
-        if: needs.changes.outputs.full == 'true'
 
       - name: Load release version
-        if: needs.changes.outputs.full == 'true'
         run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
-
 
       - *linux-apt-update
       - *linux-apt-cache
       - *linux-dependencies
-
-      - &linux-vulkan-driver
-        if: needs.changes.outputs.full == 'true'
-        name: Pin Vulkan CPU driver
-        run: |
-          icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
-          test "${#icds[@]}" -eq 1
-          test -f "${icds[0]}"
-          echo "VK_DRIVER_FILES=${icds[0]}" >> "$GITHUB_ENV"
-
-      - name: Restore pinned Vulkan validation layer archive
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ runner.temp }}/goo-vulkan-validation-layer/vulkan-validationlayers_1.4.313.0~rc2-1lunarg24.04-1_amd64.deb
-          key: vulkan-validation-layer-linux-x64-${{ hashFiles('.github/scripts/install-vulkan-validation-layer-linux-x64.sh') }}
-
-      - name: Install pinned Vulkan validation layer
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          root="$RUNNER_TEMP/goo-vulkan-validation-layer"
-          .github/scripts/install-vulkan-validation-layer-linux-x64.sh "$root"
-          echo "VK_LAYER_PATH=$root/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" \
-            >> "$GITHUB_ENV"
-
-      - name: Restore pinned shader toolchain
-        id: shader-toolchain
-        if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ${{ runner.temp }}/goo-shader-toolchain/slang-2026.16
-            ${{ runner.temp }}/goo-shader-toolchain/vulkan-sdk-1.4.357.0
-          key: shader-toolchain-linux-x64-${{ hashFiles('.github/scripts/install-shader-toolchain-linux-x64.sh') }}
-
-      - name: Install pinned shader toolchain
-        if: needs.changes.outputs.full == 'true' && (steps.shader-toolchain.outputs.cache-hit != 'true')
-        run: .github/scripts/install-shader-toolchain-linux-x64.sh "$RUNNER_TEMP/goo-shader-toolchain"
-
-      - &linux-shader-toolchain
-        if: needs.changes.outputs.full == 'true'
-        name: Select pinned shader toolchain
-        run: |
-          root="$RUNNER_TEMP/goo-shader-toolchain"
-          test "$("$root/slang-2026.16/bin/slangc" -version 2>&1)" = "2026.16"
-          "$root/vulkan-sdk-1.4.357.0/bin/spirv-val" --version 2>&1 \
-            | grep -F "SPIRV-Tools v2026.3 vulkan-sdk-1.4.357.0"
-          echo "SLANG_SDK=$root/slang-2026.16" >> "$GITHUB_ENV"
-          echo "VULKAN_SDK=$root/vulkan-sdk-1.4.357.0" >> "$GITHUB_ENV"
-
-      - name: Restore glibc 2.27 native payloads
-        id: glibc-native
-        if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            artifacts/native/libSDL3.so
-            artifacts/native/libSDL3.a
-            artifacts/native/text
-          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/test_sdl_*.py', 'tests/NativeWindow/*_harness.c', 'tools/Goo.TextNative/**') }}
-
-      - name: Build glibc 2.27 native payloads
-        if: needs.changes.outputs.full == 'true' && (steps.glibc-native.outputs.cache-hit != 'true')
-        run: |
-          mkdir -p artifacts/native/text
-          docker run --rm \
-            -v "$PWD:/src:ro" \
-            -v "$PWD/artifacts/native:/out" \
-            ubuntu:18.04@sha256:dca176c9663a7ba4c1f0e710986f5a25e672842963d95b960191e2d9f7185ebe \
-            bash -lc '
-              set -euo pipefail
-              apt-get update
-              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-                binutils ca-certificates curl file g++-8 gcc-8 libdbus-1-dev \
-                libasound2-dev libpulse-dev \
-                libegl1-mesa-dev libexpat1-dev libffi-dev libfontconfig1-dev \
-                libibus-1.0-dev libwayland-dev libxkbcommon-dev libxml2-dev \
-                ninja-build patch pkg-config python3 python3-pip tar \
-                wayland-protocols xz-utils zlib1g-dev
-              update-ca-certificates
-              pip3 install --no-cache-dir meson==0.61.5
-              export CC=gcc-8 CXX=g++-8
-              /src/.github/scripts/build-sdl-linux-x64.sh /out/libSDL3.so /out/libSDL3.a
-              /src/.github/scripts/build-text-native-linux-x64.sh /out/text --static
-            '
+      - *linux-vulkan-driver
+      - *linux-vulkan-layer-cache
+      - *linux-vulkan-layer-install
+      - *linux-shader-toolchain-cache
+      - *linux-shader-toolchain-install
+      - *linux-shader-toolchain
+      - *linux-glibc-native-cache
+      - *linux-glibc-native-build
 
       - name: Compare rebuilt text payloads with the committed files
         if: needs.changes.outputs.full == 'true'
@@ -813,7 +1077,7 @@ jobs:
 
   linux-validation:
     needs: [changes, linux-build]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.native-rebuild == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -1017,7 +1281,7 @@ jobs:
 
   linux-test-build:
     needs: [changes, linux-build]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.native-rebuild == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -1048,7 +1312,7 @@ jobs:
 
   linux-packages:
     needs: [changes, linux-build, macos-native]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true' || needs.changes.outputs.platform-host == 'true' || needs.changes.outputs.android-changed == 'true' || needs.changes.outputs.widgets-pin-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -1330,7 +1594,7 @@ jobs:
 
   linux-x64:
     needs: [changes, linux-packages]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -1600,7 +1864,7 @@ jobs:
   linux-fixtures:
     name: linux-${{ matrix.lane }}
     needs: [changes, linux-test-build]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.native-rebuild == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -1673,315 +1937,16 @@ jobs:
           run_vulkan_proof_lane GOO_VK_TEXT_PAINT_READBACK
           run_vulkan_proof_lane GOO_VK_IMAGE_READBACK
 
-      - name: Run async readback checks
-        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
+      - name: Run async readback and GPU experiment checks
+        if: matrix.lane == 'async-readback'
         run: |
-          export SDL_VIDEODRIVER=wayland
-          export LIBGL_ALWAYS_SOFTWARE=1
-          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
-          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_LIQUID_GLASS_ALPHA_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_BACKDROP_BLUR_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SHADER_EFFECT_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SHADER_GENERATOR_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_FRAGMENT_CORRECTNESS_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_QUEUE_WAKE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_SVG_CORPUS_OUTPUT="$PWD/artifacts/reports/svg-corpus" \
-            GOO_SVG_CORPUS_BASELINE="$PWD/tests/Goo.AsyncReadbackSmoke/Assets/SvgCorpus" \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VECTOR_RETAIN_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            XDG_CACHE_HOME="$RUNNER_TEMP/non-scaling-stroke-cache" \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_NON_SCALING_STROKE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_SVG_MORPH_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PROFILER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PROFILER_SMOKE=1 GOO_PROFILE_START=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_ANIMATION_VISIBILITY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_EMBEDDED_HOST_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_WINDOW_ACTIVATION_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          (
-            reports="$PWD/artifacts/reports/native-popup"
-            mkdir -p "$reports"
-            dpkg-query -W -f '${binary:Package}\t${Version}\n' weston libweston-13-0 \
-              > "$reports/packages.txt"
-            command -v gdb >/dev/null || sudo apt-get install -y --no-install-recommends gdb
-            core_pattern="$(cat /proc/sys/kernel/core_pattern)"
-            trap 'status=$?; printf "%s\n" "$core_pattern" | sudo tee /proc/sys/kernel/core_pattern >/dev/null; exit "$status"' EXIT
-            printf '%s\n' "$reports/core.%e.%p" | sudo tee /proc/sys/kernel/core_pattern >/dev/null
-            ulimit -S -c 131072
-            status=0
-            .github/scripts/with-headless-wayland.sh env \
-              GOO_VK_DIAGNOSTICS=1 \
-              GOO_NATIVE_POPUP_SMOKE=1 \
-              WAYLAND_DEBUG=client \
-              bash -c 'ulimit -c 0; exec dotnet "$@"' bash \
-              tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
-              2> "$reports/client-protocol.log" || status=$?
-            if (( status != 0 )); then
-              cat "$reports/client-protocol.log"
-              for core in "$reports"/core.*; do
-                [[ -f "$core" ]] || continue
-                if [[ "$core" != "$reports"/core.weston.* ]]; then
-                  rm -f -- "$core"
-                  continue
-                fi
-                if DEBUGINFOD_URLS=https://debuginfod.ubuntu.com DEBUGINFOD_TIMEOUT=15 \
-                  timeout --kill-after=5s 120s gdb -q -nx -batch \
-                  -iex 'set debuginfod enabled on' \
-                  -ex 'set pagination off' -ex 'set backtrace limit 64' \
-                  -ex 'set print elements 64' -ex 'info sharedlibrary' \
-                  -ex 'thread apply all bt full' /usr/bin/weston "$core" \
-                  > "$reports/weston-backtrace.txt" 2>&1 \
-                  && grep -q '^#0 ' "$reports/weston-backtrace.txt" \
-                  && ! grep -q '??' "$reports/weston-backtrace.txt"; then
-                  rm -f -- "$core"
-                fi
-              done
-            fi
-            exit "$status"
-          )
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_WINDOW_DISPLAY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_TIMELINE_COMPLETION_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PRIMITIVE_METRICS_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PIPELINE_IDENTITY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_CLIP_CAPTURE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PARTIAL_REDRAW_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_RETAINED_FRAME_EQUALITY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_EDITOR_GUTTER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_GLYPH_UPLOAD_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SCROLLBAR_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SCROLL_PLACEMENT_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PORTAL_CAPTURE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_KEYED_ORDER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PIXEL_EDGE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_BORDER_SNAP_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PATH_ATLAS_GROWTH_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_HIDE_RESOURCES_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_HIDDEN_DEVICE_RECOVERY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_LAYER_WINDOW_CLOSE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PENDING_DEVICE_RECOVERY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_ZERO_EXTENT_DEVICE_RECOVERY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_IMAGE_STAGING_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_IMAGE_RELEASE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_IMAGE_BUDGET_PRESSURE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_TRANSPARENT_WINDOW_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_ORDERED_MODIFIER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PREVENTED_KEY_REPEAT_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env GOO_VK_DIAGNOSTICS=1 \
-            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-      - name: Verify local PNG pixels in Vulkan
-        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
-        run: |
-          set -o pipefail
-          .github/scripts/with-headless-wayland.sh env \
-            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
-            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
-            GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
-            2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
-          grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
-
-      - name: Verify Vulkan GPU experiment pixels
-        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
-        run: |
-          export SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1
-          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
-          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          export XDG_CONFIG_HOME="$RUNNER_TEMP/gpu-experiments/config"
-          export XDG_CACHE_HOME="$RUNNER_TEMP/gpu-experiments/cache"
-          export XDG_DATA_HOME="$RUNNER_TEMP/gpu-experiments/data"
-          trap 'rm -rf "$RUNNER_TEMP/gpu-experiments"' EXIT
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 GOO_GPU_EXPERIMENT_SMOKE=1 \
-            GOO_VK_GPU_EXPERIMENT=no-text GOO_GPU_EXPERIMENT_EXPECTED=none \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
           dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
             -c Release -p:GooGpuExperiments=true -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-          for mode in none full-redraw no-text no-shadows no-images no-layers \
-            no-clip-sampling clip-clear-only clip-regenerate no-gpu-timestamps
-          do
-            .github/scripts/with-headless-wayland.sh env \
-              GOO_VK_DIAGNOSTICS=1 GOO_GPU_EXPERIMENT_SMOKE=1 \
-              GOO_VK_GPU_EXPERIMENT="$mode" GOO_GPU_EXPERIMENT_EXPECTED="$mode" \
-              dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-          done
-          mkdir -p "$RUNNER_TEMP/gpu-experiments"
-          printf 'no-text\n' > "$RUNNER_TEMP/gpu-experiments/selection"
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 GOO_GPU_EXPERIMENT_SMOKE=1 \
-            GOO_VK_GPU_EXPERIMENT=no-shadows GOO_GPU_EXPERIMENT_EXPECTED=no-text \
-            GOO_VK_GPU_EXPERIMENT_FILE="$RUNNER_TEMP/gpu-experiments/selection" \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o "$RUNNER_TEMP/gpu-experiments-bin"
+          .github/scripts/run-linux-readback-smokes.sh \
+            --dll tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
+            --experiments-dll "$RUNNER_TEMP/gpu-experiments-bin/Goo.AsyncReadbackSmoke.dll"
 
       - name: Run focused core behavior tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')
@@ -2021,7 +1986,7 @@ jobs:
 
   windows-native:
     needs: [changes, preflight]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.native-rebuild == 'true' || needs.changes.outputs.platform-host == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -2061,7 +2026,7 @@ jobs:
 
   windows-x64:
     needs: [changes, linux-packages]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.platform-host == 'true'
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
@@ -2477,7 +2442,7 @@ jobs:
 
   android:
     needs: [changes, preflight]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -2650,7 +2615,7 @@ jobs:
 
   android-native-menus:
     needs: [changes, android]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -2659,6 +2624,34 @@ jobs:
         with:
           name: android-smoke
           path: artifacts/android-native-menu-app
+      - &android-emulator-cache
+        name: Restore cached Android emulator and system image
+        id: android-emulator-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ runner.temp }}/android-emulator-cache
+          key: android-emulator-36-16428233-r07
+      - &android-emulator-prepare
+        name: Prepare Android emulator and system image
+        run: |
+          cache_root="$RUNNER_TEMP/android-emulator-cache"
+          if [[ ! -x "$cache_root/runtime/emulator/emulator" || ! -f "$cache_root/image/x86_64/system.img" ]]; then
+            mkdir -p "$cache_root/runtime" "$cache_root/image"
+            curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
+              https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip \
+              -o "$RUNNER_TEMP/emulator.zip"
+            printf '%s  %s\n' cd7362ea55dfb86a418958138dc396e74165dd01 "$RUNNER_TEMP/emulator.zip" | sha1sum -c -
+            unzip -q "$RUNNER_TEMP/emulator.zip" -d "$cache_root/runtime"
+            rm -f "$RUNNER_TEMP/emulator.zip"
+            curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
+              https://dl.google.com/android/repository/sys-img/google_apis/x86_64-36_r07.zip \
+              -o "$RUNNER_TEMP/image.zip"
+            printf '%s  %s\n' c6bf44bdcd885bb902b4ba752d111a073ad7a817 "$RUNNER_TEMP/image.zip" | sha1sum -c -
+            unzip -q "$RUNNER_TEMP/image.zip" -d "$cache_root/image"
+            rm -f "$RUNNER_TEMP/image.zip"
+          fi
+          echo "GOO_EMULATOR_DIRECTORY=$cache_root/runtime/emulator" >> "$GITHUB_ENV"
+          echo "GOO_ANDROID_IMAGE_DIRECTORY=$cache_root/image/x86_64" >> "$GITHUB_ENV"
       - name: Enable Android hardware virtualization
         run: sudo chmod 666 /dev/kvm
       - name: Check native Android context menus and detached pages
@@ -2674,7 +2667,7 @@ jobs:
 
   android-accessibility:
     needs: [changes, android]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -2683,6 +2676,8 @@ jobs:
         with:
           name: android-smoke
           path: artifacts/android-smoke
+      - *android-emulator-cache
+      - *android-emulator-prepare
       - name: Enable KVM
         run: sudo chmod a+rw /dev/kvm
       - name: Check native accessibility through UiAutomation
@@ -2695,7 +2690,7 @@ jobs:
 
   android-consumer:
     needs: [changes, linux-packages, android]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -2805,7 +2800,7 @@ jobs:
 
   android-nativeaot-accessibility:
     needs: [changes, android-consumer]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -2814,6 +2809,8 @@ jobs:
         with:
           name: android-nativeaot-consumer
           path: artifacts/android-nativeaot-consumer
+      - *android-emulator-cache
+      - *android-emulator-prepare
       - name: Enable KVM
         run: sudo chmod a+rw /dev/kvm
       - name: Check NativeAOT accessibility through UiAutomation
@@ -2826,7 +2823,7 @@ jobs:
 
   verify:
     if: always()
-    needs: [changes, preflight, quality, plugin, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, widgets-focus, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
+    needs: [changes, preflight, linux-unit, linux-render, compile-windows, compile-macos, compile-android, quality, plugin, macos-native, macos-arm64, macos-checks, linux-build, linux-validation, linux-test-build, linux-packages, widgets-focus, linux-x64, linux-fixtures, windows-native, windows-x64, android, android-native-menus, android-accessibility, android-consumer, android-nativeaot-accessibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
