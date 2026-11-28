@@ -106,7 +106,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     return result
   }
 
-  internal func MarkAcquired(acquireResult VkResult, semaphoreSignaled bool = true) VkResult {
+  internal func MarkAcquired(acquireResult VkResult) VkResult {
     if disposed {
       throw ObjectDisposedException("VulkanFrameSlot")
     }
@@ -119,7 +119,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     acquirePrepared = false
     if acquireResult == VkConstants.VK_SUCCESS || acquireResult == VkConstants.VK_SUBOPTIMAL_KHR {
       acquired = true
-      acquireWaitPending = semaphoreSignaled
+      acquireWaitPending = true
     }
     return acquireResult
   }

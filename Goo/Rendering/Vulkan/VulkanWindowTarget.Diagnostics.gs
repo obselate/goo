@@ -979,6 +979,7 @@ internal unsafe partial class VulkanWindowTarget {
         if let renderer = primitiveRenderer {
           current.SetTextFrameStats(renderer.TextFrameStats)
         }
+        current.SetTextCacheStats(TextLayouts.CacheStats(), TextShaping.RunShapeCacheStats())
         current.SetCacheBytes(cacheBytes)
         current.CaptureResourceFacts(
           heapBudgetAvailable, heapBudgetSampleCurrent, heapBudget, driverHeapUsage, heapAllocated,

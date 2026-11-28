@@ -56,6 +56,16 @@ internal func hb_font_set_scale(font nint, xScale int32, yScale int32) void;
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_nominal_glyph", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_get_nominal_glyph(font nint, codepoint uint32, ref glyph uint32) uint32;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_nominal_glyphs", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_get_nominal_glyphs(font nint, count uint32, firstUnicode nint,
+  unicodeStride uint32, firstGlyph nint, glyphStride uint32) uint32;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_create_sub_font", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_create_sub_font(parentFont nint) nint;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_make_immutable", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_make_immutable(font nint) void;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_font_get_glyph_extents", CallingConvention: CallingConvention.Cdecl)
 internal func hb_font_get_glyph_extents(font nint, glyph uint32, ref extents VulkanTextGlyphExtents) uint32;
 
@@ -69,6 +79,9 @@ internal func hb_font_set_variations(font nint, variations nint, variationCount 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_font_set_funcs", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_font_set_funcs(font nint) void;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_font_set_ppem", CallingConvention: CallingConvention.Cdecl)
+internal func hb_font_set_ppem(font nint, xPpem uint32, yPpem uint32) void;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_paint", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_has_paint(face nint) uint32;
 
@@ -78,6 +91,16 @@ internal func hb_ot_color_has_layers(face nint) uint32;
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_png", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_has_png(face nint) uint32;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_svg", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_has_svg(face nint) uint32;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_has_palettes", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_has_palettes(face nint) uint32;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_palette_get_colors", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_palette_get_colors(face nint, paletteIndex uint32, startOffset uint32,
+  ref colorCount uint32, colors nint) uint32;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_glyph_get_layers", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_glyph_get_layers(face nint, glyph uint32, startOffset uint32,
   ref layerCount uint32, layers nint) uint32;
@@ -85,11 +108,23 @@ internal func hb_ot_color_glyph_get_layers(face nint, glyph uint32, startOffset 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_glyph_has_paint", CallingConvention: CallingConvention.Cdecl)
 internal func hb_ot_color_glyph_has_paint(face nint, glyph uint32) uint32;
 
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_glyph_reference_png", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_glyph_reference_png(font nint, glyph uint32) nint;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_ot_color_glyph_reference_svg", CallingConvention: CallingConvention.Cdecl)
+internal func hb_ot_color_glyph_reference_svg(face nint, glyph uint32) nint;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_blob_get_length", CallingConvention: CallingConvention.Cdecl)
+internal func hb_blob_get_length(blob nint) uint32;
+
 @DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_create", CallingConvention: CallingConvention.Cdecl)
 internal func hb_buffer_create() nint;
 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_destroy", CallingConvention: CallingConvention.Cdecl)
 internal func hb_buffer_destroy(buffer nint) void;
+
+@DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_clear_contents", CallingConvention: CallingConvention.Cdecl)
+internal func hb_buffer_clear_contents(buffer nint) void;
 
 @DllImport("goo-harfbuzz", EntryPoint: "hb_buffer_add_utf16", CallingConvention: CallingConvention.Cdecl)
 internal func hb_buffer_add_utf16(buffer nint, text nint, textLength int32, itemOffset uint32, itemLength int32) void;
@@ -244,9 +279,10 @@ internal data struct VulkanTextProviderResult {
 internal sealed class VulkanTextProviderWorkspace {
   shared {
     const MaxByteCapacity int32 = 268435456
+    internal const MaxGrowableByteCapacity int32 = 16777216
   }
 
-  private let byteBuffer []uint8
+  private var byteBuffer []uint8
   private var byteCount int32
   private var requiredByteCount int32
   private var glyphExtents VulkanTextGlyphExtents
@@ -265,6 +301,34 @@ internal sealed class VulkanTextProviderWorkspace {
     }
     byteBuffer = bytes
     Reset()
+  }
+
+  internal func EnsureByteCapacity(required int32) bool {
+    if required < 0 {
+      return false
+    }
+    if required <= byteBuffer.Length {
+      return true
+    }
+    if required > MaxGrowableByteCapacity {
+      return false
+    }
+    var capacity = byteBuffer.Length
+    if capacity < 4096 {
+      capacity = 4096
+    }
+    while capacity < required && capacity < MaxGrowableByteCapacity {
+      if capacity > MaxGrowableByteCapacity / 2 {
+        capacity = MaxGrowableByteCapacity
+      } else {
+        capacity = capacity * 2
+      }
+    }
+    if capacity < required {
+      capacity = required
+    }
+    byteBuffer = [capacity]uint8
+    return true
   }
 
   internal func Reset() {
@@ -325,14 +389,24 @@ internal interface VulkanTextProvider {
   prop OutlineHintingAvailable bool { get; }
   func ShapeInto(text string, options VulkanTextShapingOptions,
     workspace VulkanTextShapingWorkspace) VulkanTextProviderResult;
+  func ShapeInto(text string, itemOffset int32, itemLength int32,
+    options VulkanTextShapingOptions, workspace VulkanTextShapingWorkspace) VulkanTextProviderResult;
+  func TryGetNominalGlyph(codepoint uint32, out glyphId uint32) bool;
   func EncodeGlyphInto(glyphId uint32,
     workspace VulkanTextProviderWorkspace, ppem int32) VulkanTextProviderResult;
   func EncodePaintGlyphInto(glyphId uint32, paletteIndex uint32,
     workspace VulkanTextProviderWorkspace) VulkanTextProviderResult;
   func HasColorPaint() bool;
   func HasColorLayers() bool;
+  func HasColorBitmaps() bool;
+  func HasColorSvg() bool;
   func GlyphHasColorPaint(glyphId uint32) bool;
   func GlyphHasColorLayers(glyphId uint32) bool;
+  func TryDecodeColorBitmapGlyph(glyphId uint32, ppem int32,
+    out width int32, out height int32, out rgba([]uint8)?,
+    out extents VulkanTextGlyphExtents, out scale int32) bool;
+  func TryGetColorSvgGlyph(glyphId uint32, out svgBytes([]uint8)?,
+    out extents VulkanTextGlyphExtents, out scale int32) bool;
 }
 
 internal data struct VulkanTextVariation {
@@ -363,4 +437,5 @@ internal data struct VulkanTextGlyph {
   var YAdvance int32
   var XOffset int32
   var YOffset int32
+  var Flags uint32
 }

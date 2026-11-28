@@ -11,8 +11,35 @@ internal class UnicodeGraphemes {
   shared {
     internal func Starts(text string) []int32 {
       if text == nil { throw ArgumentNullException("text") }
-      let scalars = List[UnicodeGraphemeScalar](text.Length)
-      let starts = List[int32](text.Length)
+      let len = text.Length
+      if len == 0 { return []int32{} }
+      if Ascii.IsValid(text.AsSpan()) {
+        var crLfCount int32 = 0
+        var prevCr = false
+        for i in 0 ... len {
+          let ch = text[i]
+          if prevCr && ch == '\n' { crLfCount++ }
+          prevCr = ch == '\r'
+        }
+        let result = [len - crLfCount]int32
+        if crLfCount == 0 {
+          for i in 0 ... len { result[i] = i }
+          return result
+        }
+        var write int32 = 0
+        prevCr = false
+        for i in 0 ... len {
+          let ch = text[i]
+          if !(prevCr && ch == '\n') {
+            result[write] = i
+            write++
+          }
+          prevCr = ch == '\r'
+        }
+        return result
+      }
+      let scalars = List[UnicodeGraphemeScalar](len)
+      let starts = List[int32](len)
       return Starts(text, scalars, starts).ToArray()
     }
 
@@ -21,8 +48,21 @@ internal class UnicodeGraphemes {
         if text == nil { throw ArgumentNullException("text") }
         scalars.Clear()
         starts.Clear()
-        if scalars.Capacity < text.Length { scalars.Capacity = text.Length }
-        if starts.Capacity < text.Length { starts.Capacity = text.Length }
+        let len = text.Length
+        if len == 0 { return starts }
+        if starts.Capacity < len { starts.Capacity = len }
+        if Ascii.IsValid(text.AsSpan()) {
+          var prevCr = false
+          for i in 0 ... len {
+            let ch = text[i]
+            if !(prevCr && ch == '\n') {
+              starts.Add(i)
+            }
+            prevCr = ch == '\r'
+          }
+          return starts
+        }
+        if scalars.Capacity < len { scalars.Capacity = len }
         DecodeScalars(text, scalars)
         if scalars.Count == 0 { return starts }
         starts.Add(0)

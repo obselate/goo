@@ -934,42 +934,21 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           || run.InstanceCount <= 0
           || run.InstanceCount > segment.RecordCount - expectedFirst
           || run.PipelineKind > 1u
-          || !run.AtlasId.IsValid || run.AtlasId.Kind != SceneResourceKind.Atlas{
+          || !run.AtlasId.IsValid || run.AtlasId.Kind != SceneResourceKind.Atlas {
             throw ArgumentException("cached text segment run is invalid")
           }
         let atlas = atlases.Resolve(run.AtlasId)
-        let runEnd = run.FirstInstance + run.InstanceCount
-        var glyphIndex = run.FirstInstance
-        while glyphIndex < runEnd {
-          let glyphResource = segment.GlyphResources[glyphIndex]
-          if !glyphResource.IsValid || glyphResource.Kind != SceneResourceKind.GlyphRun
-            || glyphResource.LogicalId != run.AtlasId.LogicalId
-            || glyphResource.Version == 0uL {
-              throw ArgumentException("cached text segment glyph resource is invalid")
-            }
-          let record = segment.Records[glyphIndex]
-          if record.glyphInput_z != uint32(segment.ClipChainId)
-            || record.glyphInput_y > 3u {
-              throw ArgumentException("cached text segment instance mirror is invalid")
-            }
-          let texelOffset = if record.glyphInput_y == 0u {
-            segment.GlyphAtlasTexelOffsets[glyphIndex]
-          } else {
-            segment.GlyphEffectAtlasTexelOffsets[glyphIndex]
+        let atlasByteSize = uint64(atlas.TexelCount) * 8uL
+        if run.ByteRangeEnd == 0uL || (run.ByteRangeEnd & 7uL) != 0uL
+          || run.ByteRangeEnd > atlasByteSize {
+            throw ArgumentOutOfRangeException("cached text atlas range")
           }
-          let texelCount = if record.glyphInput_y == 0u {
-            segment.GlyphAtlasTexelCounts[glyphIndex]
-          } else {
-            segment.GlyphEffectAtlasTexelCounts[glyphIndex]
+        let sample = segment.Records[run.FirstInstance]
+        if sample.glyphInput_z != uint32(segment.ClipChainId)
+          || sample.glyphInput_y > 3u {
+            throw ArgumentException("cached text segment instance mirror is invalid")
           }
-          let texelTotal = uint64(atlas.TexelCount)
-          if texelCount == 0u || uint64(texelOffset) >= texelTotal
-            || uint64(texelCount) > texelTotal - uint64(texelOffset) {
-              throw ArgumentOutOfRangeException("cached text atlas range")
-            }
-          glyphIndex = glyphIndex + 1
-        }
-        expectedFirst = runEnd
+        expectedFirst = run.FirstInstance + run.InstanceCount
         runIndex = runIndex + 1
       }
       if expectedFirst != segment.RecordCount {

@@ -133,6 +133,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
 
   private func DestroyImage(index int32, entry VulkanImageResourceEntry) {
+    if entry.AtlasOwned {
+      return
+    }
     if let frame = entry.External {
       externalSlots?.Remove(index)
       frame.Release()

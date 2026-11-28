@@ -12,7 +12,6 @@ internal unsafe partial class VulkanSwapchainGeneration {
     if let storage = staleImageSet {
       try { storage.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
     }
-    try { Composition?.Dispose() } catch (cleanup Exception) { }
     if swapchain != 0uL {
       let staleSwapchain = swapchain
       swapchain = 0uL

@@ -33,6 +33,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private let pathResources VulkanPathResources
   private let clipMaskAtlas VulkanClipMaskAtlas
   private let textAtlases VulkanTextAtlasSet?
+  private let colorGlyphAtlas VulkanColorGlyphAtlas?
   private let resourceGeneration uint64
   private let maxStorageBufferRange VkDeviceSize
   private let resourcePolicy VulkanResourcePolicy
@@ -152,7 +153,8 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     nativeDiagnostics VulkanDiagnostics?,
     nativeTimestampState VulkanDiagnosticTimestampState?,
     nativeQueueMailbox VulkanQueueMailbox,
-    nativeSharedLease VulkanSharedLease) {
+    nativeSharedLease VulkanSharedLease,
+    nativeColorGlyphAtlas VulkanColorGlyphAtlas? = nil) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -235,6 +237,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       pathResources = nativePathResources
       clipMaskAtlas = nativeClipMaskAtlas
       textAtlases = nativeTextAtlases
+      colorGlyphAtlas = nativeColorGlyphAtlas
       resourceGeneration = expectedGeneration
       maxStorageBufferRange = nativeMaxStorageBufferRange
       resourcePolicy = nativeResourcePolicy
@@ -481,6 +484,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
           imageResources.RecordUploads(commandBuffer, resourceGeneration, out var imageBytes, out var imageBarriers)
           pathResources.RecordUpload(commandBuffer)
           textAtlases?.RecordUploads(commandBuffer, out var textBytes, out var textBarriers)
+          colorGlyphAtlas?.RecordUploads(commandBuffer)
         }
         renderer.RecordPrimitiveFrameUpload(commandBuffer)
         renderer.RecordClipMasks(commandBuffer, extent)
@@ -562,6 +566,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if let atlases = textAtlases {
         let textFlush = atlases.FlushBeforeSubmit()
         if textFlush != VkConstants.VK_SUCCESS { return textFlush }
+      }
+      if let colorAtlas = colorGlyphAtlas {
+        let colorFlush = colorAtlas.FlushBeforeSubmit()
+        if colorFlush != VkConstants.VK_SUCCESS { return colorFlush }
       }
     }
     queueMailbox.PrepareSubmit(commandBuffer, 0uL, 0uL)
@@ -758,6 +766,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if let atlases = textAtlases {
       atlases.Collect(completed)
     }
+    colorGlyphAtlas?.Collect(completed)
     pathResources.Collect(completed)
     state = VulkanOffscreenState.Complete
     if let currentDiagnostics = diagnostics {
@@ -796,6 +805,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if !includeResourceUploads { return }
     imageResources.MarkSubmitted(commandBuffer, serial, resourceGeneration)
     textAtlases?.MarkSubmitted(commandBuffer, serial)
+    colorGlyphAtlas?.MarkSubmitted(commandBuffer, serial)
     pathResources.MarkSubmitted(commandBuffer, serial)
   }
 
@@ -803,6 +813,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if !includeResourceUploads { return }
     imageResources.AbortUploads(commandBuffer, resourceGeneration)
     textAtlases?.AbortUploads()
+    colorGlyphAtlas?.AbortUploads()
     pathResources.AbortUpload()
   }
 
@@ -1229,6 +1240,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     }
     if let atlases = textAtlases {
       atlases.MarkSubmitted(commandBuffer, submissionSerial)
+      colorGlyphAtlas?.MarkSubmitted(commandBuffer, submissionSerial)
       var textAtlasIndex int32 = 0
       while textAtlasIndex < reservedTextAtlasIdCount {
         let atlasId = textAtlasIds[textAtlasIndex]

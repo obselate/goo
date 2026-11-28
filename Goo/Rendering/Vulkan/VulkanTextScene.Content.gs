@@ -40,9 +40,7 @@ internal unsafe sealed partial class VulkanTextScene {
         var lineIndex int32 = 0
         while lineIndex < rich.Lines.Count {
           let line = rich.Lines[lineIndex]
-          let rtl = if let shape = layout.Lines[lineIndex].Shape {
-            shape.RightToLeft
-          } else { false }
+          let rtl = layout.Lines[lineIndex].RightToLeft
           let lineX = contentX + TextLayouts.lineOffset(node, line.Width, rtl, contentWidth)
           let natural = line.Descent - line.Ascent
           let baseline = lineY + (line.Height - natural) * 0.5F - line.Ascent

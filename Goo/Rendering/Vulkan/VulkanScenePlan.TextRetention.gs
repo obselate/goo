@@ -13,12 +13,6 @@ internal class VulkanRetainedTextValidation {
       && value.GlyphCount == segment.GlyphCount
       && segment.RecordCount == segment.GlyphCount
       && segment.RecordCount <= segment.Records.Length
-      && segment.GlyphResourceCount == segment.GlyphCount
-      && segment.GlyphResourceCount <= segment.GlyphResources.Length
-      && segment.GlyphCount <= segment.GlyphAtlasTexelOffsets.Length
-      && segment.GlyphCount <= segment.GlyphAtlasTexelCounts.Length
-      && segment.GlyphCount <= segment.GlyphEffectAtlasTexelOffsets.Length
-      && segment.GlyphCount <= segment.GlyphEffectAtlasTexelCounts.Length
       && segment.RunCount > 0
       && segment.RunCount <= segment.Runs.Length
 
@@ -81,15 +75,11 @@ internal partial class SceneFrame {
         if !ValidRetainedTextSegment(value, segment) {
           return false
         }
-        if segment.GlyphCount > Int32.MaxValue - segment.RunCount {
-          return false
-        }
-        let segmentResourceCount = segment.GlyphCount + segment.RunCount
         if expectedResources > snapshot.ResourceCount
-          || segmentResourceCount > snapshot.ResourceCount - expectedResources{
+          || segment.RunCount > snapshot.ResourceCount - expectedResources{
             return false
           }
-        expectedResources = expectedResources + segmentResourceCount
+        expectedResources = expectedResources + segment.RunCount
         index = index + 1
       }
       if expectedResources != snapshot.ResourceCount {
@@ -126,12 +116,7 @@ internal partial class SceneFrame {
       RequireOpenChunk()
       ExtendChunkTextBounds(value.Bounds)
       Grow[CachedTextSegmentRefRecord](&cachedTextSegments, cachedTextSegmentCount, NextCount(cachedTextSegmentCount))
-      Grow[ResourceId](&resourceRefs, resourceRefCount, resourceRefCount + segment.GlyphCount + segment.RunCount)
-      var glyphIndex int32 = 0
-      while glyphIndex < segment.GlyphCount {
-        AddResourceReference(segment.GlyphResources[glyphIndex])
-        glyphIndex = glyphIndex + 1
-      }
+      Grow[ResourceId](&resourceRefs, resourceRefCount, resourceRefCount + segment.RunCount)
       var runIndex int32 = 0
       while runIndex < segment.RunCount {
         AddResourceReference(segment.Runs[runIndex].AtlasId)

@@ -241,17 +241,17 @@
     <Error Condition="'$(GooLinuxSdlPath)' == '' or !Exists('$(GooLinuxSdlPath)')"
            Text="Packing Goo requires -p:GooLinuxSdlPath=/absolute/path/to/a glibc-2.27-compatible libSDL3.so." />
   </Target>
-  <Target Name="ValidateGooLinuxStaticPackageAssets" BeforeTargets="Pack">
+  <Target Name="ValidateGooLinuxStaticPackageAssets" BeforeTargets="Pack" Condition="'$(GooPackLinuxRuntimeOnly)' != 'true'">
     <Error Condition="'$(GooLinuxSdlStaticPath)' == '' or !Exists('$(GooLinuxSdlStaticPath)')"
            Text="Packing Goo requires -p:GooLinuxSdlStaticPath=/absolute/path/to/libSDL3.a." />
     <Error Condition="'$(GooLinuxTextStaticRoot)' == '' or !Exists('$(GooLinuxTextStaticRoot)/libgoo-harfbuzz.a') or !Exists('$(GooLinuxTextStaticRoot)/libgoo-harfbuzz-gpu.a')"
            Text="Packing Goo requires the pinned Linux static HarfBuzz archives." />
   </Target>
-  <Target Name="ValidateGooWindowsSdlPackageAsset" BeforeTargets="Pack">
+  <Target Name="ValidateGooWindowsSdlPackageAsset" BeforeTargets="Pack" Condition="'$(GooPackLinuxRuntimeOnly)' != 'true'">
     <Error Condition="'$(GooWindowsSdlPath)' == '' or !Exists('$(GooWindowsSdlPath)')"
            Text="Packing Goo requires -p:GooWindowsSdlPath=/absolute/path/to/SDL3.dll from the pinned SDL release." />
   </Target>
-  <Target Name="ValidateGooMacOsArm64PackageAssets" BeforeTargets="Pack">
+  <Target Name="ValidateGooMacOsArm64PackageAssets" BeforeTargets="Pack" Condition="'$(GooPackLinuxRuntimeOnly)' != 'true'">
     <Error Condition="'$(GooMacOsArm64NativeRoot)' == ''"
            Text="Packing Goo requires -p:GooMacOsArm64NativeRoot=/absolute/path/to/the pinned osx-arm64 native payloads." />
     <Error Condition="'$(GooMacOsArm64NativeRoot)' != '' and !Exists('$(GooMacOsArm64NativeRoot)/libSDL3.dylib')"

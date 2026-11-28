@@ -53,6 +53,14 @@ internal unsafe partial class VulkanWindowTarget {
           return
         }
       }
+      if let colorAtlas = colorGlyphAtlas {
+        let flushResult = colorAtlas.FlushBeforeSubmit()
+        RecordDiagnosticResult(VulkanDiagnosticEventIds.UploadStage, flushResult)
+        if flushResult != VkConstants.VK_SUCCESS {
+          HandleFrameFailure(flushResult, VulkanDiagnosticEventIds.UploadStage)
+          return
+        }
+      }
       if let resources = imageResources {
         let flushResult = resources.FlushBeforeSubmit()
         RecordDiagnosticResult(VulkanDiagnosticEventIds.UploadStage, flushResult)
@@ -89,9 +97,8 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       mailbox.PrepareSubmit(slot.CommandBuffer, slot.SubmitWaitSemaphore,
-        if initialImageUploadFrame || current.Composition != nil { 0uL } else { current.RenderSemaphore(activeImageIndex) })
+        if initialImageUploadFrame { 0uL } else { current.RenderSemaphore(activeImageIndex) })
       imageResources?.AppendExternalWaits(mailbox, slot.CommandBuffer)
-      if !initialImageUploadFrame { current.Composition?.PrepareSubmit(mailbox) }
       if !mailbox.BeginSubmit() {
         throw InvalidOperationException("Vulkan queue mailbox rejected graphics submission")
       }
@@ -313,6 +320,7 @@ internal unsafe partial class VulkanWindowTarget {
       RecordDiagnosticSubmit(pendingSubmitStart)
       if let atlas = textAtlas {
         atlas.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
+        colorGlyphAtlas?.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
         var segmentIndex int32 = 0
         while !initialImageUploadFrame && segmentIndex < sceneCompiler.Frame.CachedTextSegmentCount {
           let reference = sceneCompiler.Frame.CachedTextSegments[segmentIndex]
@@ -377,6 +385,7 @@ internal unsafe partial class VulkanWindowTarget {
     ResolveDiagnosticTimestamp(slot, activeFrameSlotIndex)
     imageResources?.Collect(completedGraphicsSubmissionSerial)
     textAtlas?.Collect(completedGraphicsSubmissionSerial)
+    colorGlyphAtlas?.Collect(completedGraphicsSubmissionSerial)
     textScene?.PublishCompletedUploads()
     pathScene?.Collect(completedGraphicsSubmissionSerial)
     frameRendered = false
@@ -493,8 +502,6 @@ internal unsafe partial class VulkanWindowTarget {
       }
       mailbox.PreparePresent(current.Handle, activeImageIndex,
         current.RenderSemaphore(activeImageIndex), pendingPresentFence, current.PresentFenceEnabled)
-      mailbox.PresentComposition = current.Composition
-      mailbox.PresentCompositionValue = mailbox.SubmitSignalValue
       native?.PrepareLockPresent()
     } catch (error Exception) {
       frameFailed = true

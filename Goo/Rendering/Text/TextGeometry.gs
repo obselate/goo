@@ -343,17 +343,17 @@ internal class TextGeometry {
 
 }
 
+internal sealed class TextHitPositionComparer : IComparer[TextHitPosition] {
+  shared {
+    internal let Instance TextHitPositionComparer = TextHitPositionComparer()
+  }
+
+  public func Compare(left TextHitPosition, right TextHitPosition) int32 -> comparePositions(left, right)
+}
+
 internal func sortPositions(values []TextHitPosition) {
-  var i int32 = 1
-  while i < values.Length {
-    let value = values[i]
-    var j = i
-    while j > 0 && comparePositions(values[j - 1], value) > 0 {
-      values[j] = values[j - 1]
-      j--
-    }
-    values[j] = value
-    i++
+  if values.Length > 1 {
+    Array.Sort[TextHitPosition](values, TextHitPositionComparer.Instance)
   }
 }
 

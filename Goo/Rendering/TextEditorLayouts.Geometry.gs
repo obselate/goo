@@ -309,7 +309,7 @@ internal partial class TextEditorLayouts {
           let selectedStart = segment.DisplayStart > start ? segment.DisplayStart : start
           let selectedEnd = segmentEnd < end ? segmentEnd : end
           if selectedEnd <= selectedStart { continue }
-          var natural = shape.CaretX(selectedEnd - start, int32(TextAffinity.Downstream))
+          var natural = shape.CaretX(selectedEnd - start, int32(TextAffinity.Upstream))
           -shape.CaretX(selectedStart - start, int32(TextAffinity.Downstream))
           if natural < 0.0F { natural = -natural }
           var actual = natural

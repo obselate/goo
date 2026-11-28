@@ -25,7 +25,8 @@ internal unsafe sealed partial class VulkanTextScene {
         || segment.ClipChainId != frame.ActiveClipChainId
         || segment.Color != color
         || segment.EffectMode != effectMode
-        || segment.Unfitted{
+        || segment.Unfitted
+        || segment.HasExternalColorGlyphs{
           return false
         }
       return SameTextFloat(segment.FontSize, fontSize)
@@ -104,36 +105,139 @@ internal unsafe sealed partial class VulkanTextScene {
   }
 
   internal func ForgetOwner(owner VulkanSceneOwnerId) {
-    nodeSegments.Remove(owner)
-    gutterSegments.Remove(owner)
+    if nodeSegments.TryGetValue(owner, out var cachedNode) {
+      nodeSegments.Remove(owner)
+      RecycleSegmentCache(cachedNode)
+    }
+    if gutterSegments.TryGetValue(owner, out var cachedGutter) {
+      gutterSegments.Remove(owner)
+      RecycleSegmentCache(cachedGutter)
+    }
   }
 
-  private func BeginSegment(frame SceneFrame, glyphCount int32) VulkanRetainedTextSegment {
+  private func SegmentBucketIndex(capacity int32) int32 {
+    var size int32 = 4
+    var bucket int32 = 0
+    while size < capacity && bucket < TextSegmentPoolBucketCount - 1 {
+      size = size * 2
+      bucket = bucket + 1
+    }
+    return bucket
+  }
+
+  private func BucketCapacity(bucket int32) int32 -> 4 << bucket
+
+  private func ReturnSegmentToPool(segment VulkanRetainedTextSegment) {
+    let capacity = segment.Records.Length
+    segment.ResetForReuse()
+    if pooledSegmentCount >= MaxPooledTextSegments || capacity > MaxPooledSegmentCapacity {
+      return
+    }
+    var bucket = SegmentBucketIndex(capacity)
+    if capacity < BucketCapacity(bucket) {
+      if bucket == 0 { return }
+      bucket = bucket - 1
+    }
+    var list = segmentPool[bucket]
+    if list == nil {
+      let created = List[VulkanRetainedTextSegment](8)
+      segmentPool[bucket] = created
+      created.Add(segment)
+    } else {
+      list.Add(segment)
+    }
+    pooledSegmentCount = pooledSegmentCount + 1
+  }
+
+  private func AcquireSegmentFromPoolOrNew(capacity int32) VulkanRetainedTextSegment {
+    let resolved = capacity <= 0 ? 1 : capacity
+    if resolved <= MaxPooledSegmentCapacity {
+      let bucket = SegmentBucketIndex(resolved)
+      let maxSearch = Math.Min(bucket + 2, TextSegmentPoolBucketCount - 1)
+      var probe = bucket
+      while probe <= maxSearch {
+        if let list = segmentPool[probe] {
+          if list.Count > 0 {
+            let last = list.Count - 1
+            let reused = list[last]
+            list.RemoveAt(last)
+            pooledSegmentCount = pooledSegmentCount - 1
+            reused.EnsureRecordCapacity(resolved)
+            return reused
+          }
+        }
+        probe = probe + 1
+      }
+      var smaller = bucket - 1
+      while smaller >= 0 {
+        if let list = segmentPool[smaller] {
+          if list.Count > 0 {
+            let last = list.Count - 1
+            let reused = list[last]
+            list.RemoveAt(last)
+            pooledSegmentCount = pooledSegmentCount - 1
+            reused.EnsureRecordCapacity(BucketCapacity(bucket))
+            return reused
+          }
+        }
+        smaller = smaller - 1
+      }
+      return VulkanRetainedTextSegment(BucketCapacity(bucket))
+    }
+    return VulkanRetainedTextSegment(resolved)
+  }
+
+  private func RecycleSegmentCache(cache VulkanTextNodeSegmentCache) {
+    var index int32 = 0
+    while index < cache.Segments.Length {
+      if let seg = cache.Segments[index] {
+        cache.Segments[index] = nil
+        ReturnSegmentToPool(seg)
+      }
+      index = index + 1
+    }
+    cache.Cursor = 0
+  }
+
+  private func PeekSegment(frame SceneFrame) VulkanRetainedTextSegment? {
     guard let cache = activeNodeSegments else {
       throw InvalidOperationException("Vulkan text segment cache is not active")
     }
     if frame.ActiveClipChainId < 0 {
       throw InvalidOperationException("Vulkan text clip chain is invalid")
     }
-    let index = cache.Cursor
-    cache.EnsureCapacity(index + 1)
-    var segment = cache.Segments[index]
-    if segment == nil {
-      if nextSegmentId == 0uL {
-        throw InvalidOperationException("Vulkan text segment identity overflow")
-      }
-      let created = VulkanRetainedTextSegment(glyphCount)
-      created.Id = nextSegmentId
-      nextSegmentId = nextSegmentId + 1uL
-      cache.Segments[index] = created
-      segment = created
+    return if cache.Cursor < cache.Segments.Length { cache.Segments[cache.Cursor] } else { nil }
+  }
+
+  private func AdvanceSegmentCursor() {
+    guard let cache = activeNodeSegments else {
+      throw InvalidOperationException("Vulkan text segment cache is not active")
     }
     cache.Cursor = cache.Cursor + 1
-    return segment
   }
+
+  private func CommitSegmentSlot(segment VulkanRetainedTextSegment) {
+    guard let cache = activeNodeSegments else {
+      throw InvalidOperationException("Vulkan text segment cache is not active")
+    }
+    let index = cache.Cursor
+    cache.EnsureCapacity(index + 1)
+    cache.Segments[index] = segment
+    cache.Cursor = index + 1
+  }
+
+  private func AllocateSegmentId() uint64 {
+    if nextSegmentId == 0uL {
+      throw InvalidOperationException("Vulkan text segment identity overflow")
+    }
+    let id = nextSegmentId
+    nextSegmentId = nextSegmentId + 1uL
+    return id
+  }
+
   private func CommitSegment(segment VulkanRetainedTextSegment) {
     if segment.Id == 0uL {
-      throw InvalidOperationException("cached text segment has no identity")
+      segment.Id = AllocateSegmentId()
     }
     let workspace = buildWorkspace
     if segment.Version != 0uL && SameSegmentContent(segment, workspace) {
@@ -143,31 +247,16 @@ internal unsafe sealed partial class VulkanTextScene {
     if segment.Version == uint64.MaxValue {
       throw InvalidOperationException("cached text segment version overflow")
     }
-    var capacity = workspace.RecordCount
-    if workspace.GlyphResourceCount > capacity {
-      capacity = workspace.GlyphResourceCount
-    }
-    segment.EnsureRecordCapacity(capacity)
+    segment.EnsureRecordCapacity(workspace.RecordCount)
     segment.EnsureRunCapacity(workspace.RunCount)
     Array.Copy(workspace.Records, segment.Records, workspace.RecordCount)
-    Array.Copy(workspace.GlyphResources, segment.GlyphResources,
-      workspace.GlyphResourceCount)
     Array.Copy(workspace.GlyphPointY, segment.GlyphPointY, workspace.RecordCount)
-    Array.Copy(workspace.GlyphAtlasTexelOffsets, segment.GlyphAtlasTexelOffsets,
-      workspace.GlyphResourceCount)
-    Array.Copy(workspace.GlyphAtlasTexelCounts, segment.GlyphAtlasTexelCounts,
-      workspace.GlyphResourceCount)
-    Array.Copy(workspace.GlyphEffectAtlasTexelOffsets,
-      segment.GlyphEffectAtlasTexelOffsets, workspace.GlyphResourceCount)
-    Array.Copy(workspace.GlyphEffectAtlasTexelCounts,
-      segment.GlyphEffectAtlasTexelCounts, workspace.GlyphResourceCount)
     Array.Copy(workspace.Runs, segment.Runs, workspace.RunCount)
     segment.Bounds = workspace.Bounds
     segment.GlyphCount = workspace.GlyphCount
     segment.ClipChainId = workspace.ClipChainId
     segment.RecordCount = workspace.RecordCount
     segment.RunCount = workspace.RunCount
-    segment.GlyphResourceCount = workspace.GlyphResourceCount
     segment.AtlasGeneration = workspace.AtlasGeneration
     segment.Version = segment.Version + 1uL
   }
@@ -176,7 +265,6 @@ internal unsafe sealed partial class VulkanTextScene {
     segment VulkanRetainedTextSegment,
     workspace VulkanTextSegmentBuildWorkspace) bool{
       if segment.RecordCount != workspace.RecordCount
-        || segment.GlyphResourceCount != workspace.GlyphResourceCount
         || segment.RunCount != workspace.RunCount
         || segment.GlyphCount != workspace.GlyphCount{
           return false
@@ -194,21 +282,6 @@ internal unsafe sealed partial class VulkanTextScene {
       var index int32 = 0
       while index < workspace.RecordCount {
         if !SameTextRecord(segment.Records[index], workspace.Records[index]) {
-          return false
-        }
-        index = index + 1
-      }
-      index = 0
-      while index < workspace.GlyphResourceCount {
-        if !SameIdentity(segment.GlyphResources[index], workspace.GlyphResources[index])
-          || segment.GlyphAtlasTexelOffsets[index]
-        != workspace.GlyphAtlasTexelOffsets[index]
-          || segment.GlyphAtlasTexelCounts[index]
-        != workspace.GlyphAtlasTexelCounts[index]
-          || segment.GlyphEffectAtlasTexelOffsets[index]
-        != workspace.GlyphEffectAtlasTexelOffsets[index]
-          || segment.GlyphEffectAtlasTexelCounts[index]
-        != workspace.GlyphEffectAtlasTexelCounts[index]{
           return false
         }
         index = index + 1
@@ -266,14 +339,15 @@ internal unsafe sealed partial class VulkanTextScene {
   == BitConverter.SingleToInt32Bits(right)
 
   private func AddSegmentRun(
-    workspace VulkanTextSegmentBuildWorkspace,
+    storage VulkanTextSegmentStorage,
     firstInstance int32,
     atlasId ResourceId,
     pipelineKind uint32,
-    byteRangeEnd uint64) {
-      if workspace.RunCount > 0 {
-        let lastIndex = workspace.RunCount - 1
-        var last = workspace.Runs[lastIndex]
+    byteRangeEnd uint64,
+    atlasSlotHint int32 = -1) {
+      if storage.RunCount > 0 {
+        let lastIndex = storage.RunCount - 1
+        var last = storage.Runs[lastIndex]
         if last.AtlasId.Kind == atlasId.Kind
           && last.AtlasId.LogicalId == atlasId.LogicalId
           && last.AtlasId.Version == atlasId.Version
@@ -285,24 +359,25 @@ internal unsafe sealed partial class VulkanTextScene {
             if byteRangeEnd > last.ByteRangeEnd {
               last.ByteRangeEnd = byteRangeEnd
             }
-            workspace.Runs[lastIndex] = last
+            storage.Runs[lastIndex] = last
             return
           }
       }
-      let runIndex = workspace.RunCount
+      let runIndex = storage.RunCount
       if runIndex < 0 || runIndex == Int32.MaxValue
-        || firstInstance < 0 || firstInstance >= workspace.RecordCount{
+        || firstInstance < 0 || firstInstance >= storage.RecordCount{
           throw InvalidOperationException("Vulkan text segment run overflow")
         }
-      workspace.EnsureRunCapacity(runIndex + 1)
-      workspace.Runs[runIndex] = VulkanTextSegmentRun{
+      storage.EnsureRunCapacity(runIndex + 1)
+      storage.Runs[runIndex] = VulkanTextSegmentRun{
         FirstInstance: firstInstance,
         InstanceCount: 1,
         AtlasId: atlasId,
         PipelineKind: pipelineKind,
         ByteRangeEnd: byteRangeEnd,
+        AtlasSlotHint: atlasSlotHint,
       }
-      workspace.RunCount = runIndex + 1
+      storage.RunCount = runIndex + 1
     }
 
   private func ComposeLogicalTransform(
@@ -431,6 +506,18 @@ internal unsafe sealed partial class VulkanTextScene {
       }
     }
 
+  private func MinimumTransformScale(a float32, b float32, c float32, d float32) float32 {
+    let determinant = MathF.Abs(a * d - b * c)
+    let firstLength = MathF.Sqrt(a * a + b * b)
+    let secondLength = MathF.Sqrt(c * c + d * d)
+    let maximum = firstLength > secondLength ? firstLength : secondLength
+    if determinant <= 0.0001F || maximum <= 0.0001F {
+      return 0.0001F
+    }
+    let result = determinant / maximum
+    return result > 0.0001F ? result : 0.0001F
+  }
+
   private func ParentTransformMinimumScale(frame SceneFrame, parentIndex int32) float32 {
     var a = 1.0F
     var b = 0.0F
@@ -454,15 +541,7 @@ internal unsafe sealed partial class VulkanTextScene {
       current = value.ParentIndex
       steps = steps + 1
     }
-    let determinant = MathF.Abs(a * d - b * c)
-    let firstLength = MathF.Sqrt(a * a + b * b)
-    let secondLength = MathF.Sqrt(c * c + d * d)
-    let maximum = firstLength > secondLength ? firstLength : secondLength
-    if determinant <= 0.0001F || maximum <= 0.0001F {
-      return 0.0001F
-    }
-    let result = determinant / maximum
-    return result > 0.0001F ? result : 0.0001F
+    return MinimumTransformScale(a, b, c, d)
   }
 
   private func BeginContentClip(frame SceneFrame, node Node, transformIndex int32) bool {

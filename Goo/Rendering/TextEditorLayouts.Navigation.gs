@@ -78,20 +78,7 @@ internal partial class TextEditorLayouts {
       state.Layout = layout
       state.Dirty = false
       if layout.AnchorShift != 0.0F { ScrollState.ShiftEditor(n, layout.AnchorShift) }
-      if n.HasElementHandle {
-        warmGeometry(layout)
-      }
       return layout
-    }
-
-    private func warmGeometry(layout TextEditorVisualLayout) {
-      for line in layout.Lines {
-        line.Shape?.PrepareGeometry()
-        line.LineNumberShape?.PrepareGeometry()
-        for run in line.Runs {
-          run.Shape?.PrepareGeometry()
-        }
-      }
     }
 
     internal func Invalidate(n Node) {
@@ -343,8 +330,10 @@ internal partial class TextEditorLayouts {
     }
 
     internal func PrepareCurrentGeometry(n Node) {
-      if let layout = CurrentForGeometry(n) {
-        warmGeometry(layout)
+      let width = BoxGeometry.ContentWidth(n, true)
+      let height = BoxGeometry.ContentHeight(n, true)
+      if n.EditorState != nil {
+        let _ = For(n, width, height)
       }
     }
 

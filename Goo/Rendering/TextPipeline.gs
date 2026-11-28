@@ -87,13 +87,15 @@ internal class PassiveTextPresentation {
   internal prop Transform TextTransform{ get; init; }
   internal prop Ranges []TextStyleRange{ get; init; }
   internal prop Plan TextPresentationPlan{ get; init; }
+  internal prop Signature uint64{ get; init; }
 
   internal init(content string, transform TextTransform, ranges []TextStyleRange,
-    displayRanges []TextStyleRange) {
+    displayRanges []TextStyleRange, signature uint64) {
       Content = content
       Transform = transform
       Ranges = ranges
       Plan = TextPresentationPlan(displayRanges)
+      Signature = signature
     }
 }
 
@@ -153,11 +155,65 @@ internal class PassiveTextPresentations {
         let flowChanged = rangesAffectFlow(ranges) || oldFlow
         values.Remove(n)
         values.Add(n, PassiveTextPresentation(content, n.TextTransform,
-          copyPassiveTextStyleRanges(ranges), displayRanges))
+          copyPassiveTextStyleRanges(ranges), displayRanges, computeSignature(displayRanges)))
         return PassiveTextPresentationChange{ Changed: true, FlowChanged: flowChanged }
       }
 
     internal func Read(n Node) [] ? TextStyleRange -> if values.TryGetValue(n, out var value) { value.Plan.Ranges } else { nil }
+
+    internal func Signature(n Node) uint64 -> if values.TryGetValue(n, out var value) { value.Signature } else { 0uL }
+
+    internal func SameDisplayRanges(left [] ? TextStyleRange, right [] ? TextStyleRange) bool {
+      if left == nil || right == nil { return left == nil && right == nil }
+      if Object.ReferenceEquals(left, right) { return true }
+      return sameRanges(left, right)
+    }
+
+    private func computeSignature(ranges []TextStyleRange) uint64 {
+      let h1 = HashCode()
+      let h2 = HashCode()
+      h1.Add(ranges.Length)
+      h2.Add(ranges.Length * 17)
+      for i in 0 ... ranges.Length {
+        let r = ranges[i]
+        h1.Add(r.Range.Start)
+        h1.Add(r.Range.Length)
+        h2.Add(r.Range.Length ^ (r.Range.Start << 5))
+        if let entries = r.Style.Entries() {
+          var cursor = entries.Cursor()
+          while cursor.MoveNext() {
+            let e = cursor.Current
+            h1.Add(int32(e.Field))
+            h1.Add(e.A)
+            h1.Add(e.B)
+            h2.Add(e.C)
+            h2.Add(e.D)
+            if let t = entryText(e) {
+              h1.Add(t, StringComparer.Ordinal)
+              h2.Add(t.Length)
+            }
+            if let lenDecl = e.Payload as LengthDeclaration {
+              h2.Add(lenDecl.Value.Value)
+              h2.Add(lenDecl.Value.EmPart)
+              h2.Add(lenDecl.Value.RemPart)
+            }
+            if let shadows = entryShadows(e) {
+              let count = textShadowCount(shadows)
+              h2.Add(count)
+              for s in 0 ... count {
+                let sh = textShadowAt(shadows, s)
+                h1.Add(sh.Color.R)
+                h1.Add(sh.Color.G)
+                h2.Add(sh.Color.B)
+                h2.Add(sh.Color.A)
+              }
+            }
+          }
+        }
+      }
+      let combined = (uint64(uint32(h1.ToHashCode())) << 32) | uint64(uint32(h2.ToHashCode()))
+      return combined == 0uL ? 1uL : combined
+    }
 
     internal func Remove(n Node) {
       values.Remove(n)

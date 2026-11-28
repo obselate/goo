@@ -451,11 +451,12 @@ internal partial class TextEditorLayouts {
       shape ShapedText, correction float32, style TextResolvedStyle) float32{
         let run = shapeEditorLine(n, paragraph, start, end, style)
         let naturalStart = shape.CaretX(start - displayStart, int32(TextAffinity.Downstream))
-        let naturalEnd = shape.CaretX(end - displayStart, int32(TextAffinity.Downstream))
+        let naturalEnd = shape.CaretX(end - displayStart, int32(TextAffinity.Upstream))
         var natural = naturalEnd - naturalStart
         if natural < 0.0F { natural = -natural }
+        let naturalLeft = naturalStart < naturalEnd ? naturalStart : naturalEnd
         let retained = TextPaintRun{ Shape: run,
-          X: shape.CaretX(start - displayStart, int32(TextAffinity.Downstream)) + correction,
+          X: naturalLeft + correction,
           DisplayStart: start,
           DisplayLength: end - start,
           Style: style }

@@ -128,4 +128,99 @@ internal unsafe partial class VulkanImageResources {
             residentBytes -= entry.ResidentBytes
         }
     }
+
+    internal func RegisterColorAtlasPage(
+        id ResourceId,
+        providerId uint64,
+        sourceId uint64,
+        samplerId ResourceId,
+        image VkImage,
+        view VkImageView,
+        width uint32,
+        height uint32) VulkanImageResourceLookup {
+        EnsureOpen()
+        ValidateImageId(id)
+        ValidateSamplerId(samplerId)
+        if image == 0uL || view == 0uL || width == 0u || height == 0u {
+            return VulkanImageResourceLookup{}
+        }
+        let existing = FindExactIndex(id)
+        if existing >= 0 {
+            if !entries[existing].GpuPublished {
+                entries[existing] = PublishCompletedImage(existing, entries[existing])
+            }
+            return Lookup(existing, samplerId, VulkanImageSamplerMode.Linear)
+        }
+        let bytes = uint64(width) * uint64(height) * 4uL
+        let source = VulkanResourceSource{
+            ProviderId: providerId,
+            SourceId: sourceId,
+            Version: id.Version,
+            Bytes: bytes,
+        }
+        let index = EnsureEmptyIndex()
+        EnsureDescriptorSlots(index)
+        let logical = PrepareLogicalRegistration(id, source)
+        var entry = VulkanImageResourceEntry{
+            Id: id,
+            ProviderId: providerId,
+            SourceId: sourceId,
+            Width: width,
+            Height: height,
+            Bytes: bytes,
+            ResidentBytes: bytes,
+            SamplerId: samplerId,
+            SamplerMode: VulkanImageSamplerMode.Linear,
+            State: VulkanImageResourceState.Resident,
+            AtlasOwned: true,
+            Image: image,
+            ImageView: view,
+            ImageLayout: VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            LastTouch: TouchValue(),
+        }
+        CommitLogicalRegistration(logical, index, id, bytes, source, false)
+        entries[index] = entry
+        if index >= entryLimit { entryLimit = index + 1 }
+        liveCount++
+        residentBytes += bytes
+        entry = PublishCompletedImage(index, entry)
+        entries[index] = entry
+        return Lookup(index, samplerId, VulkanImageSamplerMode.Linear)
+    }
+
+    internal func RemoveColorAtlasPage(id ResourceId, retireFence uint64, lost bool = false) {
+        if disposed || !id.IsValid {
+            return
+        }
+        let index = FindExactIndex(id)
+        if index < 0 {
+            return
+        }
+        let entry = entries[index]
+        if !entry.AtlasOwned {
+            return
+        }
+        if entry.RecordingUseCount != 0 && !lost {
+            return
+        }
+        let logical = LogicalIndexForPhysical(index, entry)
+        let safeFence = RetireFence(entry, retireFence)
+        var updated = entry
+        if entry.State != VulkanImageResourceState.Retiring {
+            updated = RetireDescriptors(entry, safeFence)
+            RetireLogical(logical)
+        }
+        updated.State = VulkanImageResourceState.Retiring
+        updated.RetireFence = safeFence
+        updated.DropLogicalOnRetire = true
+        if lost {
+            CompleteLogicalRetirement(logical, updated)
+            currentReferenceCounts[index] = 0
+            entries[index] = VulkanImageResourceEntry{}
+            liveCount--
+            residentBytes -= entry.ResidentBytes
+        } else {
+            entries[index] = updated
+        }
+    }
 }

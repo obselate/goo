@@ -8,6 +8,7 @@ internal struct VulkanTextSegmentRun {
   internal var AtlasId ResourceId
   internal var PipelineKind uint32
   internal var ByteRangeEnd uint64
+  internal var AtlasSlotHint int32
 }
 
 internal open class VulkanTextSegmentStorage {
@@ -16,12 +17,6 @@ internal open class VulkanTextSegmentStorage {
   internal var RecordCount int32
   internal var Runs []VulkanTextSegmentRun
   internal var RunCount int32
-  internal var GlyphResources []ResourceId
-  internal var GlyphResourceCount int32
-  internal var GlyphAtlasTexelOffsets []uint32
-  internal var GlyphAtlasTexelCounts []uint32
-  internal var GlyphEffectAtlasTexelOffsets []uint32
-  internal var GlyphEffectAtlasTexelCounts []uint32
   internal var Bounds ConservativeBounds
   internal var GlyphCount int32
   internal var ClipChainId int32
@@ -33,11 +28,6 @@ internal open class VulkanTextSegmentStorage {
     Records = [resolvedCapacity]HbGpuTextInstanceRecord
     GlyphPointY = [resolvedCapacity]float32
     Runs = [1]VulkanTextSegmentRun
-    GlyphResources = [resolvedCapacity]ResourceId
-    GlyphAtlasTexelOffsets = [resolvedCapacity]uint32
-    GlyphAtlasTexelCounts = [resolvedCapacity]uint32
-    GlyphEffectAtlasTexelOffsets = [resolvedCapacity]uint32
-    GlyphEffectAtlasTexelCounts = [resolvedCapacity]uint32
   }
 
   internal func EnsureRecordCapacity(required int32) {
@@ -45,25 +35,10 @@ internal open class VulkanTextSegmentStorage {
     let next = ArrayGrowthCapacity(Records.Length, required, 1)
     let expandedRecords = [next]HbGpuTextInstanceRecord
     let expandedPointY = [next]float32
-    let expandedResources = [next]ResourceId
-    let expandedOffsets = [next]uint32
-    let expandedCounts = [next]uint32
-    let expandedEffectOffsets = [next]uint32
-    let expandedEffectCounts = [next]uint32
     Array.Copy(Records, expandedRecords, RecordCount)
     Array.Copy(GlyphPointY, expandedPointY, RecordCount)
-    Array.Copy(GlyphResources, expandedResources, GlyphResourceCount)
-    Array.Copy(GlyphAtlasTexelOffsets, expandedOffsets, GlyphResourceCount)
-    Array.Copy(GlyphAtlasTexelCounts, expandedCounts, GlyphResourceCount)
-    Array.Copy(GlyphEffectAtlasTexelOffsets, expandedEffectOffsets, GlyphResourceCount)
-    Array.Copy(GlyphEffectAtlasTexelCounts, expandedEffectCounts, GlyphResourceCount)
     Records = expandedRecords
     GlyphPointY = expandedPointY
-    GlyphResources = expandedResources
-    GlyphAtlasTexelOffsets = expandedOffsets
-    GlyphAtlasTexelCounts = expandedCounts
-    GlyphEffectAtlasTexelOffsets = expandedEffectOffsets
-    GlyphEffectAtlasTexelCounts = expandedEffectCounts
   }
 
   internal func EnsureRunCapacity(required int32) {
@@ -72,6 +47,15 @@ internal open class VulkanTextSegmentStorage {
     let expanded = [next]VulkanTextSegmentRun
     Array.Copy(Runs, expanded, RunCount)
     Runs = expanded
+  }
+
+  internal func ResetBuildState(atlasGeneration uint64, clipChainId int32) {
+    Bounds = ConservativeBounds{}
+    GlyphCount = 0
+    ClipChainId = clipChainId
+    RecordCount = 0
+    RunCount = 0
+    AtlasGeneration = atlasGeneration
   }
 }
 
@@ -91,6 +75,7 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
   internal var EffectOffsetY float32
   internal var ParentTransform PrimitiveTransform
   internal var BaselineReusable bool
+  internal var HasExternalColorGlyphs bool
   internal var SceneValidationVersion uint64
   internal var RendererValidationVersion uint64
   internal var RendererValidationAtlasGeneration uint64
@@ -99,6 +84,31 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
 
   internal init(capacity int32) {
     Initialize(capacity)
+  }
+
+  internal func ResetForReuse() {
+    Id = 0uL
+    Version = 0uL
+    Shape = nil
+    FontSize = 0.0F
+    SizeChanged = false
+    Unfitted = false
+    LineX = 0.0F
+    Baseline = 0.0F
+    Color = 0u
+    EffectMode = 0u
+    EffectRadiusPixels = 0.0F
+    EffectOffsetX = 0.0F
+    EffectOffsetY = 0.0F
+    ParentTransform = PrimitiveTransform{}
+    BaselineReusable = false
+    HasExternalColorGlyphs = false
+    SceneValidationVersion = 0uL
+    RendererValidationVersion = 0uL
+    RendererValidationAtlasGeneration = 0uL
+    RendererValidationValid = false
+    RendererValidationCacheEligible = false
+    ResetBuildState(0uL, 0)
   }
 
   internal func CreateReference() CachedTextSegmentRefRecord -> CachedTextSegmentRefRecord {
@@ -118,13 +128,7 @@ internal sealed class VulkanTextSegmentBuildWorkspace : VulkanTextSegmentStorage
   }
 
   internal func BeginBuild(atlasGeneration uint64, clipChainId int32) {
-    Bounds = ConservativeBounds{}
-    GlyphCount = 0
-    ClipChainId = clipChainId
-    RecordCount = 0
-    RunCount = 0
-    GlyphResourceCount = 0
-    AtlasGeneration = atlasGeneration
+    ResetBuildState(atlasGeneration, clipChainId)
   }
 }
 

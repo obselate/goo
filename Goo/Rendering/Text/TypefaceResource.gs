@@ -1,8 +1,13 @@
 package Goo
 
 import System
+import System.Threading
 
 internal sealed class TypefaceResource : IDisposable {
+  shared {
+    private var nextId uint64
+  }
+
   private let font VulkanTextFont
   private let family string
   private let sourceId uint64
@@ -10,7 +15,9 @@ internal sealed class TypefaceResource : IDisposable {
   private var references int32 = 1
   private var disposed bool
 
+  internal let Id uint64 = Interlocked.Increment(ref nextId)
   internal prop Provider VulkanTextProvider{ get -> font }
+  internal prop Font VulkanTextFont{ get -> font }
   internal prop Family string{ get -> family }
   internal prop HeapByteSize int64{ get -> font.HeapByteSize }
   internal prop IsDisposed bool{ get { lock (this) { return disposed } } }

@@ -23,7 +23,7 @@ Releases the source and unregisters it when necessary.
 
 ### `FromPath(string,int32,bool,string)`
 
-Creates an unregistered font source backed by a read-only file mapping of at most 64 MiB. Do not change or truncate the file while the source or its text layouts are in use. Live sources for the same file share one read-only backing.
+Creates an unregistered font source backed by a read-only file mapping of at most 512 MiB. Do not change or truncate the file while the source or its text layouts are in use. Live sources for the same file share one read-only backing.
 
 ### `FromPath(string,int32,bool,string,System.UInt32,FontVariation[])`
 

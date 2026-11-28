@@ -129,7 +129,29 @@ internal partial class VulkanSceneCompiler {
     parentTransformIndex int32,
     parentAxisAligned bool,
     parentIsolated bool) bool -> parentTransformIndex == -1 && parentAxisAligned && !parentIsolated
+    && PassiveTextPresentations.Read(node) == nil
     && StrictPlainTextContentEligible(node, owner, bounds)
+
+  private func HasRichDecoration(node Node) bool {
+    guard let ranges = PassiveTextPresentations.Read(node) else {
+      return false
+    }
+    var index int32 = 0
+    while index < ranges.Length {
+      if let values = ranges[index].Style.Entries() {
+        var cursor = values.Cursor()
+        while cursor.MoveNext() {
+          let entry = cursor.Current
+          if entry.Field == StyleField.TextDecoration
+            && TextDecoration(int32(entry.A)) != TextDecoration.None {
+              return true
+            }
+        }
+      }
+      index = index + 1
+    }
+    return false
+  }
 
   private func StrictPlainTextContentEligible(
     node Node,
@@ -147,19 +169,17 @@ internal partial class VulkanSceneCompiler {
         }
       let fontSize = TextLayouts.fontSize(node)
       let lineHeight = TextLayouts.resolvedLineHeight(node)
+      let contentWidth = BoxGeometry.ContentWidth(node)
       let contentHeight = BoxGeometry.ContentHeight(node)
-      let eligible = node.TextWrap == TextWrap.NoWrap
-        && node.TextTrimming == TextTrimming.Ellipsis
-        && node.Width.Unit == LengthUnit.Px
-        && node.Height.Unit == LengthUnit.Px
-        && node.FontSize.Unit == LengthUnit.Px
-        && finiteVulkanSceneValue(fontSize) && fontSize > 0.0F
+      let eligible = finiteVulkanSceneValue(fontSize) && fontSize > 0.0F
         && finiteVulkanSceneValue(lineHeight) && lineHeight > 0.0F
-        && finiteVulkanSceneValue(contentHeight) && contentHeight >= lineHeight
+        && finiteVulkanSceneValue(contentWidth) && contentWidth >= 0.0F
+        && finiteVulkanSceneValue(contentHeight) && contentHeight >= 0.0F
         && !node.HasTextShadowState
         && !node.HasTextStrokeState
         && node.TextDecoration == TextDecoration.None
-        && PassiveTextPresentations.Read(node) == nil
+        && !HasRichDecoration(node)
+        && !(node.Selectable && node.Anchor != node.Caret)
         && node.BackgroundColor.A <= 0.0F
         && node.BackgroundGradient == nil
         && !node.HasBackgroundImageState

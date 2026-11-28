@@ -75,9 +75,6 @@ internal class TextMetrics {
     if let cached = n.EntryShape {
       if let shape = cached.Shape {
         if cached.Matches(n) {
-          if n.HasElementHandle {
-            shape.PrepareGeometry()
-          }
           return shape
         }
         shape.Dispose()
@@ -93,9 +90,6 @@ internal class TextMetrics {
       FontFamily: n.FontFamily, Language: n.Language, FontSize: TextLayouts.fontSize(n),
       FontWeight: n.FontWeight, Italic: n.FontStyle == FontStyle.Italic,
       Spacing: Spacing(n), Direction: int32(n.Direction), Password: n.Password, Shape: shaped,
-    }
-    if n.HasElementHandle {
-      shaped.PrepareGeometry()
     }
     return shaped
   }
@@ -115,7 +109,6 @@ internal class TextMetrics {
       cached.PlaceholderShape?.Dispose()
       cached.PlaceholderShape = Shape(n, n.Placeholder)
       cached.Placeholder = n.Placeholder
-      if n.HasElementHandle { cached.PlaceholderShape!!.PrepareGeometry() }
     }
     return cached.PlaceholderShape
   }

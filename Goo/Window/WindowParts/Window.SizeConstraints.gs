@@ -90,9 +90,9 @@ public partial class Window {
     let area = display?.UsableBounds ?? display?.Bounds
     let maximum = LayoutSize(
       Math.Min(if maxWidth != 0.0 { maxWidth } else { Double.PositiveInfinity },
-        (area?.Width ?? Double.PositiveInfinity) / float64(UiScale)),
+        (area?.Width ?? Double.PositiveInfinity) / NativeScale),
       Math.Min(if maxHeight != 0.0 { maxHeight } else { Double.PositiveInfinity },
-        (area?.Height ?? Double.PositiveInfinity) / float64(UiScale)))
+        (area?.Height ?? Double.PositiveInfinity) / NativeScale))
     Size = MeasureContentSize(maximum,
       SizeToContent == SizeToContent.Width || SizeToContent == SizeToContent.Both,
       SizeToContent == SizeToContent.Height || SizeToContent == SizeToContent.Both)

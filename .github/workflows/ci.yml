@@ -579,8 +579,8 @@ jobs:
           node --check integrations/vscode/extension.js
 
   plugin:
-    needs: [changes, preflight, linux-x64]
-    if: ${{ !cancelled() && (needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true' || needs.changes.outputs.plugin-changed == 'true') && needs.preflight.result == 'success' && (needs.linux-x64.result == 'success' || (needs.linux-x64.result == 'skipped' && needs.changes.outputs.heavy != 'true' && needs.changes.outputs.packaging != 'true')) }}
+    needs: [changes, preflight, linux-packages]
+    if: ${{ !cancelled() && (needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true' || needs.changes.outputs.plugin-changed == 'true') && needs.preflight.result == 'success' && (needs.linux-packages.result == 'success' || needs.linux-packages.result == 'skipped') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -592,18 +592,29 @@ jobs:
       - *linux-apt-update
       - *linux-apt-cache
       - *linux-dependencies
-      - name: Download release candidates
-        if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.packaging == 'true'
+      - *linux-glibc-native-cache
+      - *linux-glibc-native-build
+      - name: Download ready packages
+        if: needs.linux-packages.result == 'success'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: release-candidates
+          name: linux-packages
           path: artifacts/packages
       - name: Verify Goo plugin
         run: |
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
-          if [ -d artifacts/packages ]; then
-            dotnet nuget add source "$PWD/artifacts/packages" --name goo-release-candidates --configfile "$HOME/.nuget/NuGet/NuGet.Config"
+          if [ ! -d artifacts/packages ]; then
+            mkdir -p artifacts/packages
+            dotnet pack Goo/Goo.gsproj -c Release -o artifacts/packages \
+              -p:TreatWarningsAsErrors=true \
+              -p:GooPackLinuxRuntimeOnly=true \
+              -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
           fi
+          mkdir -p "$HOME/.nuget/NuGet"
+          if [ ! -f "$HOME/.nuget/NuGet/NuGet.Config" ]; then
+            printf '%s\n' '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" /></packageSources></configuration>' > "$HOME/.nuget/NuGet/NuGet.Config"
+          fi
+          dotnet nuget add source "$PWD/artifacts/packages" --name goo-release-candidates --configfile "$HOME/.nuget/NuGet/NuGet.Config"
           run="$RUNNER_TEMP/plugin"
           trap 'rm -rf "$run"' EXIT
           mkdir -p "$run"/{cache,config,data}

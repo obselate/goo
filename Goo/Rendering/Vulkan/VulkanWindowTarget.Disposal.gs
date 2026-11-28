@@ -299,6 +299,12 @@ internal unsafe partial class VulkanWindowTarget {
     clipMaskFrameStarted = false
     clipMaskFramePrepared = false
     clipMaskAtlasAbandoned = false
+    if let colorAtlas = colorGlyphAtlas {
+      try { colorAtlas.Collect(uint64.MaxValue) } catch (cleanup Exception) { }
+      try { colorAtlas.AbortUploads() } catch (cleanup Exception) { }
+      try { colorAtlas.Dispose() } catch (cleanup Exception) { }
+      colorGlyphAtlas = nil
+    }
     if let atlas = textAtlas {
       try { atlas.RetireAll(uint64.MaxValue) } catch (cleanup Exception) { }
       try { atlas.Collect(uint64.MaxValue) } catch (cleanup Exception) { }

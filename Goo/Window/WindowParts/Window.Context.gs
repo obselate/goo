@@ -38,7 +38,7 @@ public partial class Window {
         trackedWidth?.Sync(host?.LogicalWidth ?? width)
         trackedHeight?.Sync(host?.LogicalHeight ?? height)
         trackedScale?.Sync(EffectiveUiScale)
-        trackedPixelScale?.Sync(float64(dpi.X) * EffectiveUiScale)
+        trackedPixelScale?.Sync(float64(dpi.X) * NativeScale)
         trackedPreferences?.Sync(preferences)
         trackedModifiers?.Sync(modifiers)
         SyncWindowFocus()

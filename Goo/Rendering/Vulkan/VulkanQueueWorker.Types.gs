@@ -38,9 +38,7 @@ internal unsafe sealed class VulkanQueueMailbox {
 
   internal var SubmitCommandBuffer VkCommandBuffer
   internal var SubmitWaitSemaphore VkSemaphore
-  internal var SubmitWaitValue uint64
   internal var SubmitSignalSemaphore VkSemaphore
-  internal var SubmitSignalValue uint64
   internal var SubmitTimeline VkSemaphore
   internal var SubmitSerial uint64
   internal var SubmitHasWait bool
@@ -50,8 +48,6 @@ internal unsafe sealed class VulkanQueueMailbox {
   internal var PresentWaitSemaphore VkSemaphore
   internal var PresentFence VkFence
   internal var PresentFenceEnabled bool
-  internal var PresentComposition VulkanCompositionPresentation?
-  internal var PresentCompositionValue uint64
   internal var TraceId string?
   internal var TraceContext FrameTraceContext
 
@@ -89,9 +85,7 @@ internal unsafe sealed class VulkanQueueMailbox {
       completionResult = VkConstants.VK_SUCCESS
       SubmitCommandBuffer = commandBuffer
       SubmitWaitSemaphore = waitSemaphore
-      SubmitWaitValue = 0uL
       SubmitSignalSemaphore = signalSemaphore
-      SubmitSignalValue = 0uL
       SubmitTimeline = 0uL
       SubmitSerial = 0uL
       SubmitHasWait = waitSemaphore != 0uL
@@ -128,7 +122,6 @@ internal unsafe sealed class VulkanQueueMailbox {
       PresentWaitSemaphore = waitSemaphore
       PresentFence = fence
       PresentFenceEnabled = fenceEnabled
-      PresentComposition = nil
     }
 
   internal func BeginSubmit() bool {
@@ -239,7 +232,6 @@ internal unsafe sealed class VulkanQueueMailbox {
     waitInfos[0] = VkSemaphoreSubmitInfo{
       sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
       semaphore: SubmitWaitSemaphore,
-      value: SubmitWaitValue,
       stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
     }
     signalInfos[0] = VkSemaphoreSubmitInfo{
@@ -252,7 +244,6 @@ internal unsafe sealed class VulkanQueueMailbox {
       signalInfos[1] = VkSemaphoreSubmitInfo{}
       signalInfos[1].sType = VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
       signalInfos[1].semaphore = SubmitSignalSemaphore
-      signalInfos[1].value = SubmitSignalValue
       signalInfos[1].stageMask = VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
     }
     var commandInfo = VkCommandBufferSubmitInfo{}
@@ -286,11 +277,6 @@ internal unsafe sealed class VulkanQueueMailbox {
     if Interlocked.CompareExchange(
       ref phase, VulkanQueueMailboxPhase.PresentRunning, VulkanQueueMailboxPhase.PresentQueued)
     != VulkanQueueMailboxPhase.PresentQueued{
-      return
-    }
-    if let composition = PresentComposition {
-      presentResult = composition.Present(PresentCompositionValue)
-      Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.PresentComplete)
       return
     }
     var fenceInfo = VkSwapchainPresentFenceInfoEXT{}

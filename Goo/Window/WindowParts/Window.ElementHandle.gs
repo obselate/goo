@@ -64,8 +64,8 @@ public partial class Window {
       nativeWidth = native.FramebufferWidth
       nativeHeight = native.FramebufferHeight
     }
-    let metrics = ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
-      host?.DisplayScale ?? 0.0F)
+    let metrics = DisplayScale.ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+      host?.DisplayScale ?? 0.0F, host?.PixelDensity ?? 0.0F)
     return WindowMetrics{...metrics, UiScale: UiScale}
   }
 
@@ -161,10 +161,10 @@ public partial class Window {
         return false
       }
     guard let native = host else { return false }
-    let left = Math.Floor(area.X * float64(UiScale))
-    let top = Math.Floor(area.Y * float64(UiScale))
-    let right = Math.Ceiling((area.X + area.Width) * float64(UiScale))
-    let bottom = Math.Ceiling((area.Y + area.Height) * float64(UiScale))
+    let left = Math.Floor(area.X * NativeScale)
+    let top = Math.Floor(area.Y * NativeScale)
+    let right = Math.Ceiling((area.X + area.Width) * NativeScale)
+    let bottom = Math.Ceiling((area.Y + area.Height) * NativeScale)
     let width = right > left ? int32(right - left) : 1
     let height = bottom > top ? int32(bottom - top) : 1
     return native.SetImeArea(int32(left), int32(top), width, height, 0)

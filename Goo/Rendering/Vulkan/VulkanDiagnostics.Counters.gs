@@ -99,6 +99,16 @@ internal class VulkanDiagnosticCounters {
   private var textFrameTopologyKey uint64
   private var textFrameLastUseSerial uint64
   private var textFramePrepared uint32
+  private var textLayoutCacheBytes uint64
+  private var textLayoutCacheEntries uint64
+  private var textLayoutCacheHits uint64
+  private var textLayoutCacheMisses uint64
+  private var textLayoutCacheEvictions uint64
+  private var textRunShapeCacheBytes uint64
+  private var textRunShapeCacheEntries uint64
+  private var textRunShapeCacheHits uint64
+  private var textRunShapeCacheMisses uint64
+  private var textRunShapeCacheEvictions uint64
   private var imageEvictionCount uint64
   private var imageRetirementCount uint64
   private var allocatorBytes uint64
@@ -229,6 +239,16 @@ internal class VulkanDiagnosticCounters {
         textFrameTopologyKey: Interlocked.Read(in textFrameTopologyKey),
         textFrameLastUseSerial: Interlocked.Read(in textFrameLastUseSerial),
         textFramePrepared: Interlocked.CompareExchange(ref textFramePrepared, 0u, 0u),
+        textLayoutCacheBytes: Interlocked.Read(in textLayoutCacheBytes),
+        textLayoutCacheEntries: Interlocked.Read(in textLayoutCacheEntries),
+        textLayoutCacheHits: Interlocked.Read(in textLayoutCacheHits),
+        textLayoutCacheMisses: Interlocked.Read(in textLayoutCacheMisses),
+        textLayoutCacheEvictions: Interlocked.Read(in textLayoutCacheEvictions),
+        textRunShapeCacheBytes: Interlocked.Read(in textRunShapeCacheBytes),
+        textRunShapeCacheEntries: Interlocked.Read(in textRunShapeCacheEntries),
+        textRunShapeCacheHits: Interlocked.Read(in textRunShapeCacheHits),
+        textRunShapeCacheMisses: Interlocked.Read(in textRunShapeCacheMisses),
+        textRunShapeCacheEvictions: Interlocked.Read(in textRunShapeCacheEvictions),
         imageEvictionCount: Interlocked.Read(in imageEvictionCount),
         imageRetirementCount: Interlocked.Read(in imageRetirementCount),
         allocatorBytes: Interlocked.Read(in allocatorBytes),
@@ -410,6 +430,18 @@ internal class VulkanDiagnosticCounters {
     Interlocked.Exchange(ref textFrameTopologyKey, stats.TopologyKey)
     Interlocked.Exchange(ref textFrameLastUseSerial, stats.LastUseSerial)
     Interlocked.Exchange(ref textFramePrepared, stats.Prepared ? 1u : 0u)
+  }
+  internal func SetTextCacheStats(layoutStats TextCacheStats, runStats TextCacheStats) {
+    Interlocked.Exchange(ref textLayoutCacheBytes, uint64(layoutStats.Bytes < 0L ? 0L : layoutStats.Bytes))
+    Interlocked.Exchange(ref textLayoutCacheEntries, uint64(layoutStats.Entries < 0 ? 0 : layoutStats.Entries))
+    Interlocked.Exchange(ref textLayoutCacheHits, uint64(layoutStats.Hits < 0L ? 0L : layoutStats.Hits))
+    Interlocked.Exchange(ref textLayoutCacheMisses, uint64(layoutStats.Misses < 0L ? 0L : layoutStats.Misses))
+    Interlocked.Exchange(ref textLayoutCacheEvictions, uint64(layoutStats.Evictions < 0L ? 0L : layoutStats.Evictions))
+    Interlocked.Exchange(ref textRunShapeCacheBytes, uint64(runStats.Bytes < 0L ? 0L : runStats.Bytes))
+    Interlocked.Exchange(ref textRunShapeCacheEntries, uint64(runStats.Entries < 0 ? 0 : runStats.Entries))
+    Interlocked.Exchange(ref textRunShapeCacheHits, uint64(runStats.Hits < 0L ? 0L : runStats.Hits))
+    Interlocked.Exchange(ref textRunShapeCacheMisses, uint64(runStats.Misses < 0L ? 0L : runStats.Misses))
+    Interlocked.Exchange(ref textRunShapeCacheEvictions, uint64(runStats.Evictions < 0L ? 0L : runStats.Evictions))
   }
   internal func SetPathAtlasStats(stats VulkanPathResourcesStats, liveObjectCount uint64) {
     Interlocked.Exchange(ref pathAtlasByteBudget, uint64(stats.WordCapacity) * 4uL)

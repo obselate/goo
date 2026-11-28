@@ -84,10 +84,6 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.MacSpelling+<lambda_host_<lambda1>_ordinal>::Invoke([S.P.CoreLib]System.Span`1<char>, native int)][offset][found Native Int][expected address of Char] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Run(string, [S.P.CoreLib]System.Action`1<native int>, string&)][offset][found address of '[S.P.CoreLib]System.Guid'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.SpellCheck.WindowsSpelling::Run(string, [S.P.CoreLib]System.Action`1<native int>, string&)][offset][found address of IntPtr][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanCompositionPresentation::Dispose()][offset][found address of UInt64][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanCompositionPresentation::ImportImage(native int, uint32, uint32)][offset][found address of '[Goo]Goo.VkExternalMemoryImageCreateInfo'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanCompositionPresentation::RecordOwnership(native int, uint32, bool, bool)][offset][found address of '[Goo]Goo.VkImageMemoryBarrier2'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanCompositionPresentation::TryCreate([Goo]Goo.VulkanSharedLease, native int, [Goo]Goo.VkExtent2D, bool, [Goo]Goo.VulkanCompositionPresentation, [Goo]Goo.VulkanObjectAccounting)][offset][found address of '[Goo]Goo.VkPhysicalDeviceIDProperties'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::CreateSingleBindingLayout(native int, [Goo]Goo.VkDeviceDispatch, [Goo]Goo.VulkanObjectAccounting, int32, uint32)][offset][found address of '[Goo]Goo.VkDescriptorSetLayoutBinding'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::WriteCombinedImageSampler(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, int32)][offset][found address of '[Goo]Goo.VkDescriptorImageInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanDescriptorFactory::WriteStorageBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, uint64)][offset][found address of '[Goo]Goo.VkDescriptorBufferInfo'][expected Native Int] Unexpected type on the stack.
@@ -142,11 +138,9 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextAtlas::CreateDescriptorResources()][offset][found address of UInt64][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextFont::ApplyVariations(native int, [Goo]Goo.VulkanTextVariation[], [S.P.CoreLib]System.Nullable`1<int32>)][offset][found address of '[Goo]Goo.VulkanTextVariation'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextFrameData::CopySegmentRecords([Goo]Goo.VulkanTextFrameSlot, [Goo]Goo.VulkanRetainedTextSegment, int32, int32, int32)][offset][found Native Int][expected address of '[Goo]Goo.HbGpuTextInstanceRecord'] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTextFrameData::SegmentClipMatches([Goo]Goo.VulkanTextFrameSlot, int32, int32)][offset][found Native Int][expected readonly address of '[Goo]Goo.HbGpuTextInstanceRecord'] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTransitions::RecordBuffer(native int, (*void)(native int,[Goo]Goo.VkDependencyInfo*), uint64, uint64, uint64, uint64, uint64, uint64, uint64)][offset][found address of '[Goo]Goo.VkBufferMemoryBarrier2'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanTransitions::RecordImage(native int, (*void)(native int,[Goo]Goo.VkDependencyInfo*), uint64, [Goo]Goo.VkImageSubresourceRange, int32, int32, uint64, uint64, uint64, uint64)][offset][found address of '[Goo]Goo.VkImageMemoryBarrier2'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset][found address of '[Goo]Goo.VkClearValue'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset][found address of '[Goo]Goo.VkRenderingAttachmentInfo'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::CreateDevice()][offset][found address of '[Goo]Goo.VkPhysicalDeviceVulkan12Features'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::CreateDevice()][offset][found address of '[Goo]Goo.VkPhysicalDeviceVulkan13Features'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.VulkanWindowTarget::ExtensionNameEquals([Goo]Goo.VkExtensionProperties*, string)][offset][found Native Int][expected address of '[Goo]Goo.VkExtensionProperties'] Unexpected type on the stack.
@@ -165,7 +159,6 @@
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::Initialize(native int)][offset][found address of '[Goo]Goo.BackdropWaylandArgument'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandLayerWindow::RequestFrame(native int)][offset][found address of '[Goo]Goo.BackdropWaylandArgument'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WaylandTransferPipe::Wait(int32, int16, [S.P.CoreLib]System.Threading.CancellationToken)][offset][found address of '[Goo]Goo.TransferPollDescriptor'][expected Native Int] Unexpected type on the stack.
-[IL]: Error [StackUnexpected]: [Goo.dll : Goo.WindowsCompositionDevice::Initialize(native int, uint64)][offset][found address of '[S.P.CoreLib]System.Guid'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WindowsMenuBridge::Build([S.P.CoreLib]System.Collections.Generic.IReadOnlyList`1<Goo.NativeMenuItem>, [Goo]Goo.NativeMenuSnapshot, bool, int32)][offset][found address of '[Goo]Goo.MenuWinItem'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WindowsMenuBridge::FilterMenuMessage(int32, native int, native int)][offset][found address of '[Goo]Goo.MenuWinMessage'][expected Native Int] Unexpected type on the stack.
 [IL]: Error [StackUnexpected]: [Goo.dll : Goo.WindowsMenuBridge::ShowContext([Goo]Goo.Window, [Goo]Goo.Point, [Goo]Goo.NativeMenuSnapshot, [Goo]Goo.NativeModalLease)][offset][found address of '[Goo]Goo.MenuWinPoint'][expected Native Int] Unexpected type on the stack.
@@ -193,7 +186,6 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.Printing.WindowsPrinting::DrawPage(native int, [Goo]Goo.WindowCapture)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.RasterImageDecoder::ReadPngProfile([S.P.CoreLib]System.ReadOnlySpan`1<uint8>, [S.P.CoreLib]System.Threading.CancellationToken, bool&)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CopyCandidates([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLTextEditingCandidatesEvent)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CreateWindow(string, int32, int32, int32, int32, bool, int32, int32, bool, bool, [Goo]Goo.LayerWindowOptions)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::CreateWindowsIcon(uint8[], int32, int32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::Dispatch([Hexa.NET.SDL3]Hexa.NET.SDL3.SDLEvent)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.SdlHost::GetClipboardText()][offset] Unmanaged pointers are not a verifiable type.
@@ -258,13 +250,13 @@
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedPrimitiveState::EnsurePathStrokes()][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSharedRuntime::Create(native int, [Goo]Goo.VkInstanceDispatch, native int, native int, [Goo]Goo.VkDeviceDispatch, native int, native int, uint32, uint32, native int, [Goo]Goo.VulkanSwapchainMaintenanceVariant, [Goo]Goo.VulkanSwapchainMaintenanceVariant, [Goo]Goo.VulkanSharedDeviceFacts, uint8*, [Goo]Goo.VkPhysicalDeviceMemoryProperties, uint32, uint32, uint64, uint64, bool, [Goo]Goo.VulkanDiagnostics, bool, [Goo]Goo.VulkanDiagnosticsValidation, uint64, bool, bool, bool, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VulkanObjectAccounting, [Goo]Goo.VulkanSurfaceHost)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::Adapter([Goo]Goo.VkPhysicalDeviceProperties*)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::Drain()][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanSwapchainImageSet::Create(uint64, int32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextAtlas::QueueUpload(uint8*, uint64, uint64)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFont::ShapeInto(string, [Goo]Goo.VulkanTextShapingOptions, [Goo]Goo.VulkanTextShapingWorkspace)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFont::FillNominalGlyphs(uint32[], uint32[], int32)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFont::ResolveLanguage(string)][offset] Unmanaged pointers are not a verifiable type.
+[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFont::ShapeInto(string, int32, int32, [Goo]Goo.VulkanTextShapingOptions, [Goo]Goo.VulkanTextShapingWorkspace)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFrameData::CopySegmentRecords([Goo]Goo.VulkanTextFrameSlot, [Goo]Goo.VulkanRetainedTextSegment, int32, int32, int32)][offset] Unmanaged pointers are not a verifiable type.
-[IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextFrameData::SegmentClipMatches([Goo]Goo.VulkanTextFrameSlot, int32, int32)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanTextScene::PrepareUpload()][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)][offset] Unmanaged pointers are not a verifiable type.
 [IL]: Error [UnmanagedPointer]: [Goo.dll : Goo.VulkanWindowTarget::CreateCommandResources()][offset] Unmanaged pointers are not a verifiable type.
@@ -310,7 +302,6 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateStrokeMetricPipeline()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::CreateTextPipelineLayout()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSharedPrimitiveState::EnsurePathStrokes()][offset] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanStartupReport::StartCapture()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanStartupReport::TryLoad(string, native int&)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanSwapchainGeneration::Create(int32, int32, uint64, [Goo]Goo.VulkanDiagnostics)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.VulkanTextFrameData::CreateDescriptorResources()][offset] Instruction cannot be verified.
@@ -322,7 +313,6 @@
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandBackdrop::Initialize()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandLayerWindow::CreateLayerSurface(native int)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WaylandLayerWindow::Global(native int, native int, uint32, native int, uint32)][offset] Instruction cannot be verified.
-[IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsCompositionDevice::Initialize(native int, uint64)][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsDragComWrappers::DefineSource()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsDragComWrappers::DefineTarget()][offset] Instruction cannot be verified.
 [IL]: Error [Unverifiable]: [Goo.dll : Goo.WindowsTrayBackend::GuidFor(string)][offset] Instruction cannot be verified.
@@ -358,12 +348,9 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyImageView()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroyLayerViews()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanClipMaskAtlasGeneration::DestroySampler()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::Create(uint32, uint32)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::Dispose()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::ImportImage(native int, uint32, uint32)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::Present(uint64)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::RecordOwnership(native int, uint32, bool, bool)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanCompositionPresentation::TryCreate([Goo]Goo.VulkanSharedLease, native int, [Goo]Goo.VkExtent2D, bool, [Goo]Goo.VulkanCompositionPresentation, [Goo]Goo.VulkanObjectAccounting)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::DestroyStagingChunks()] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::DestroyVulkanPageResources(uint64, uint64, [Goo]Goo.VulkanMemoryAllocation)] ImportCalli not implemented
+[IL]: Error []: [Goo.dll : Goo.VulkanColorGlyphAtlas::RecordUploads(native int)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteCombinedImageSampler(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, int32)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteStorageBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64, uint64, uint64)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanDescriptorFactory::WriteUniformTexelBuffer(native int, [Goo]Goo.VkDeviceDispatch, uint64, uint32, uint64)] ImportCalli not implemented
@@ -496,7 +483,6 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::BeginCommandBuffer([Goo]Goo.VulkanFrameSlot)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::BeginFrame()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::BeginPage([Goo]Goo.Cell, [Goo]Goo.OffscreenRenderOptions, [S.P.CoreLib]System.Threading.CancellationToken, [S.P.CoreLib]System.Threading.CancellationToken, [Goo]Goo.WindowCapture, [Goo]Goo.Window, [S.P.CoreLib]System.Threading.Tasks.TaskCompletionSource`1<Goo.OffscreenRenderResult>)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::BeginRendering([Goo]Goo.VulkanSwapchainGeneration, [Goo]Goo.VulkanFrameSlot, uint32, [Goo]Goo.VulkanDamageRegion)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CleanupUnpublishedBootstrap()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CreateCandidateRuntime()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::CreateValidationMessenger()] ImportCalli not implemented
@@ -520,7 +506,4 @@
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::SelectPhysicalDevice()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::ValidateSharedPresentationSupport()] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.VulkanWindowTarget::WaitDeviceIdleResult()] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.WindowsCompositionDevice::Attach(native int)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.WindowsCompositionDevice::Query(native int, string)] ImportCalli not implemented
-[IL]: Error []: [Goo.dll : Goo.WindowsCompositionDevice::Release(native int)] ImportCalli not implemented
 [IL]: Error []: [Goo.dll : Goo.WindowsDropTarget::OwnData(native int)] ImportCalli not implemented

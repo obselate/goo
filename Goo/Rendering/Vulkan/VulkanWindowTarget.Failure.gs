@@ -60,6 +60,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func AbortUnsubmittedTextUpload() {
+    colorGlyphAtlas?.AbortUploads()
     if let atlas = textAtlas {
       if atlas.AbortUploads() {
         textScene?.RestoreUpload()

@@ -103,7 +103,7 @@ public partial class Window {
     guard let native = host as SdlHost? else { return IsOpen ? WindowOperationResult.Unsupported : WindowOperationResult.Closed }
     if native.IsClosing { return WindowOperationResult.Closed }
     if OperatingSystem.IsWindows() && !decorated { return WindowOperationResult.Unsupported }
-    return native.ShowSystemMenu(int32(Math.Round(point.X * UiScale)), int32(Math.Round(point.Y * UiScale)))
+    return native.ShowSystemMenu(int32(Math.Round(point.X * NativeScale)), int32(Math.Round(point.Y * NativeScale)))
   }
 
   private func beginInteraction(name string, edge WindowHitResult) WindowOperationResult {

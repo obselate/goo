@@ -1,6 +1,14 @@
 package Goo
 
 import System
+import System.Collections.Generic
+
+internal data struct SceneEffectCapture {
+  internal var Layer int32
+  internal var Bounds ConservativeBounds
+  internal var Backdrop bool
+  internal var DrawOrdinal int32
+}
 
 internal partial class VulkanSceneCompiler {
   private var retentionProofs VulkanSceneRetentionProofStore? = nil
@@ -13,6 +21,8 @@ internal partial class VulkanSceneCompiler {
   private var retainedText VulkanRetentionCounters
   private var damageClosureBounds ConservativeBounds
   private var damageClosureFirstDraw int32
+  private let effectCaptures List[SceneEffectCapture] = List[SceneEffectCapture]()
+  private let grownChunkBounds List[ConservativeBounds] = List[ConservativeBounds]()
 
   internal prop RetainedLeafHitCount uint64{ get -> retainedLeaf.Hit }
   internal prop RetainedLeafRebuildCount uint64{ get -> retainedLeaf.Rebuild }
@@ -467,24 +477,31 @@ internal partial class VulkanSceneCompiler {
     return damageClosureBounds
   }
 
+  // Captures of the effect layers whose output depends on what is drawn below them, placed once per compile.
+  private func CollectEffectCaptures() {
+    effectCaptures.Clear()
+    for index in 0 ... frame.LayerCount {
+      if frame.Layers[index].EffectIndex < 0 { continue }
+      let layer = frame.Layer(index)
+      let program = frame.ShaderEffects[layer.EffectIndex].Program
+      if program?.SourceIndependent == true { continue }
+      effectCaptures.Add(SceneEffectCapture{ Layer: index,
+        Bounds: ConservativeBounds{ X: layer.OriginX, Y: layer.OriginY,
+          Width: float32(layer.ExtentWidth), Height: float32(layer.ExtentHeight) },
+        Backdrop: program == BackdropBlurEffect.Shared, DrawOrdinal: layer.DrawOrdinal })
+    }
+  }
+
   private func GrowDamageToEffectLayers(bounds ConservativeBounds, firstDraw int32) ConservativeBounds{
-    if frame.LayerCount == 0 || bounds.IsEmpty { return bounds }
+    if effectCaptures.Count == 0 || bounds.IsEmpty { return bounds }
     var result = bounds
     var grown = true
     while grown {
       grown = false
-      for index in 0 ... frame.LayerCount {
-        let layer = frame.Layer(index)
-        if layer.EffectIndex < 0 { continue }
-        let effect = frame.ShaderEffects[layer.EffectIndex]
-        if effect.Program?.SourceIndependent == true
-          || (effect.Program == BackdropBlurEffect.Shared && layer.DrawOrdinal < firstDraw) { continue }
-        let capture = ConservativeBounds{
-          X: layer.OriginX, Y: layer.OriginY,
-          Width: float32(layer.ExtentWidth), Height: float32(layer.ExtentHeight),
-        }
-        if !IntersectBounds(result, capture).IsEmpty {
-          let expanded = unionVulkanSceneBounds(result, capture)
+      for capture in effectCaptures {
+        if capture.Backdrop && capture.DrawOrdinal < firstDraw { continue }
+        if !IntersectBounds(result, capture.Bounds).IsEmpty {
+          let expanded = unionVulkanSceneBounds(result, capture.Bounds)
           if !ExactBounds(result, expanded) {
             result = expanded
             grown = true
@@ -496,24 +513,21 @@ internal partial class VulkanSceneCompiler {
   }
 
   private func UpdateBackdropVersions() {
-    if frame.LayerCount == 0 { return }
-    for index in 0 ... frame.LayerCount {
-      let layer = frame.Layer(index)
-      if layer.EffectIndex < 0
-        || frame.ShaderEffects[layer.EffectIndex].Program != BackdropBlurEffect.Shared { continue }
-      let capture = ConservativeBounds{X: layer.OriginX, Y: layer.OriginY,
-        Width: float32(layer.ExtentWidth), Height: float32(layer.ExtentHeight)}
+    grownChunkBounds.Clear()
+    for capture in effectCaptures {
+      if !capture.Backdrop { continue }
       var version = 1469598103934665603uL
       for chunkIndex in 0 ... frame.ChunkCount {
         let chunk = frame.Chunks[chunkIndex]
-        if chunk.FirstDraw > layer.DrawOrdinal { break }
-        if !IntersectBounds(GrowDamageToEffectLayers(chunk.Bounds, chunk.FirstDraw), capture).IsEmpty {
+        if chunk.FirstDraw > capture.DrawOrdinal { break }
+        if chunkIndex == grownChunkBounds.Count { grownChunkBounds.Add(GrowDamageToEffectLayers(chunk.Bounds, chunk.FirstDraw)) }
+        if !IntersectBounds(grownChunkBounds[chunkIndex], capture.Bounds).IsEmpty {
           version = (version ^ chunk.OwnerId) * 1099511628211uL
           version = (version ^ chunk.Version) * 1099511628211uL
           version = (version ^ chunk.TransformKey) * 1099511628211uL
         }
       }
-      frame.Layers[index].BackdropVersion = version | 1uL
+      frame.Layers[capture.Layer].BackdropVersion = version | 1uL
     }
   }
 
@@ -526,6 +540,7 @@ internal partial class VulkanSceneCompiler {
     }
     journal.BeginVersion(frameVersion)
     ResolveChunkPaintBounds()
+    CollectEffectCaptures()
     damageClosureBounds = ConservativeBounds{}
     damageClosureFirstDraw = 0
     let currentCount = frame.ChunkCount

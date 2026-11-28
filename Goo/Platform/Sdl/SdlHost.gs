@@ -20,6 +20,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var window SDLWindowPtr = SDLWindowPtr.Null
   private var windowId uint32
   private var windowHandle nint
+  private var windowDecorated bool = true
   private var windowsSmallIcon nint
   private var windowsLargeIcon nint
   private var disposed bool
@@ -32,6 +33,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var hitTestEnabled bool
   private var pointerButtons PointerButtons
   private var pixelDensity float32
+  private var lastDisplayScale float32
   private var pixelDensityChange bool
   private let touchPointers Dictionary[TouchContactKey, int64] =
   Dictionary[TouchContactKey, int64]()
@@ -80,10 +82,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if driver == "wayland" { waylandWindowProperties = NativeProperties(windowHandle) }
         SdlRuntime.Register(windowId, Dispatch)
         BindNativeFocus()
-        if OperatingSystem.IsWindows() && Transparent {
-          WindowsBackdrop.SuppressTransparentErase(WindowsPresentationHandle)
-        }
         if popupParent == nil && layerWindow == nil && lockWindow == nil {
+          if OperatingSystem.IsWindows() {
+            WindowsBackdrop.SetTransparent(WindowsHandle(), transparent)
+          }
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
           SetState(state)
@@ -100,6 +102,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         if LogicalWidth > 0 && FramebufferWidth > 0 {
           pixelDensity = float32(FramebufferWidth) / float32(LogicalWidth)
         }
+        lastDisplayScale = DisplayScale
         RefreshPosition()
         RefreshDisplayPacing(true)
       } catch (e Exception) {
@@ -140,6 +143,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public prop FramebufferWidth int32{ get; private set }
   public prop FramebufferHeight int32{ get; private set }
   public prop DisplayScale float32{ get -> SDL.GetWindowDisplayScale(window) }
+  public prop PixelDensity float32{ get -> SDL.GetWindowPixelDensity(window) }
   public prop X int32{ get; private set }
   public prop Y int32{ get; private set }
   public prop IsClosing bool{ get; private set }
@@ -393,14 +397,32 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if value == WindowState.Normal || value == WindowState.Minimized ||
     value == WindowState.Maximized{
       Require(SDL.SetWindowFullscreen(window, false), "SDL_SetWindowFullscreen")
+      if OperatingSystem.IsWindows() {
+        WindowsBackdrop.SetFullscreen(WindowsHandle(), false, windowDecorated)
+      }
     }
     switch value {
       case WindowState.Normal { Require(SDL.RestoreWindow(window), "SDL_RestoreWindow") }
       case WindowState.Minimized { Require(SDL.MinimizeWindow(window), "SDL_MinimizeWindow") }
       case WindowState.Maximized { Require(SDL.MaximizeWindow(window), "SDL_MaximizeWindow") }
-      case WindowState.Fullscreen { Require(SDL.SetWindowFullscreen(window, true), "SDL_SetWindowFullscreen") }
+      case WindowState.Fullscreen { Require(EnterNativeFullscreen(), "SDL_SetWindowFullscreen") }
       case _ { throw ArgumentOutOfRangeException("value") }
     }
+  }
+
+  private func EnterNativeFullscreen() bool {
+    if OperatingSystem.IsWindows() {
+      let hwnd = WindowsHandle()
+      let wasFullscreen = WindowsBackdrop.IsFullscreen(hwnd)
+      WindowsBackdrop.SetFullscreen(hwnd, true, windowDecorated)
+      if !SDL.SetWindowFullscreen(window, true) {
+        if !wasFullscreen { WindowsBackdrop.SetFullscreen(hwnd, false, windowDecorated) }
+        return false
+      }
+      WindowsBackdrop.EnsureFullscreenBounds(hwnd)
+      return true
+    }
+    return SDL.SetWindowFullscreen(window, true)
   }
 
   public func RequestActivation() WindowOperationResult {
@@ -445,6 +467,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     ThrowIfDisposed()
     if layerWindow != nil { throw NotSupportedException("Layer-shell windows do not support window decorations") }
     if lockWindow != nil { throw NotSupportedException("Session lock windows do not support window decorations") }
+    windowDecorated = decorated
     if !decorated {
       EnableHitTest()
     }
@@ -459,8 +482,12 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       DisableHitTest()
     }
     if OperatingSystem.IsWindows() {
-      WindowsBackdrop.SetCaption(BackdropPointer(BackdropProperties(WindowHandle), "SDL.window.win32.hwnd", nint(0)), decorated)
-      Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
+      let hwnd = WindowsHandle()
+      let fullscreen = WindowsBackdrop.IsFullscreen(hwnd)
+      WindowsBackdrop.SetCaption(hwnd, decorated)
+      if !fullscreen {
+        Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
+      }
     }
     let outside = !decorated && resizable
     var waylandBorder = false
@@ -579,6 +606,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         SDL_SetWindowHitTestRaw(windowHandle, nint(0), nint(0))
       }
       if !window.IsNull {
+        let windowsHwnd = if OperatingSystem.IsWindows() { WindowsHandle() } else { nint(0) }
         if OperatingSystem.IsMacOS() {
           SDL.SyncWindow(window)
           if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
@@ -590,6 +618,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           SDL.HideWindow(window)
         }
         SDL.DestroyWindow(window)
+        if windowsHwnd != nint(0) { WindowsBackdrop.ClearWindow(windowsHwnd) }
         window = SDLWindowPtr.Null
         windowHandle = nint(0)
       }
@@ -656,16 +685,32 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         role.Attach(display, surface, ReadWaylandOutput(role.Output))
       }
     } else {
-      let requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
-      var bounds = requested
+      var requested = ElementRect{ X: x, Y: y, Width: width, Height: height }
+      var scaledMinWidth = minWidth
+      var scaledMinHeight = minHeight
       var displayId = SDL.GetPrimaryDisplay()
       if positionSet {
         let rect = SDLRect{ X: x, Y: y, W: width, H: height }
         displayId = SDL.GetDisplayForRect(in rect)
       }
+      let displayContentScale = SDL.GetDisplayContentScale(displayId)
+      let mode = SDL.GetDesktopDisplayMode(displayId)
+      let modeDensity = !mode.IsNull && mode.PixelDensity > 0.0F ? mode.PixelDensity : 1.0F
+      let initialContentScale = DisplayScale.ResolveContentScale(1, 1, 1, 1, displayContentScale, modeDensity)
+      if initialContentScale != 1.0 {
+        requested = ElementRect{
+          X: requested.X,
+          Y: requested.Y,
+          Width: Math.Max(1.0, Math.Round(requested.Width * initialContentScale)),
+          Height: Math.Max(1.0, Math.Round(requested.Height * initialContentScale)),
+        }
+        if scaledMinWidth > 0 { scaledMinWidth = Math.Max(1, int32(Math.Round(float64(scaledMinWidth) * initialContentScale))) }
+        if scaledMinHeight > 0 { scaledMinHeight = Math.Max(1, int32(Math.Round(float64(scaledMinHeight) * initialContentScale))) }
+      }
+      var bounds = requested
       let usable = ReadDisplay(displayId)?.UsableBounds
       if let area = usable {
-        bounds = ConstrainInitialBounds(requested, minWidth, minHeight, positionSet, area)
+        bounds = ConstrainInitialBounds(requested, scaledMinWidth, scaledMinHeight, positionSet, area)
       }
       let properties = SDL.CreateProperties()
       if properties == 0u { ThrowSdl("SDL_CreateProperties") }
@@ -861,7 +906,13 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let framebufferHeight = FramebufferHeight
     RefreshMetrics()
     RefreshDisplayPacing(false)
-    if logicalWidth != LogicalWidth || logicalHeight != LogicalHeight ||
+    let currentDisplayScale = DisplayScale
+    let displayScaleChanged = MathF.Abs(currentDisplayScale - lastDisplayScale) > 0.001F
+    if displayScaleChanged {
+      lastDisplayScale = currentDisplayScale
+      pixelDensityChange = true
+    }
+    if displayScaleChanged || logicalWidth != LogicalWidth || logicalHeight != LogicalHeight ||
     framebufferWidth != FramebufferWidth || framebufferHeight != FramebufferHeight{
       RaiseMetrics()
       if layerWindow != nil { Exposed?.Invoke() }
@@ -933,6 +984,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     let point = *SdlHostPoint(pointAddress)
     return EvaluateHitTest(hitTest, point -> X, point -> Y)
   }
+
+  private func WindowsHandle() nint ->
+    if windowHandle == nint(0) { nint(0) } else { BackdropPointer(BackdropProperties(windowHandle), "SDL.window.win32.hwnd", nint(0)) }
 
   private func ThrowIfDisposed() {
     SdlRuntime.RequireMainThread("SdlHost.")

@@ -237,6 +237,16 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var textFrameTopologyKey uint64
   var textFrameLastUseSerial uint64
   var textFramePrepared uint32
+  var textLayoutCacheBytes uint64
+  var textLayoutCacheEntries uint64
+  var textLayoutCacheHits uint64
+  var textLayoutCacheMisses uint64
+  var textLayoutCacheEvictions uint64
+  var textRunShapeCacheBytes uint64
+  var textRunShapeCacheEntries uint64
+  var textRunShapeCacheHits uint64
+  var textRunShapeCacheMisses uint64
+  var textRunShapeCacheEvictions uint64
   var imageEvictionCount uint64
   var imageRetirementCount uint64
   var allocatorBytes uint64

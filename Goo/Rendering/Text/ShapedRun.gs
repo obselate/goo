@@ -18,16 +18,21 @@ internal sealed class ShapedRun : IDisposable {
   internal prop OwnsTypeface bool{ get; set; }
   internal prop Provider VulkanTextProvider{
     get {
+      if let direct = directProvider {
+        return direct
+      }
       guard let lease = typefaceLease else { throw ObjectDisposedException("ShapedRun") }
       return lease.Provider
     }
   }
   private let typefaceLease TypefaceLease?
+  private let directProvider VulkanTextProvider?
   private var disposed bool
 
   internal init(text string, family string, glyphs []uint32, points []TextPoint,
     clusters []uint32, logicalStart int32, rightToLeft bool, visualStart float32,
-    visualEnd float32, ownsTypeface bool, lease TypefaceLease?) {
+    visualEnd float32, ownsTypeface bool, lease TypefaceLease?,
+    provider VulkanTextProvider? = nil) {
       Text = text
       Family = family
       Glyphs = glyphs
@@ -39,6 +44,7 @@ internal sealed class ShapedRun : IDisposable {
       VisualEnd = visualEnd
       OwnsTypeface = ownsTypeface
       typefaceLease = lease
+      directProvider = provider
     }
 
   internal func Slice(start int32, end int32) ShapedRun? {
@@ -72,7 +78,7 @@ internal sealed class ShapedRun : IDisposable {
     let right = GlyphEdge(lastGlyph)
     return ShapedRun(Text, Family, glyphs.ToArray(), points.ToArray(), clusters.ToArray(),
       LogicalStart, RightToLeft, RightToLeft ? right : left, RightToLeft ? left : right,
-      lease == nil, lease)
+      lease == nil, lease, directProvider)
   }
 
   internal func GlyphEdge(glyph int32) float32 ->

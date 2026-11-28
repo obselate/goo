@@ -46,6 +46,7 @@ internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public prop FramebufferWidth int32{ get -> host.FramebufferWidth }
   public prop FramebufferHeight int32{ get -> host.FramebufferHeight }
   public prop DisplayScale float32{ get -> 0.0F }
+  public prop PixelDensity float32{ get -> 0.0F }
   public prop PreferRequestedFramebufferExtent bool{ get -> host.UsesRequestedFramebufferExtent() }
   public prop AllowInheritedCompositeAlpha bool{ get -> host.AllowsInheritedCompositeAlpha() }
   public prop X int32{ get -> 0 }

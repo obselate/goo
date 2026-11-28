@@ -167,18 +167,6 @@ internal func AppendVulkanProofGlyph(
       ByteRangeEnd: uint64(atlasTexelOffset + atlasTexelCount) * 8uL,
     }
     segment.RunCount = 1
-    segment.GlyphResources[0] = ResourceId{
-      Kind: SceneResourceKind.GlyphRun,
-      LogicalId: atlasId.LogicalId,
-      Version: uint64(atlasTexelOffset) + 1uL,
-    }
-    segment.GlyphResourceCount = 1
-    segment.GlyphAtlasTexelOffsets[0] = atlasTexelOffset
-    segment.GlyphAtlasTexelCounts[0] = atlasTexelCount
-    if effectMode != 0u {
-      segment.GlyphEffectAtlasTexelOffsets[0] = atlasTexelOffset
-      segment.GlyphEffectAtlasTexelCounts[0] = atlasTexelCount
-    }
     segment.AtlasGeneration = atlasGeneration
     frame.AddCachedTextSegment(CachedTextSegmentRefRecord{
       Bounds: bounds,

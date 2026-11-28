@@ -3,6 +3,7 @@ import System
 import System.Diagnostics
 import System.Globalization
 import System.IO
+import System.Text
 import System.Runtime.CompilerServices
 
 internal enum LayoutPass {
@@ -48,9 +49,10 @@ func Main(args[]string) {
         return
     }
     let sample = args.Length > 0 && args[0] == "--sample"
-    if args.Length > 3 || args.Length != 0 && !sample {
+    let chat = args.Length > 0 && args[0] == "--chat"
+    if args.Length > 3 || args.Length != 0 && !sample && !chat || chat && args.Length > 2 {
         Console.WriteLine(
-            "Usage: dotnet run -c Release --project tools/Goo.LayoutBenchmark -- [--storage | --sample [matrix|deep|wide [First|TextChange|Resize|MountFirst]]]"
+            "Usage: dotnet run -c Release --project tools/Goo.LayoutBenchmark -- [--storage | --chat [paragraphs] | --sample [matrix|deep|wide [First|TextChange|Resize|MountFirst]]]"
         )
         Console.WriteLine(
             "On Linux, put Goo's packaged runtime libraries on LD_LIBRARY_PATH if they are not in the output directory."
@@ -67,6 +69,10 @@ func Main(args[]string) {
         []FontVariation{FontVariation("wght", 400.0F)}
     )
     font.Register()
+    if chat {
+        MeasureChat(args.Length == 2 ? Int32.Parse(args[1]) : 1000)
+        return
+    }
     let runtime = RuntimeFeature.IsDynamicCodeSupported ? "JIT" : "NativeAOT"
     let runs = sample ? 1 : 10
     Console.WriteLine("$runtime; $runs measured runs per row after one warmup; mount included only in MountFirst")
@@ -214,4 +220,45 @@ func Measure(shape string, nodes int32, batchSize int32, pass LayoutPass, batche
     Console.WriteLine(
         "$shape\t$nodes\t$pass\t${batchSize * batches}\t${(micros[lower] + micros[upper]) / 2.0:F3}\t${(allocations[lower] + allocations[upper]) / 2.0:F1}"
     )
+}
+
+func MeasureChat(count int32) {
+    FrameRecorder.Start(Guid.NewGuid(), 65536)
+    let words = []string{"layout", "glyph", "message", "scroll", "virtual", "paragraph", "shaping", "cache", "render", "window"}
+    let random = Random(7)
+    let contents = [count]string{}
+    let handles = [count]ElementHandle{}
+    for i in 0 ... count {
+        let length = 50 + random.Next(2951)
+        let builder = StringBuilder("$i ")
+        while builder.Length < length {
+            builder.Append(words[random.Next(words.Length)]).Append(' ')
+        }
+        contents[i] = builder.ToString()
+        handles[i] = ElementHandle()
+    }
+    let page int32 = 12
+    let pages = (count + page - 1) / page
+    Console.WriteLine("chat: $count paragraphs, 50-3000 chars, every 4th with an element handle, $page per page, width 640")
+    Console.WriteLine("pass\tpages\tshape calls\tms")
+    for back in []bool{false, true} {
+        let shapes = FrameWorkCounters.ShapeCalls
+        let start = Stopwatch.GetTimestamp()
+        for step in 0 ... pages {
+            let first = (back ? pages - 1 - step : step) * page
+            let column = Column{Width: 640}
+            for i in first ... Math.Min(first + page, count) {
+                let text = Text{Content: contents[i], FontFamily: "LayoutBenchmark", FontWeight: 400}
+                if i % 4 == 0 {
+                    text.Handle = handles[i]
+                }
+                column.Children.Add(text)
+            }
+            let subject = LayoutSubject(column)
+            subject.Engine.Calculate(subject.Root, 640.0F, 720.0F)
+            NodeLifecycle.DisposeTree(subject.Root)
+        }
+        let elapsed = float64(Stopwatch.GetTimestamp() - start) * 1000.0 / float64(Stopwatch.Frequency)
+        Console.WriteLine("${back ? "back" : "forward"}\t$pages\t${FrameWorkCounters.ShapeCalls - shapes}\t${elapsed:F1}")
+    }
 }

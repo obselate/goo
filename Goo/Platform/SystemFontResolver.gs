@@ -13,6 +13,8 @@ internal sealed class FileSystemFontResolver {
     let sansAliases = requested == "" || requested == "sansserif" || requested == "sans"
       || requested == "systemui"
     let monoAliases = requested == "monospace" || requested == "mono"
+    let segoeEmojiAlias = requested == "segoeuiemoji"
+    let emojiAlias = requested == "emoji"
     var best string?
     var bestScore int32 = Int32.MinValue
     var bestWeight int32
@@ -38,6 +40,15 @@ internal sealed class FileSystemFontResolver {
           || stem.StartsWith("menlo") || stem.StartsWith("monaco")
           || stem.StartsWith("lucidaconsole") || stem.StartsWith("sourcecodepro") {
             familyScore = 50
+          }
+      } else if segoeEmojiAlias {
+        if stem == "seguiemj" || stem.Contains("segoeuiemoji") {
+          familyScore = 100
+        }
+      } else if emojiAlias {
+        if stem.Contains("notocoloremoji") || stem == "seguiemj"
+          || stem.Contains("segoeuiemoji") || stem.Contains("applecoloremoji") {
+            familyScore = 100
           }
       } else if stem.Contains(requested) {
         familyScore = 100

@@ -136,9 +136,11 @@ internal partial class VulkanSceneCompiler {
             guard let scene = imageScene else {
                 return false
             }
-            if !scene.TryRetain(rangeData.CachedImages[index]) {
+            let cachedImage = rangeData.CachedImages[index]
+            if !scene.TryRetain(cachedImage) {
                 return false
             }
+            textScene?.TouchColorAtlasImage(cachedImage.ImageId)
         }
         for index in start.AnalyticPathBands ... end.AnalyticPathBands {
             guard let scene = pathScene else {
@@ -185,8 +187,8 @@ internal partial class VulkanSceneCompiler {
             }
             for runIndex in 0 ... segment.RunCount {
                 let run = segment.Runs[runIndex]
-                if !scene.TryMarkAtlasActive(run.AtlasId) || run.ByteRangeEnd == 0uL
-                || !scene.IsAtlasRangeResident(run.AtlasId, run.ByteRangeEnd) {
+                if !scene.TryMarkAtlasActive(run.AtlasId, run.AtlasSlotHint) || run.ByteRangeEnd == 0uL
+                || !scene.IsAtlasRangeResident(run.AtlasId, run.ByteRangeEnd, run.AtlasSlotHint) {
                     return false
                 }
             }
