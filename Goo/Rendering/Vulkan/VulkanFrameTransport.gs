@@ -29,10 +29,6 @@ internal unsafe data struct VulkanFrameBuffers {
     }
   }
 
-  internal prop LiveObjectCount uint64{
-    get -> (Buffer != 0uL ? 1uL : 0uL) + (StagingBuffer != 0uL ? 1uL : 0uL)
-  }
-
   internal func Flush(offset VkDeviceSize, byteCount VkDeviceSize) VkResult {
     let candidate = StagingAllocation ?? Allocation
     guard let allocation = candidate else {
@@ -55,7 +51,7 @@ internal unsafe data struct VulkanFrameBuffers {
       if required == 0uL {
         throw ArgumentOutOfRangeException("required")
       }
-      if required <= Capacity && Buffer != 0uL && StagingBuffer != 0uL
+      if required <= Capacity && Buffer != VkBuffer.Null && StagingBuffer != VkBuffer.Null
         && Allocation != nil && StagingAllocation != nil {
           return false
         }
@@ -93,7 +89,7 @@ internal unsafe data struct VulkanFrameBuffers {
       if required == 0uL {
         throw ArgumentOutOfRangeException("required")
       }
-      if required <= Capacity && Buffer != 0uL && Allocation != nil {
+      if required <= Capacity && Buffer != VkBuffer.Null && Allocation != nil {
         return false
       }
       if Generation == uint64.MaxValue {
@@ -154,9 +150,9 @@ internal unsafe data struct VulkanFrameBuffers {
 
   private func DestroyBuffer(ref buffer VkBuffer,
     ref allocation VulkanMemoryAllocation?, ref accounted bool) {
-      if buffer != 0uL {
+      if buffer != VkBuffer.Null {
         let stale = buffer
-        buffer = 0uL
+        buffer = VkBuffer.Null
         let destroyBuffer = Dispatch.vkDestroyBuffer
         try { destroyBuffer(Device, stale, nil) } catch (cleanup Exception) { }
         if accounted {
@@ -185,7 +181,7 @@ internal data struct VulkanFrameSlotLifecycle {
     Prepared = true
     Recorded = false
     Submitted = false
-    RecordedCommandBuffer = nint(0)
+    RecordedCommandBuffer = VkCommandBuffer.Null
     FlushPrepared = false
   }
 
@@ -197,7 +193,7 @@ internal data struct VulkanFrameSlotLifecycle {
   internal func AcceptSubmission(submissionSerial uint64) {
     Prepared = false
     Recorded = false
-    RecordedCommandBuffer = nint(0)
+    RecordedCommandBuffer = VkCommandBuffer.Null
     Submitted = true
     LastUseSerial = submissionSerial
   }
@@ -215,7 +211,7 @@ internal data struct VulkanFrameSlotLifecycle {
   internal func Abort() {
     Prepared = false
     Recorded = false
-    RecordedCommandBuffer = nint(0)
+    RecordedCommandBuffer = VkCommandBuffer.Null
     FlushPrepared = false
   }
 
@@ -235,10 +231,6 @@ internal unsafe data struct VulkanFrameDescriptorOwner {
   internal var PoolAccounted bool
   internal var SetsAccounted int32
 
-  internal prop LiveObjectCount uint64{
-    get -> (Pool != 0uL ? 1uL : 0uL) + uint64(SetsAccounted)
-  }
-
   internal func Adopt(allocation VulkanDescriptorAllocation) {
     Pool = allocation.Pool
     if ObjectAccounting != nil {
@@ -256,9 +248,9 @@ internal unsafe data struct VulkanFrameDescriptorOwner {
     }
 
   internal func Destroy() {
-    if Pool != 0uL {
+    if Pool != VkDescriptorPool.Null {
       let stale = Pool
-      Pool = 0uL
+      Pool = VkDescriptorPool.Null
       let destroyPool = Dispatch.vkDestroyDescriptorPool
       try { destroyPool(Device, stale, nil) } catch (cleanup Exception) { }
       if let accounting = ObjectAccounting {
@@ -274,7 +266,7 @@ internal unsafe data struct VulkanFrameDescriptorOwner {
     }
     var index int32 = 0
     while index < Sets.Length {
-      Sets[index] = 0uL
+      Sets[index] = VkDescriptorSet.Null
       index++
     }
   }

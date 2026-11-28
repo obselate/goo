@@ -51,7 +51,7 @@ internal unsafe partial class VulkanWindowTarget {
       profileGpuTraceId = recorder.TraceId
       var gpuContext = context
       gpuContext.DeviceId = uint64(device)
-      gpuContext.DeviceGeneration = runtime?.Generation ?? 0uL
+      gpuContext.DeviceGeneration = runtime?.Runtime.Generation ?? 0uL
       recorder.Publish(FrameTraceRecord{
         Kind: FrameTraceKind.Metadata, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
         Context: gpuContext, Name: "gpu.timestamp", Source: "vulkan.timestamp",
@@ -78,11 +78,11 @@ internal unsafe partial class VulkanWindowTarget {
 
   public func Sample(recorder FrameRecorder, force bool, includeShared bool) {
     if includeShared {
-      runtime?.MemoryAllocator.ProfileSnapshot(recorder, force)
+      runtime?.Runtime.MemoryAllocator.ProfileSnapshot(recorder, force)
       TextShaping.ProfileResources(recorder)
-      runtime?.PrimitiveState.ProfileResources(recorder)
-      runtime?.PipelineCache.ProfileResources(recorder)
-      runtime?.ImageIdentityRegistry.ProfileResources(recorder)
+      runtime?.Runtime.PrimitiveState.ProfileResources(recorder)
+      runtime?.Runtime.PipelineCache.ProfileResources(recorder)
+      runtime?.Runtime.ImageIdentityRegistry.ProfileResources(recorder)
     }
     ProfileSwapchains(recorder)
   }
@@ -99,7 +99,7 @@ internal unsafe partial class VulkanWindowTarget {
     let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
     getProperties(physicalDevice, &properties)
     return FrameTraceRecord{Kind: FrameTraceKind.Metadata,
-      Context: FrameTraceContext{DeviceId: uint64(device), DeviceGeneration: runtime?.Generation ?? 0uL},
+      Context: FrameTraceContext{DeviceId: uint64(device), DeviceGeneration: runtime?.Runtime.Generation ?? 0uL},
       Name: Marshal.PtrToStringUTF8(nint(&properties.deviceName[0])),
       Source: "vulkan.device", Validity: "available",
       Value0: uint64(properties.vendorID), Value1: uint64(properties.deviceID)}
@@ -116,7 +116,7 @@ internal unsafe partial class VulkanWindowTarget {
     var context = activeTraceContext
     context.FrameId = activeFrameId
     context.DeviceId = uint64(device)
-    context.DeviceGeneration = runtime?.Generation ?? 0uL
+    context.DeviceGeneration = runtime?.Runtime.Generation ?? 0uL
     if let current = generation { context.Generation = current.Generation }
     return context
   }
@@ -640,9 +640,9 @@ internal unsafe partial class VulkanWindowTarget {
             }
             chunkIndex++
           }
-          current.AddPlanCompile(1uL)
-          current.SetDirtyChunkCount(dirtyChunkCount)
-          current.SetReusedChunkCount(reusedChunkCount)
+          current.AddCounter(VulkanCounterId.PlanCompileCount)
+          current.SetCounter(VulkanCounterId.DirtyChunkCount, dirtyChunkCount)
+          current.SetCounter(VulkanCounterId.ReusedChunkCount, reusedChunkCount)
           current.Record(
             0uL,
             0uL,
@@ -752,8 +752,8 @@ internal unsafe partial class VulkanWindowTarget {
     }
     try {
       if let current = diagnostics {
-        current.AddUpload(1uL)
-        current.AddUploadBytes(bytes)
+        current.AddCounter(VulkanCounterId.UploadCount)
+        current.AddCounter(VulkanCounterId.UploadBytes, bytes)
         RecordDiagnosticTiming(VulkanDiagnosticEventIds.UploadStage,
           VulkanDiagnosticCategories.Timing, start)
       }
@@ -768,10 +768,10 @@ internal unsafe partial class VulkanWindowTarget {
       }
       try {
         if let current = diagnostics {
-          current.AddRecord(1uL)
-          current.AddDraw(recordResult.drawCallCount)
-          current.AddPipelineChange(recordResult.pipelineChangeCount)
-          current.AddDescriptorChange(recordResult.descriptorChangeCount)
+          current.AddCounter(VulkanCounterId.RecordCount)
+          current.AddCounter(VulkanCounterId.DrawCount, recordResult.drawCallCount)
+          current.AddCounter(VulkanCounterId.PipelineChangeCount, recordResult.pipelineChangeCount)
+          current.AddCounter(VulkanCounterId.DescriptorChangeCount, recordResult.descriptorChangeCount)
           current.Record(
             0uL,
             0uL,
@@ -808,7 +808,7 @@ internal unsafe partial class VulkanWindowTarget {
           RecordDiagnosticTiming(VulkanDiagnosticEventIds.FirstSubmit,
             VulkanDiagnosticCategories.Timing, start)
         }
-        current.AddSubmit(1uL)
+        current.AddCounter(VulkanCounterId.SubmitCount)
         RecordDiagnosticTiming(VulkanDiagnosticEventIds.Submit,
           VulkanDiagnosticCategories.Timing, start)
         if let slot = activeFrameSlot {
@@ -827,7 +827,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     try {
       if let current = diagnostics {
-        current.AddPresent(1uL)
+        current.AddCounter(VulkanCounterId.PresentCount)
         RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainPresent,
           VulkanDiagnosticCategories.Timing, start)
         CaptureDiagnosticWsi()
@@ -845,7 +845,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     try {
       if let current = diagnostics {
-        current.AddBarrier(uint64(count))
+        current.AddCounter(VulkanCounterId.BarrierCount, uint64(count))
       }
     } catch (cleanup Exception) { }
   }
@@ -853,7 +853,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func RecordDiagnosticPass() {
     try {
       if let current = diagnostics {
-        current.AddPass(1uL)
+        current.AddCounter(VulkanCounterId.PassCount)
       }
     } catch (cleanup Exception) { }
   }
@@ -938,32 +938,32 @@ internal unsafe partial class VulkanWindowTarget {
           heapAllocated = uint64(values.residentBytes)
           retiredBytes = uint64(values.retiredBytes)
           allocatorBytes = uint64(values.liveBytes) + uint64(values.retiredBytes)
-          current.SetAllocatorBytes(allocatorBytes)
-          current.SetVulkanDeviceMemoryAllocationCount(values.allocationEvents)
-          current.SetVulkanDeviceMemoryBytes(uint64(values.residentBytes))
+          current.SetCounter(VulkanCounterId.AllocatorBytes, allocatorBytes)
+          current.SetCounter(VulkanCounterId.VulkanDeviceMemoryAllocationCount, values.allocationEvents)
+          current.SetCounter(VulkanCounterId.VulkanDeviceMemoryBytes, uint64(values.residentBytes))
         }
         var liveObjects uint64 = 0uL
         if let accounting = objectAccounting {
           liveObjects = accounting.LiveCount
-          current.SetVulkanObjectCount(liveObjects)
-          current.SetVulkanObjectAllocationCount(accounting.AllocationCount)
+          current.SetCounter(VulkanCounterId.VulkanObjectCount, liveObjects)
+          current.SetCounter(VulkanCounterId.VulkanObjectAllocationCount, accounting.AllocationCount)
         }
         var cacheBytes uint64 = 0uL
         if let resources = imageResources {
           let stats = resources.Stats
           cacheBytes = cacheBytes + uint64(stats.ResidentBytes)
-          current.SetImageResidentBytes(uint64(stats.ResidentBytes))
-          current.SetImageLiveObjectCount(stats.LiveObjectCount)
-          current.SetImagePeakResidentBytes(uint64(stats.ResidentBytes))
-          current.SetImagePeakLiveObjectCount(stats.LiveObjectCount)
+          current.SetCounter(VulkanCounterId.ImageResidentBytes, uint64(stats.ResidentBytes))
+          current.SetCounter(VulkanCounterId.ImageLiveObjectCount, stats.LiveObjectCount)
+          current.SetPeakCounter(VulkanCounterId.ImagePeakResidentBytes, uint64(stats.ResidentBytes))
+          current.SetPeakCounter(VulkanCounterId.ImagePeakLiveObjectCount, stats.LiveObjectCount)
         }
         if let atlas = textAtlas {
           let stats = atlas.Stats
           cacheBytes = cacheBytes + uint64(stats.ResidentByteSize)
           PublishTextAtlasDiagnosticContribution(current, stats)
-          current.SetTextAtlasPeakCount(uint64(stats.AtlasCount))
-          current.SetTextAtlasPeakResidentBytes(uint64(stats.ResidentByteSize))
-          current.SetTextAtlasPeakLiveObjectCount(stats.LiveObjectCount)
+          current.SetPeakCounter(VulkanCounterId.TextAtlasPeakCount, uint64(stats.AtlasCount))
+          current.SetPeakCounter(VulkanCounterId.TextAtlasPeakResidentBytes, uint64(stats.ResidentByteSize))
+          current.SetPeakCounter(VulkanCounterId.TextAtlasPeakLiveObjectCount, stats.LiveObjectCount)
         }
         if let resources = pathResources {
           let stats = resources.Stats
@@ -980,7 +980,7 @@ internal unsafe partial class VulkanWindowTarget {
           current.SetTextFrameStats(renderer.TextFrameStats)
         }
         current.SetTextCacheStats(TextLayouts.CacheStats(), TextShaping.RunShapeCacheStats())
-        current.SetCacheBytes(cacheBytes)
+        current.SetCounter(VulkanCounterId.CacheBytes, cacheBytes)
         current.CaptureResourceFacts(
           heapBudgetAvailable, heapBudgetSampleCurrent, heapBudget, driverHeapUsage, heapAllocated,
           retiredBytes, liveObjects)

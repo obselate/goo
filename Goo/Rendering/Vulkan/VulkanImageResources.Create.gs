@@ -75,8 +75,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     samplerInfo.maxLod = if filter == VkConstants.VK_FILTER_LINEAR { VkConstants.VK_LOD_CLAMP_NONE } else { 0.0F }
     samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
     let createSampler = dispatch.vkCreateSampler
-    var sampler VkSampler = 0uL
-    if createSampler(device, &samplerInfo, nil, &sampler) != VkConstants.VK_SUCCESS || sampler == 0uL {
+    var sampler VkSampler = VkSampler.Null
+    if createSampler(device, &samplerInfo, nil, &sampler) != VkConstants.VK_SUCCESS || sampler == VkSampler.Null {
       throw InvalidOperationException("vkCreateSampler failed")
     }
     try {
@@ -97,16 +97,16 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     } else {
       stagingMaximumByteCapacity
     }
-    if stagingBuffer != 0uL && stagingAllocation != nil
+    if stagingBuffer != VkBuffer.Null && stagingAllocation != nil
       && stagingByteCapacity >= demand{
         return
       }
     lock (stagingGate) {
-      if stagingBuffer != 0uL && stagingAllocation != nil
+      if stagingBuffer != VkBuffer.Null && stagingAllocation != nil
         && stagingByteCapacity >= demand{
           return
         }
-      if (stagingBuffer != 0uL) != (stagingAllocation != nil) {
+      if (stagingBuffer != VkBuffer.Null) != (stagingAllocation != nil) {
         throw InvalidOperationException("Vulkan image staging state is incomplete")
       }
       if uploadRing.Stats.ActiveRanges == 0 && stagingByteCapacity < demand {
@@ -119,7 +119,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           }
         }
         GrowStagingBuffer(grown)
-      } else if stagingBuffer == 0uL {
+      } else if stagingBuffer == VkBuffer.Null {
         try {
           CreateStagingBuffer(stagingByteCapacity)
         } catch (error Exception) {
@@ -387,7 +387,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     samplerMode VulkanImageSamplerMode) VulkanImageDescriptorBinding{
       let sampler = if samplerMode == VulkanImageSamplerMode.Nearest { nearestSampler } else { linearSampler }
       let slot = DescriptorSlot(index, samplerMode)
-      if slot < 0 || slot >= descriptorCapacity || descriptorSets[slot] == 0uL {
+      if slot < 0 || slot >= descriptorCapacity || descriptorSets[slot] == VkDescriptorSet.Null {
         throw InvalidOperationException("Vulkan image descriptor capacity reached")
       }
       let existing = if samplerMode == VulkanImageSamplerMode.Nearest {

@@ -8,7 +8,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     extent VkExtent2D,
     value AnalyticPathBandRecord,
     frame SceneFrame, index int32) {
-      if pathAtlas == nil || pathPipelineLayout == 0uL {
+      if pathAtlas == nil || pathPipelineLayout == VkPipelineLayout.Null {
         throw NotSupportedException("Vulkan primitive renderer has no path atlas pipeline")
       }
       let stroke = value.Stroke.Width > 0.0F

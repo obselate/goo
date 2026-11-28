@@ -8,7 +8,7 @@ internal unsafe class VulkanSynchronizationFactory {
       device VkDevice,
       dispatch VkDeviceDispatch,
       objectAccounting VulkanObjectAccounting?) VkSemaphore{
-        var semaphore VkSemaphore = 0uL
+        var semaphore VkSemaphore = VkSemaphore.Null
         var accounted bool = false
         var info = VkSemaphoreCreateInfo{
           sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -18,7 +18,7 @@ internal unsafe class VulkanSynchronizationFactory {
         try {
           let createSemaphore = dispatch.vkCreateSemaphore
           let result = createSemaphore(device, &info, nil, &semaphore)
-          if result != VkConstants.VK_SUCCESS || semaphore == 0uL {
+          if result != VkConstants.VK_SUCCESS || semaphore == VkSemaphore.Null {
             throw InvalidOperationException(
               "vkCreateSemaphore failed: " + result.ToString())
           }
@@ -28,7 +28,7 @@ internal unsafe class VulkanSynchronizationFactory {
           }
           return semaphore
         } catch (error Exception) {
-          if semaphore != 0uL {
+          if semaphore != VkSemaphore.Null {
             let destroySemaphore = dispatch.vkDestroySemaphore
             try { destroySemaphore(device, semaphore, nil) } catch (cleanup Exception) { }
           }
@@ -46,7 +46,7 @@ internal unsafe class VulkanSynchronizationFactory {
       dispatch VkDeviceDispatch,
       objectAccounting VulkanObjectAccounting?,
       flags VkFenceCreateFlags) VkFence{
-        var fence VkFence = 0uL
+        var fence VkFence = VkFence.Null
         var accounted bool = false
         var info = VkFenceCreateInfo{
           sType: VkConstants.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -56,7 +56,7 @@ internal unsafe class VulkanSynchronizationFactory {
         try {
           let createFence = dispatch.vkCreateFence
           let result = createFence(device, &info, nil, &fence)
-          if result != VkConstants.VK_SUCCESS || fence == 0uL {
+          if result != VkConstants.VK_SUCCESS || fence == VkFence.Null {
             throw InvalidOperationException(
               "vkCreateFence failed: " + result.ToString())
           }
@@ -66,7 +66,7 @@ internal unsafe class VulkanSynchronizationFactory {
           }
           return fence
         } catch (error Exception) {
-          if fence != 0uL {
+          if fence != VkFence.Null {
             let destroyFence = dispatch.vkDestroyFence
             try { destroyFence(device, fence, nil) } catch (cleanup Exception) { }
           }

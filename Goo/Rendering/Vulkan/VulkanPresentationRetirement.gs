@@ -1,17 +1,6 @@
 package Goo
 
 import System
-import System.Diagnostics
-
-internal data struct VulkanPresentationLatencySample {
-  var token uint64
-  var kind int32
-  var startTimestamp int64
-  var handoffTimestamp int64
-  var completionObservedTimestamp int64
-  var presentId uint64
-  var presentFenceObserved bool
-}
 
 internal data struct VulkanPresentationRecord {
   var generation uint64
@@ -21,10 +10,6 @@ internal data struct VulkanPresentationRecord {
   var completionSerial uint64
   var hasCompletion bool
   var completed bool
-  var latencyToken uint64
-  var latencyKind int32
-  var latencyStartTimestamp int64
-  var latencyHandoffTimestamp int64
 }
 
 internal data struct VulkanCompletedPresentationRecord {
@@ -48,10 +33,6 @@ internal partial class VulkanPresentationRetirement {
   private var retiredGenerationCount int32
   private var nextPresentId uint64
   private var newestGeneration uint64
-  private var presentationLatencySink Action[VulkanPresentationLatencySample]?
-  private var pendingLatencyToken uint64
-  private var pendingLatencyKind int32
-  private var pendingLatencyStartTimestamp int64
 
   internal init(presentationCapacity uint32, retiredGenerationCapacity uint32) {
     if presentationCapacity == 0u || presentationCapacity > uint32(Int32.MaxValue) {
@@ -65,114 +46,6 @@ internal partial class VulkanPresentationRetirement {
     retiredGenerations = [int32(retiredGenerationCapacity)]VulkanRetiredGenerationRecord
     nextPresentId = 1uL
   }
-
-  internal func SetPresentationLatencySink(
-    sink Action[VulkanPresentationLatencySample]?) {
-      presentationLatencySink = sink
-    }
-
-  internal func BeginPresentationLatency(
-    token uint64, kind int32, startTimestamp int64) {
-      if token == 0uL {
-        throw InvalidOperationException("Vulkan presentation latency token must be nonzero")
-      }
-      if startTimestamp <= 0L {
-        throw InvalidOperationException(
-          "Vulkan presentation latency start timestamp must be positive")
-      }
-      if pendingLatencyToken != 0uL {
-        throw InvalidOperationException(
-          "Vulkan presentation latency already has a pending token")
-      }
-      pendingLatencyToken = token
-      pendingLatencyKind = kind
-      pendingLatencyStartTimestamp = startTimestamp
-    }
-
-  internal func ClearPresentationLatency() {
-    presentationLatencySink = nil
-    pendingLatencyToken = 0uL
-    pendingLatencyKind = 0
-    pendingLatencyStartTimestamp = 0L
-    if let storage = presentations {
-      var index int32 = 0
-      while index < presentationCount {
-        let record = storage[index]
-        if record.latencyToken != 0uL {
-          storage[index] = VulkanPresentationRecord{
-            generation: record.generation,
-            presentId: record.presentId,
-            imageIndex: record.imageIndex,
-            completionSlot: record.completionSlot,
-            completionSerial: record.completionSerial,
-            hasCompletion: record.hasCompletion,
-            completed: record.completed,
-            latencyToken: 0uL,
-            latencyKind: 0,
-            latencyStartTimestamp: 0L,
-            latencyHandoffTimestamp: 0L,
-          }
-        }
-        index = index + 1
-      }
-    }
-  }
-  internal func CancelPendingPresentationLatency() {
-    pendingLatencyToken = 0uL
-    pendingLatencyKind = 0
-    pendingLatencyStartTimestamp = 0L
-  }
-
-  internal func AttachPendingPresentationLatency(
-    presentId uint64, handoffTimestamp int64, presentFenceSupported bool) bool{
-      if presentId == 0uL || pendingLatencyToken == 0uL {
-        return false
-      }
-      if let storage = presentations {
-        var index int32 = 0
-        while index < presentationCount {
-          let record = storage[index]
-          if record.presentId == presentId {
-            let attached = VulkanPresentationRecord{
-              generation: record.generation,
-              presentId: record.presentId,
-              imageIndex: record.imageIndex,
-              completionSlot: record.completionSlot,
-              completionSerial: record.completionSerial,
-              hasCompletion: record.hasCompletion,
-              completed: record.completed,
-              latencyToken: pendingLatencyToken,
-              latencyKind: pendingLatencyKind,
-              latencyStartTimestamp: pendingLatencyStartTimestamp,
-              latencyHandoffTimestamp: handoffTimestamp,
-            }
-            storage[index] = attached
-            pendingLatencyToken = 0uL
-            pendingLatencyKind = 0
-            pendingLatencyStartTimestamp = 0L
-            if !presentFenceSupported {
-              storage[index] = VulkanPresentationRecord{
-                generation: attached.generation,
-                presentId: attached.presentId,
-                imageIndex: attached.imageIndex,
-                completionSlot: attached.completionSlot,
-                completionSerial: attached.completionSerial,
-                hasCompletion: attached.hasCompletion,
-                completed: attached.completed,
-                latencyToken: 0uL,
-                latencyKind: 0,
-                latencyStartTimestamp: 0L,
-                latencyHandoffTimestamp: 0L,
-              }
-              EmitPresentationLatency(attached, handoffTimestamp, false)
-            }
-            return true
-          }
-          index = index + 1
-        }
-      }
-      return false
-    }
 
   internal func RecordPresent(generation uint64, imageIndex uint32) uint64 {
     if generation == 0uL {
@@ -202,10 +75,6 @@ internal partial class VulkanPresentationRetirement {
         completionSerial: 0uL,
         hasCompletion: false,
         completed: false,
-        latencyToken: 0uL,
-        latencyKind: 0,
-        latencyStartTimestamp: 0L,
-        latencyHandoffTimestamp: 0L,
       }
       presentationCount = presentationCount + 1
       return presentId
@@ -235,10 +104,6 @@ internal partial class VulkanPresentationRetirement {
                 completionSerial: completionSerial,
                 hasCompletion: true,
                 completed: false,
-                latencyToken: record.latencyToken,
-                latencyKind: record.latencyKind,
-                latencyStartTimestamp: record.latencyStartTimestamp,
-                latencyHandoffTimestamp: record.latencyHandoffTimestamp,
               }
               return true
             }
@@ -257,22 +122,6 @@ internal partial class VulkanPresentationRetirement {
       while index < presentationCount {
         let record = storage[index]
         if record.presentId == presentId {
-          if record.latencyToken != 0uL {
-            storage[index] = VulkanPresentationRecord{
-              generation: record.generation,
-              presentId: record.presentId,
-              imageIndex: record.imageIndex,
-              completionSlot: record.completionSlot,
-              completionSerial: record.completionSerial,
-              hasCompletion: record.hasCompletion,
-              completed: record.completed,
-              latencyToken: 0uL,
-              latencyKind: 0,
-              latencyStartTimestamp: 0L,
-              latencyHandoffTimestamp: 0L,
-            }
-            EmitPresentationLatency(record, Stopwatch.GetTimestamp(), true)
-          }
           RememberCompleted(record)
           MarkRetiredAnchorsComplete(record.presentId)
           var readIndex = index + 1
@@ -298,8 +147,7 @@ internal partial class VulkanPresentationRetirement {
       while readIndex < presentationCount {
         let record = storage[readIndex]
         if record.hasCompletion && record.completionSlot == completionSlot
-          && record.completionSerial <= lastCompletedSerial
-          && record.latencyToken == 0uL {
+          && record.completionSerial <= lastCompletedSerial {
             RememberCompleted(record)
             MarkRetiredAnchorsComplete(record.presentId)
             collected = collected + 1
@@ -316,24 +164,6 @@ internal partial class VulkanPresentationRetirement {
     }
     throw InvalidOperationException("Vulkan presentation history is uninitialized")
   }
-  private func EmitPresentationLatency(
-    record VulkanPresentationRecord, completionObservedTimestamp int64,
-    presentFenceObserved bool) {
-      if record.latencyToken == 0uL {
-        return
-      }
-      if let sink = presentationLatencySink {
-        sink.Invoke(VulkanPresentationLatencySample{
-          token: record.latencyToken,
-          kind: record.latencyKind,
-          startTimestamp: record.latencyStartTimestamp,
-          handoffTimestamp: record.latencyHandoffTimestamp,
-          completionObservedTimestamp: completionObservedTimestamp,
-          presentId: record.presentId,
-          presentFenceObserved: presentFenceObserved,
-        })
-      }
-    }
 
   private func RememberCompleted(record VulkanPresentationRecord) {
     if !IsFirstPresentOfGeneration(record.generation, record.presentId) {
@@ -532,12 +362,7 @@ internal partial class VulkanPresentationRetirement {
       var writeIndex int32 = 0
       while readIndex < presentationCount {
         let record = storage[readIndex]
-        if record.generation == generation {
-          if record.latencyToken != 0uL {
-            throw InvalidOperationException(
-              "Vulkan retired generation has an incomplete latency sample")
-          }
-        } else {
+        if record.generation != generation {
           if writeIndex != readIndex {
             storage[writeIndex] = record
           }
@@ -615,6 +440,5 @@ internal partial class VulkanPresentationRetirement {
     retiredGenerationCount = 0
     nextPresentId = 1uL
     newestGeneration = 0uL
-    ClearPresentationLatency()
   }
 }

@@ -12,7 +12,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       EnsureLiveCapacity(requirements.size)
       EnsureActiveCapacity()
       let placement = AcquirePlacement(requirements, selection, VulkanMemoryResourceClass.Image, dedicated,
-        image, 0uL)
+        image, VkBuffer.Null)
       let allocation = VulkanMemoryAllocation{}
       InitializeAllocation(allocation, placement, requirements, selection, dedicated)
       TrackLive(allocation)
@@ -43,7 +43,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       EnsureLiveCapacity(requirements.size)
       EnsureActiveCapacity()
       let placement = AcquirePlacement(requirements, selection, VulkanMemoryResourceClass.Buffer, dedicated,
-        0uL, buffer)
+        VkImage.Null, buffer)
       let allocation = VulkanMemoryAllocation{}
       InitializeAllocation(allocation, placement, requirements, selection, dedicated)
       TrackLive(allocation)
@@ -183,7 +183,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       if dedicated {
         allocateInfo.pNext = *void(&dedicatedInfo)
       }
-      var memory VkDeviceMemory = 0uL
+      var memory VkDeviceMemory = VkDeviceMemory.Null
       var allocateResult = VkConstants.VK_ERROR_OUT_OF_DEVICE_MEMORY
       if failingAllocationCount > 0 {
         failingAllocationCount--
@@ -197,7 +197,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
           pressureDeficit = blockSize
           return nil
         }
-      if allocateResult != VkConstants.VK_SUCCESS || memory == 0uL {
+      if allocateResult != VkConstants.VK_SUCCESS || memory == VkDeviceMemory.Null {
         throw InvalidOperationException("vkAllocateMemory failed: result=" + allocateResult.ToString()
           +", blockBytes=" + blockSize.ToString()
           +", memoryTypeIndex=" + selection.memoryTypeIndex.ToString()

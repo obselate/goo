@@ -949,11 +949,11 @@ internal shared class Program {
     }
 
     private func SubmitPathUpload(resources VulkanPathResources, fence uint64) {
-        resources.RecordUpload(1)
+        resources.RecordUpload(VkCommandBuffer(nint(1)))
         if resources.FlushBeforeSubmit() != 0 {
             throw InvalidOperationException("Path atlas upload flush failed")
         }
-        resources.MarkSubmitted(1, fence)
+        resources.MarkSubmitted(VkCommandBuffer(nint(1)), fence)
     }
 
     private func RunSceneAllocationGate() int32 {

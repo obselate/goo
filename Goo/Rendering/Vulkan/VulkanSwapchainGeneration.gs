@@ -26,7 +26,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   internal let IsTransparent bool
 
   internal func Profile(recorder FrameRecorder, eventId uint64 = 0uL, retired bool = false) {
-    if swapchain == 0uL { return }
+    if swapchain == VkSwapchainKHR.Null { return }
     let baseline = eventId == 0uL
     if retired { profileRetired = true }
     if baseline && profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
@@ -41,7 +41,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       Ticks: System.Diagnostics.Stopwatch.GetTimestamp() - recorder.Origin,
       ThreadId: Environment.CurrentManagedThreadId,
       Context: FrameTraceContext{DeviceId: uint64(device), Generation: generation},
-      ResourceId: recorder.NativeResource(FrameResourceKind.Swapchain, uint64(device), swapchain,
+      ResourceId: recorder.NativeResource(FrameResourceKind.Swapchain, uint64(device), swapchain.Raw,
         remove: eventId == VulkanDiagnosticEventIds.SwapchainDestroy),
       ResourceKind: int32(FrameResourceKind.Swapchain), ResourceGeneration: generation,
       EventId: if baseline { VulkanDiagnosticEventIds.SwapchainCreate } else { eventId },
@@ -164,10 +164,10 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     nativeObjectAccounting VulkanObjectAccounting?,
     nativeDiagnostics VulkanDiagnostics? = nil,
     opaqueClear bool = false, transparent bool = false, minimumImageCount bool = false) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if nativeSurface == 0uL {
+      if nativeSurface == VkSurfaceKHR.Null {
         throw ArgumentException("Vulkan surface is null", "nativeSurface")
       }
       if resolvedExtent.width == 0u || resolvedExtent.height == 0u {
@@ -264,13 +264,13 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     }
     disposed = true
     imageSet = nil
-    if swapchain != 0uL {
+    if swapchain != VkSwapchainKHR.Null {
       let destroySwapchain = dispatch.vkDestroySwapchainKHR
       destroySwapchain(device, swapchain, nil)
       if let accounting = objectAccounting {
         accounting.Release()
       }
-      swapchain = 0uL
+      swapchain = VkSwapchainKHR.Null
     }
   }
 
@@ -339,16 +339,16 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         let createSwapchain = dispatch.vkCreateSwapchainKHR
         var createdSwapchain VkSwapchainKHR
         let createResult = createSwapchain(device, &createInfo, nil, &createdSwapchain)
-        if createResult != VkConstants.VK_SUCCESS || createdSwapchain == 0uL {
+        if createResult != VkConstants.VK_SUCCESS || createdSwapchain == VkSwapchainKHR.Null {
           diagnostics?.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
             VulkanDiagnosticEventIds.SwapchainCreate, VulkanDiagnosticCategories.Window, 1uL,
-            int32(createResult), createdSwapchain, oldSwapchain, extent.width, extent.height)
+            int32(createResult), createdSwapchain.Raw, oldSwapchain.Raw, extent.width, extent.height)
           if let recorder = FrameRecorder.Current {
             recorder.Publish(FrameTraceRecord{Kind: FrameTraceKind.Instant,
               Ticks: System.Diagnostics.Stopwatch.GetTimestamp() - recorder.Origin,
               Context: FrameTraceContext{DeviceId: uint64(device), Generation: generation},
               EventId: VulkanDiagnosticEventIds.SwapchainCreate, Category: VulkanDiagnosticCategories.Window,
-              Result: int32(createResult), Value0: createdSwapchain, Value1: oldSwapchain,
+              Result: int32(createResult), Value0: createdSwapchain.Raw, Value1: oldSwapchain.Raw,
               Width: int32(extent.width), Height: int32(extent.height), Source: "vkCreateSwapchainKHR"})
           }
           throw System.Runtime.InteropServices.ExternalException(
@@ -363,7 +363,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         } catch (error Exception) {
           let destroySwapchain = dispatch.vkDestroySwapchainKHR
           destroySwapchain(device, swapchain, nil)
-          swapchain = 0uL
+          swapchain = VkSwapchainKHR.Null
           rethrow
         }
 

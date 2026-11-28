@@ -46,7 +46,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
     nativeDescriptorSet VkDescriptorSet,
     nativeSampler VkSampler,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan layer target device is invalid")
       }
       if targetExtent.width == 0u || targetExtent.height == 0u {
@@ -56,7 +56,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
         && colorFormat != VkConstants.VK_FORMAT_B8G8R8A8_UNORM{
           throw ArgumentException("Vulkan layer target requires a UNORM RGBA format", "colorFormat")
         }
-      if nativeDescriptorSet == 0uL || nativeSampler == 0uL {
+      if nativeDescriptorSet == VkDescriptorSet.Null || nativeSampler == VkSampler.Null {
         throw ArgumentException("Vulkan layer target descriptor is invalid")
       }
       device = nativeDevice
@@ -101,7 +101,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
 
   internal func TransitionToColorAttachment(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("commandBuffer")
     }
     if imageLayout == VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL {
@@ -137,7 +137,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
 
   internal func TransitionToTransferSource(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("commandBuffer")
     }
     if imageLayout == VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL {
@@ -170,7 +170,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
 
   internal func TransitionToTransferDestination(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("commandBuffer")
     }
     if imageLayout == VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL {
@@ -203,7 +203,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
 
   internal func TransitionToShaderRead(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("commandBuffer")
     }
     if imageLayout == VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL {
@@ -244,15 +244,15 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
     if disposed {
       return
     }
-    if imageView != 0uL {
+    if imageView != VkImageView.Null {
       let staleImageView = imageView
-      imageView = 0uL
+      imageView = VkImageView.Null
       let destroyImageView = dispatch.vkDestroyImageView
       try { destroyImageView(device, staleImageView, nil) } catch (cleanup Exception) { }
     }
-    if image != 0uL {
+    if image != VkImage.Null {
       let staleImage = image
-      image = 0uL
+      image = VkImage.Null
       let destroyImage = dispatch.vkDestroyImage
       try { destroyImage(device, staleImage, nil) } catch (cleanup Exception) { }
     }
@@ -281,19 +281,19 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
     if disposed {
       return
     }
-    if imageView != 0uL {
+    if imageView != VkImageView.Null {
       let destroyImageView = dispatch.vkDestroyImageView
       destroyImageView(device, imageView, nil)
-      imageView = 0uL
+      imageView = VkImageView.Null
       if imageViewAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         imageViewAccounted = false
       }
     }
-    if image != 0uL {
+    if image != VkImage.Null {
       let destroyImage = dispatch.vkDestroyImage
       destroyImage(device, image, nil)
-      image = 0uL
+      image = VkImage.Null
       if imageAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         imageAccounted = false
@@ -373,7 +373,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
   private var reserved []bool
   private var descriptorSets []VkDescriptorSet
   private let descriptorPools List[VkDescriptorPool]
-  private var sampler VkSampler = 0uL
+  private var sampler VkSampler = VkSampler.Null
   private let maximumDimension uint32
   private var requestedWidth uint32
   private var requestedHeight uint32
@@ -428,10 +428,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     initialTargetCapacity int32,
     maximumImageDimension uint32,
     nativeDiagnostics VulkanDiagnostics?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan layer pool device is invalid")
       }
-      if nativeDescriptorLayout == 0uL {
+      if nativeDescriptorLayout == VkDescriptorSetLayout.Null {
         throw ArgumentException("Vulkan layer pool descriptor layout is invalid")
       }
       if initialTargetCapacity <= 0 {
@@ -454,7 +454,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       descriptorPools = List[VkDescriptorPool]()
       var descriptorIndex int32 = 0
       while descriptorIndex < descriptorSets.Length {
-        descriptorSets[descriptorIndex] = 0uL
+        descriptorSets[descriptorIndex] = VkDescriptorSet.Null
         descriptorIndex++
       }
       PublishStats()
@@ -895,10 +895,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     }
     residentBytes = 0uL
     PublishStats()
-    if sampler != 0uL {
+    if sampler != VkSampler.Null {
       let destroySampler = dispatch.vkDestroySampler
       destroySampler(device, sampler, nil)
-      sampler = 0uL
+      sampler = VkSampler.Null
       if samplerAccounted {
         if let accounting = objectAccounting {
           try { accounting.Release() } catch (cleanup Exception) { }
@@ -933,7 +933,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     }
     var abandonedDescriptorIndex int32 = 0
     while abandonedDescriptorIndex < descriptorSets.Length {
-      descriptorSets[abandonedDescriptorIndex] = 0uL
+      descriptorSets[abandonedDescriptorIndex] = VkDescriptorSet.Null
       abandonedDescriptorIndex++
     }
     disposed = true
@@ -953,10 +953,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       index++
     }
     residentBytes = 0uL
-    if sampler != 0uL {
+    if sampler != VkSampler.Null {
       let destroySampler = dispatch.vkDestroySampler
       destroySampler(device, sampler, nil)
-      sampler = 0uL
+      sampler = VkSampler.Null
       if samplerAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         samplerAccounted = false
@@ -989,7 +989,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     descriptorSetsAccounted = 0
     var disposedDescriptorIndex int32 = 0
     while disposedDescriptorIndex < descriptorSets.Length {
-      descriptorSets[disposedDescriptorIndex] = 0uL
+      descriptorSets[disposedDescriptorIndex] = VkDescriptorSet.Null
       disposedDescriptorIndex++
     }
     PublishStats()
@@ -1083,10 +1083,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.maxLod = 1.0F
     samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
-    var result VkSampler = 0uL
+    var result VkSampler = VkSampler.Null
     let createSampler = dispatch.vkCreateSampler
     let createResult = createSampler(device, &samplerInfo, nil, &result)
-    if createResult != VkConstants.VK_SUCCESS || result == 0uL {
+    if createResult != VkConstants.VK_SUCCESS || result == VkSampler.Null {
       throw InvalidOperationException("vkCreateSampler failed for Vulkan layer pool")
     }
     if let accounting = objectAccounting {
@@ -1124,7 +1124,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   internal func RecordLayerPass(value0 uint64, value1 uint64) {
     if let current = diagnostics {
-      current.AddLayerPoolPass(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolPassCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPass,
         VulkanDiagnosticCategories.FramePlan, value0, value1)
     }
@@ -1132,7 +1132,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   internal func RecordLayerComposite(value0 uint64, value1 uint64) {
     if let current = diagnostics {
-      current.AddLayerPoolComposite(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolCompositeCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerComposite,
         VulkanDiagnosticCategories.FramePlan, value0, value1)
     }
@@ -1140,7 +1140,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   private func RecordCreate(target VulkanOffscreenLayerTarget) {
     if let current = diagnostics {
-      current.AddLayerPoolCreate(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolCreateCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerCreate,
         VulkanDiagnosticCategories.Resource, uint64(target.Extent.width), uint64(target.Extent.height))
     }
@@ -1148,7 +1148,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   private func RecordReuse(target VulkanOffscreenLayerTarget, sameCommand bool) {
     if let current = diagnostics {
-      current.AddLayerPoolReuse(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolReuseCount)
       let eventId = if sameCommand {
         VulkanDiagnosticEventIds.LayerCommandReuse
       } else {
@@ -1161,7 +1161,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   private func RecordPressure(required VkDeviceSize, completedSerial uint64) {
     if let current = diagnostics {
-      current.AddLayerPoolPressure(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolPressureEventCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPressure,
         VulkanDiagnosticCategories.Resource, uint64(required), uint64(residentBytes),
         completionSerial: completedSerial)
@@ -1171,7 +1171,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
   private func RecordPressureFailure(required VkDeviceSize, available VkDeviceSize) {
     lastFailedRequestBytes = required
     if let current = diagnostics {
-      current.AddLayerPoolPressureFailure(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolPressureFailureCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPressure,
         VulkanDiagnosticCategories.Resource, uint64(required), uint64(available), severity: 1uL)
     }
@@ -1179,7 +1179,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
 
   private func RecordFailure(value0 uint64, value1 uint64) {
     if let current = diagnostics {
-      current.AddLayerPoolFailure(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolFailureCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerFailure,
         VulkanDiagnosticCategories.Resource, value0, value1, severity: 1uL)
     }
@@ -1197,7 +1197,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
     leased[index] = false
     inFrame[index] = false
     if let current = diagnostics {
-      current.AddLayerPoolEviction(1uL)
+      current.AddCounter(VulkanCounterId.LayerPoolEvictionCount)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerEvict,
         VulkanDiagnosticCategories.Resource, uint64(index), uint64(bytes))
     }
@@ -1221,7 +1221,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable, VulkanGpuCa
       profileResidentBytes = residentBytes
       recorder.Publish(FrameTraceRecord{
         Kind: FrameTraceKind.Counter, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
-        Context: FrameProfiler.Current?.Context ?? FrameTraceContext{}, ResourceId: sampler,
+        Context: FrameProfiler.Current?.Context ?? FrameTraceContext{}, ResourceId: sampler.Raw,
         EventId: VulkanDiagnosticEventIds.LiveMemory, Category: VulkanDiagnosticCategories.Resource,
         Value0: residentBytes, Source: "layer.pool", Name: "resident", Unit: "bytes",
       })

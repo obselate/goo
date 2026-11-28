@@ -109,11 +109,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       let descriptorSet = if descriptor.State == VulkanImageDescriptorState.Bound
         && descriptor.Slot >= 0 && descriptor.Slot < descriptorCapacity{
           descriptorSets[descriptor.Slot]
-        } else { 0uL }
+        } else { VkDescriptorSet.Null }
       let renderable = entry.GpuPublished
         && entry.State == VulkanImageResourceState.Resident
-        && entry.Image != 0uL && entry.ImageView != 0uL
-        && entry.UploadedVersion == entry.Id.Version && descriptorSet != 0uL
+        && entry.Image != VkImage.Null && entry.ImageView != VkImageView.Null
+        && entry.UploadedVersion == entry.Id.Version && descriptorSet != VkDescriptorSet.Null
       entry.LastTouch = TouchValue()
       entries[index] = entry
       return VulkanImageResourceLookup{
@@ -141,14 +141,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       frame.Release()
       return
     }
-    if entry.ImageView != 0uL {
+    if entry.ImageView != VkImageView.Null {
       let destroyView = dispatch.vkDestroyImageView
       try { destroyView(device, entry.ImageView, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
     }
-    if entry.Image != 0uL {
+    if entry.Image != VkImage.Null {
       let destroyImage = dispatch.vkDestroyImage
       try { destroyImage(device, entry.Image, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
@@ -165,7 +165,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     while index < entries.Length {
       let entry = entries[index]
       if entry.State != VulkanImageResourceState.Empty
-        || entry.ImageView != 0uL || entry.Image != 0uL || entry.Allocation != nil {
+        || entry.ImageView != VkImageView.Null || entry.Image != VkImage.Null || entry.Allocation != nil {
           DestroyImage(index, entry)
           entries[index] = VulkanImageResourceEntry{}
         }
@@ -177,18 +177,18 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   }
 
   private func DestroyGeneration() {
-    if nearestSampler != 0uL {
+    if nearestSampler != VkSampler.Null {
       let staleSampler = nearestSampler
-      nearestSampler = 0uL
+      nearestSampler = VkSampler.Null
       let destroySampler = dispatch.vkDestroySampler
       try { destroySampler(device, staleSampler, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
     }
-    if linearSampler != 0uL {
+    if linearSampler != VkSampler.Null {
       let staleSampler = linearSampler
-      linearSampler = 0uL
+      linearSampler = VkSampler.Null
       let destroySampler = dispatch.vkDestroySampler
       try { destroySampler(device, staleSampler, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
@@ -218,9 +218,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         }
       }
     }
-    if descriptorSetLayout != 0uL {
+    if descriptorSetLayout != VkDescriptorSetLayout.Null {
       let staleLayout = descriptorSetLayout
-      descriptorSetLayout = 0uL
+      descriptorSetLayout = VkDescriptorSetLayout.Null
       let destroyLayout = dispatch.vkDestroyDescriptorSetLayout
       try { destroyLayout(device, staleLayout, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
@@ -229,7 +229,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
     var index int32 = 0
     while index < descriptorSets.Length {
-      descriptorSets[index] = 0uL
+      descriptorSets[index] = VkDescriptorSet.Null
       index++
     }
   }
@@ -237,7 +237,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private func DestroyStagingBuffer() {
     let staleBuffer = stagingBuffer
     let staleAllocation = stagingAllocation
-    stagingBuffer = 0uL
+    stagingBuffer = VkBuffer.Null
     stagingAllocation = nil
     if let allocation = staleAllocation {
       ReleaseStagingBuffer(staleBuffer, allocation)
@@ -245,7 +245,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   }
 
   private func ReleaseStagingBuffer(buffer VkBuffer, allocation VulkanMemoryAllocation) {
-    if buffer != 0uL {
+    if buffer != VkBuffer.Null {
       let destroyBuffer = dispatch.vkDestroyBuffer
       try { destroyBuffer(device, buffer, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {

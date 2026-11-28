@@ -35,13 +35,13 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
   private let byteCapacity VkDeviceSize
   private let maximumWordCapacity VkDeviceSize
   private let descriptorSetLayout VkDescriptorSetLayout
-  private var atlasBuffer VkBuffer = 0uL
+  private var atlasBuffer VkBuffer = VkBuffer.Null
   private var atlasAllocation VulkanMemoryAllocation? = nil
-  private var stagingBuffer VkBuffer = 0uL
+  private var stagingBuffer VkBuffer = VkBuffer.Null
   private var stagingAllocation VulkanMemoryAllocation? = nil
-  private var descriptorPool VkDescriptorPool = 0uL
-  private var descriptorSet VkDescriptorSet = 0uL
-  private var uploadCommandBuffer VkCommandBuffer = nint(0)
+  private var descriptorPool VkDescriptorPool = VkDescriptorPool.Null
+  private var descriptorSet VkDescriptorSet = VkDescriptorSet.Null
+  private var uploadCommandBuffer VkCommandBuffer = VkCommandBuffer.Null
   private var uploadFence uint64 = 0uL
   private var uploadPending bool
   private var uploadRecorded bool
@@ -106,10 +106,10 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     nativeMaxStorageBufferRange uint32,
     nativeDescriptorSetLayout VkDescriptorSetLayout,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if nativeDescriptorSetLayout == 0uL {
+      if nativeDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw ArgumentException("Vulkan path atlas descriptor layout is null", "nativeDescriptorSetLayout")
       }
       if atlasByteSize == 0uL || atlasByteSize > MaxAtlasBytes
@@ -147,7 +147,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     if testWordCapacity == 0uL || testWordCapacity > MaxWordCapacity {
       throw ArgumentOutOfRangeException("testWordCapacity")
     }
-    device = nint(1)
+    device = VkDevice(nint(1))
     dispatch = VkDeviceDispatch{}
     allocator = nil
     objectAccounting = nil
@@ -155,7 +155,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     wordCapacity = testWordCapacity
     byteCapacity = testWordCapacity * WordBytes
     maximumWordCapacity = MaxWordCapacity
-    descriptorSetLayout = 1uL
+    descriptorSetLayout = VkDescriptorSetLayout(1uL)
   }
 
   internal func CreateReplacement(replacementWordCapacity VkDeviceSize) VulkanPathAtlas {
@@ -218,7 +218,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
       uploadWordCount = sourceWordCount
       uploadByteOffset = destinationWordOffset * WordBytes
       uploadByteCount = sourceWordCount * WordBytes
-      uploadCommandBuffer = nint(0)
+      uploadCommandBuffer = VkCommandBuffer.Null
       uploadFence = 0uL
       flushPrepared = false
       return true
@@ -226,7 +226,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
 
   internal func RecordUpload(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
     if !uploadPending {
@@ -288,7 +288,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
 
   internal func MarkSubmitted(commandBuffer VkCommandBuffer, fence uint64) {
     EnsureOpen()
-    if commandBuffer == nint(0) || fence == 0uL {
+    if commandBuffer == VkCommandBuffer.Null || fence == 0uL {
       throw ArgumentException("Path atlas submission arguments are invalid")
     }
     if !uploadPending || !uploadRecorded || uploadCommandBuffer != commandBuffer {
@@ -320,7 +320,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     uploadWordCount = 0uL
     uploadByteOffset = 0uL
     uploadByteCount = 0uL
-    uploadCommandBuffer = nint(0)
+    uploadCommandBuffer = VkCommandBuffer.Null
     uploadFence = 0uL
     completedUploadSequence = uploadSequence
     flushPrepared = false
@@ -344,7 +344,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     uploadWordCount = 0uL
     uploadByteOffset = 0uL
     uploadByteCount = 0uL
-    uploadCommandBuffer = nint(0)
+    uploadCommandBuffer = VkCommandBuffer.Null
     uploadFence = 0uL
     flushPrepared = false
     return true
@@ -352,7 +352,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
 
   internal func BindDescriptor(commandBuffer VkCommandBuffer, pipelineLayout VkPipelineLayout) {
     EnsureOpen()
-    if commandBuffer == nint(0) || pipelineLayout == 0uL {
+    if commandBuffer == VkCommandBuffer.Null || pipelineLayout == VkPipelineLayout.Null {
       throw ArgumentException("Path atlas descriptor binding arguments are invalid")
     }
     let recordedHere = uploadPending && uploadRecorded && !uploadSubmitted
@@ -364,7 +364,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
         || (!uploadSubmitted && uploadCommandBuffer != commandBuffer)) {
           throw InvalidOperationException("Vulkan path atlas upload is not ready for this command buffer")
         }
-    if descriptorSet == 0uL {
+    if descriptorSet == VkDescriptorSet.Null {
       throw InvalidOperationException("Vulkan path atlas descriptor set is unavailable")
     }
     let bindDescriptorSets = dispatch.vkCmdBindDescriptorSets
@@ -374,10 +374,10 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
 
   private func LiveObjectCount() uint64 {
     var count uint64 = 0uL
-    if atlasBuffer != 0uL { count++ }
-    if descriptorPool != 0uL { count++ }
-    if descriptorSet != 0uL { count++ }
-    if stagingBuffer != 0uL { count++ }
+    if atlasBuffer != VkBuffer.Null { count++ }
+    if descriptorPool != VkDescriptorPool.Null { count++ }
+    if descriptorSet != VkDescriptorSet.Null { count++ }
+    if stagingBuffer != VkBuffer.Null { count++ }
     return count
   }
 
@@ -420,7 +420,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     poolSize._type = VkConstants.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
     poolSize.descriptorCount = 1u
     var layout = descriptorSetLayout
-    var createdSet VkDescriptorSet = 0uL
+    var createdSet VkDescriptorSet = VkDescriptorSet.Null
     let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
       device,
       dispatch,
@@ -456,9 +456,9 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
   }
 
   private func DestroyStagingBuffer() {
-    if stagingBuffer != 0uL {
+    if stagingBuffer != VkBuffer.Null {
       let staleBuffer = stagingBuffer
-      stagingBuffer = 0uL
+      stagingBuffer = VkBuffer.Null
       let destroyBuffer = dispatch.vkDestroyBuffer
       try { destroyBuffer(device, staleBuffer, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
@@ -472,14 +472,14 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
   }
 
   private func DestroyDescriptorResources() {
-    if descriptorPool != 0uL {
+    if descriptorPool != VkDescriptorPool.Null {
       let stalePool = descriptorPool
       let staleSet = descriptorSet
-      descriptorPool = 0uL
-      descriptorSet = 0uL
+      descriptorPool = VkDescriptorPool.Null
+      descriptorSet = VkDescriptorSet.Null
       let destroyPool = dispatch.vkDestroyDescriptorPool
       try { destroyPool(device, stalePool, nil) } catch (cleanup Exception) { }
-      if staleSet != 0uL {
+      if staleSet != VkDescriptorSet.Null {
         if let accounting = objectAccounting {
           try { accounting.Release() } catch (cleanup Exception) { }
         }
@@ -488,13 +488,13 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
     }
-    descriptorSet = 0uL
+    descriptorSet = VkDescriptorSet.Null
   }
 
   private func DestroyAtlasBuffer() {
-    if atlasBuffer != 0uL {
+    if atlasBuffer != VkBuffer.Null {
       let staleBuffer = atlasBuffer
-      atlasBuffer = 0uL
+      atlasBuffer = VkBuffer.Null
       let destroyBuffer = dispatch.vkDestroyBuffer
       try { destroyBuffer(device, staleBuffer, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {

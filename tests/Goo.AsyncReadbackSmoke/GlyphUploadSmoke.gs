@@ -51,8 +51,8 @@ func GlyphUploadPresent(
     cell.Rebuild()
     WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0, true)
     let after = WindowReadbackTestFixture.DiagnosticCounters(window)
-    let submits = after.submitCount - before.submitCount
-    let uploaded = after.textAtlasRecordedUploadBytes - before.textAtlasRecordedUploadBytes
+    let submits = after[VulkanCounterId.SubmitCount] - before[VulkanCounterId.SubmitCount]
+    let uploaded = after[VulkanCounterId.TextAtlasRecordedUploadBytes] - before[VulkanCounterId.TextAtlasRecordedUploadBytes]
     Require(
         expectUpload == (uploaded > 0uL),
         "Glyph upload smoke " + content + " uploaded " + uploaded.ToString() + " atlas bytes"

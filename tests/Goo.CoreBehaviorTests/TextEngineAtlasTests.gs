@@ -559,7 +559,7 @@ class TextEngineAtlasTests {
             if glyphId == 1u {
                 firstPlacement = placed
             }
-            colorAtlas.RecordUploads(nint(1))
+            colorAtlas.RecordUploads(VkCommandBuffer(nint(1)))
             colorAtlas.MarkUsed(uint64(glyphId))
             glyphId = glyphId + 1u
         }

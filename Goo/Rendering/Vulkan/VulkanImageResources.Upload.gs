@@ -85,7 +85,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         }
         refusedReleaseGeneration = releaseGeneration
         if let currentDiagnostics = diagnostics {
-          currentDiagnostics.AddImagePressureFailure(1uL)
+          currentDiagnostics.AddCounter(VulkanCounterId.ImagePressureFailureCount)
           currentDiagnostics.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
             VulkanDiagnosticEventIds.ImagePressure, VulkanDiagnosticCategories.Resource,
             1uL, 0, uint64(bytes), uint64(allocator.Headroom(heap)))
@@ -120,7 +120,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if entry.State == VulkanImageResourceState.Retiring {
         throw InvalidOperationException("Vulkan image is retiring")
       }
-      if entry.State == VulkanImageResourceState.Empty || entry.Image == 0uL {
+      if entry.State == VulkanImageResourceState.Empty || entry.Image == VkImage.Null {
         throw InvalidOperationException("Vulkan image is not resident")
       }
       if byteCount != entry.Bytes || byteCount > VkDeviceSize(Int32.MaxValue) {
@@ -147,7 +147,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       EnsureStagingBuffer(remainingBytes)
       if rowBytes > stagingByteCapacity {
         if let currentDiagnostics = diagnostics {
-          currentDiagnostics.AddImageUploadDeferred(1uL)
+          currentDiagnostics.AddCounter(VulkanCounterId.ImageUploadDeferredCount)
         }
         return false
       }
@@ -159,7 +159,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       if rowCount == 0u {
         if let currentDiagnostics = diagnostics {
-          currentDiagnostics.AddImageUploadDeferred(1uL)
+          currentDiagnostics.AddCounter(VulkanCounterId.ImageUploadDeferredCount)
         }
         return false
       }
@@ -174,7 +174,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       if !reservation.Succeeded || rowCount == 0u {
         if let currentDiagnostics = diagnostics {
-          currentDiagnostics.AddImageUploadDeferred(1uL)
+          currentDiagnostics.AddCounter(VulkanCounterId.ImageUploadDeferredCount)
         }
         return false
       }
@@ -189,7 +189,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       entry.Upload = reservation
       entry.UploadRecorded = false
       entry.UploadSubmitted = false
-      entry.UploadCommandBuffer = 0uL
+      entry.UploadCommandBuffer = VkCommandBuffer.Null
       entry.UploadFence = 0uL
       entry.PendingRetire = false
       flushPrepared = false
@@ -206,7 +206,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       entries[index] = entry
       if let currentDiagnostics = diagnostics {
-        currentDiagnostics.AddImageUploadChunk(1uL)
+        currentDiagnostics.AddCounter(VulkanCounterId.ImageUploadChunkCount)
       }
       return true
     }
@@ -215,7 +215,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     out recordedBytes VkDeviceSize, out recordedBarriers int32) int32{
       EnsureOpen()
       ValidateGeneration(expectedGeneration)
-      if commandBuffer == nint(0) {
+      if commandBuffer == VkCommandBuffer.Null {
         throw ArgumentException("Command buffer is null", "commandBuffer")
       }
       recordedBytes = 0uL
@@ -237,7 +237,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
               index++
               continue
             }
-            if entry.UploadCommandBuffer != 0uL {
+            if entry.UploadCommandBuffer != VkCommandBuffer.Null {
               throw InvalidOperationException("Vulkan image upload must be aborted before recording again")
             }
             var barrierCount int32 = 0
@@ -299,7 +299,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   internal func AbortUploads(commandBuffer VkCommandBuffer, expectedGeneration uint64) int32 {
     EnsureOpen()
     ValidateGeneration(expectedGeneration)
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
     SubmitDemotions(commandBuffer, 0uL)
@@ -313,7 +313,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       let entry = entries[index]
       if entry.State == VulkanImageResourceState.UploadPending
         && entry.Upload.Succeeded && !entry.UploadSubmitted
-        && entry.UploadCommandBuffer != 0uL
+        && entry.UploadCommandBuffer != VkCommandBuffer.Null
         && entry.UploadCommandBuffer != commandBuffer{
           throw InvalidOperationException("Vulkan image upload belongs to another command buffer")
         }
@@ -347,7 +347,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       let entry = entries[index]
       if entry.State == VulkanImageResourceState.UploadPending
         && entry.Upload.Succeeded && !entry.UploadSubmitted
-        && (entry.UploadRecorded || entry.UploadCommandBuffer != 0uL) {
+        && (entry.UploadRecorded || entry.UploadCommandBuffer != VkCommandBuffer.Null) {
           throw InvalidOperationException("Vulkan image upload commands are recorded")
         }
       index++
@@ -358,7 +358,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       var entry = entries[index]
       if entry.State == VulkanImageResourceState.UploadPending
         && entry.Upload.Succeeded && !entry.UploadSubmitted
-        && !entry.UploadRecorded && entry.UploadCommandBuffer == 0uL {
+        && !entry.UploadRecorded && entry.UploadCommandBuffer == VkCommandBuffer.Null {
           AbortUpload(index, ref entry)
           aborted++
         }
@@ -391,7 +391,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     entry.UploadRowCount = 0u
     entry.UploadRecorded = false
     entry.UploadSubmitted = false
-    entry.UploadCommandBuffer = 0uL
+    entry.UploadCommandBuffer = VkCommandBuffer.Null
     entry.UploadFence = 0uL
   }
 
@@ -401,7 +401,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     expectedGeneration uint64) int32{
       EnsureOpen()
       ValidateGeneration(expectedGeneration)
-      if commandBuffer == nint(0) {
+      if commandBuffer == VkCommandBuffer.Null {
         throw ArgumentException("Command buffer is null", "commandBuffer")
       }
       if fence == 0uL {
@@ -560,7 +560,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
     entry.RecordingUseCount--
     if let frame = entry.External {
-      if !frame.Acquired { frame.AcquireCommand = nint(0) }
+      if !frame.Acquired { frame.AcquireCommand = VkCommandBuffer.Null }
     }
     let retire = entry.PendingRetire && entry.RecordingUseCount == 0
       && currentReferenceCounts[index] == 0

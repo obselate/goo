@@ -112,7 +112,7 @@ internal unsafe sealed partial class VulkanExternalProducer {
 
     private func DestroySyncFd() {
         let destroy = dispatch.vkDestroySemaphore
-        if readyBinary != 0uL { destroy(device, readyBinary, nil) }
-        if gate != 0uL { destroy(device, gate, nil) }
+        if readyBinary != VkSemaphore.Null { destroy(device, readyBinary, nil) }
+        if gate != VkSemaphore.Null { destroy(device, gate, nil) }
     }
 }

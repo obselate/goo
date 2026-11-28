@@ -29,7 +29,7 @@ public partial class ExternalImageSession : IDisposable {
     public event Invalidated Action[ExternalImageStatus]
 
     /// Gets the device generation. Imports never survive a device change.
-    public prop Generation uint64 { get -> Runtime.Generation }
+    public prop Generation uint64 { get -> Runtime.Runtime.Generation }
     /// Gets the 16-byte physical device UUID.
     public prop DeviceUuid ReadOnlyMemory[uint8] { get -> ReadOnlyMemory[uint8](deviceUuid) }
     /// Gets the 16-byte driver UUID.
@@ -100,7 +100,7 @@ public partial class ExternalImageSession : IDisposable {
 
     private func ImportStatus() ExternalImageStatus {
         if closed { return closeStatus }
-        if Runtime.DeviceLost { return ExternalImageStatus.DeviceLost }
+        if Runtime.Runtime.DeviceLost { return ExternalImageStatus.DeviceLost }
         var index = images.Count - 1
         while index >= 0 {
             if images[index].Native.Closed && !images[index].Native.Busy { images.RemoveAt(index) }
@@ -175,7 +175,7 @@ public partial class ExternalImageSession : IDisposable {
             }
         }
         if slot < 0 { return ExternalImageStatus.Busy }
-        if !Runtime.ImageResources.ReserveExternalFrame() { return ExternalImageStatus.Busy }
+        if !Runtime.Runtime.ImageResources.ReserveExternalFrame() { return ExternalImageStatus.Busy }
         var accepted bool = false
         try {
             let status = ImportReady(frame)
@@ -185,7 +185,7 @@ public partial class ExternalImageSession : IDisposable {
             timer.Change(0, 4)
             return ExternalImageStatus.Success
         } finally {
-            if !accepted { Runtime.ImageResources.ReleaseExternalFrame() }
+            if !accepted { Runtime.Runtime.ImageResources.ReleaseExternalFrame() }
         }
     }
 
@@ -198,13 +198,13 @@ public partial class ExternalImageSession : IDisposable {
     private func Pump() {
         RequireOwner()
         if disposed { return }
-        if Runtime.DeviceLost {
+        if Runtime.Runtime.DeviceLost {
             if let error = Close(ExternalImageStatus.DeviceLost) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
             return
         }
         var active bool
         lock Gate {
-            Runtime.ImageResources.CollectCompletedExternal()
+            Runtime.Runtime.ImageResources.CollectCompletedExternal()
             for index in 0 ... FrameCapacity {
                 guard let frame = frames[index] else { continue }
                 if !frame.Ready {

@@ -51,7 +51,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
 
   internal prop MaxAtlasByteSize VkDeviceSize{ get -> maxAtlasByteSize }
   internal prop HardwareMaxByteSize VkDeviceSize{
-    get -> if device == nint(0) { 2147483640uL } else { VkDeviceSize(maxTexelBufferElements) * 8uL }
+    get -> if device == VkDevice.Null { 2147483640uL } else { VkDeviceSize(maxTexelBufferElements) * 8uL }
   }
   internal prop AtlasSlotCapacity int32{ get -> atlases.Length }
   internal prop AtlasCount int32{ get -> atlasCount }
@@ -138,14 +138,14 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     nativeDiagnostics VulkanDiagnostics?,
     nativeGeneration uint64,
     nativeMaxAtlasByteSize VkDeviceSize = 0uL) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeAtlasByteSize == 0uL || nativeMaxTexelBufferElements == 0u
         || nativeGeneration == 0uL {
           throw ArgumentOutOfRangeException("nativeAtlasByteSize")
         }
-      if nativeDescriptorSetLayout == 0uL {
+      if nativeDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw ArgumentException("Vulkan text atlas descriptor layout is null", "nativeDescriptorSetLayout")
       }
       let hardwareLimit = VkDeviceSize(nativeMaxTexelBufferElements) * 8uL
@@ -236,13 +236,13 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     if targetByteSize > hardwareLimit {
       throw InvalidOperationException("Vulkan text glyph exceeds hardware texel buffer capacity")
     }
-    let growth = atlasCount > 0 && device != nint(0)
+    let growth = atlasCount > 0 && device != VkDevice.Null
     if growth {
       allocator.BeginCacheGrowth()
     }
     var created VulkanTextAtlas
     try {
-      created = if device == nint(0) { VulkanTextAtlas(targetByteSize) } else {
+      created = if device == VkDevice.Null { VulkanTextAtlas(targetByteSize) } else {
         VulkanTextAtlas(device, dispatch, allocator, targetByteSize,
           maxTexelBufferElements, descriptorSetLayout, objectAccounting)
       }
@@ -355,7 +355,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     active[index] = false
     var replacement VulkanTextAtlas
     try {
-      replacement = if device == nint(0) { VulkanTextAtlas(targetByteSize) } else {
+      replacement = if device == VkDevice.Null { VulkanTextAtlas(targetByteSize) } else {
         VulkanTextAtlas(device, dispatch, allocator, targetByteSize,
           maxTexelBufferElements, descriptorSetLayout, objectAccounting)
       }
@@ -385,8 +385,8 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     evictionCount = evictionCount + 1uL
     retirementCount = retirementCount + 1uL
     if let currentDiagnostics = diagnostics {
-      currentDiagnostics.AddTextAtlasEviction(1uL)
-      currentDiagnostics.AddTextAtlasRetirement(1uL)
+      currentDiagnostics.AddCounter(VulkanCounterId.TextAtlasEvictionCount)
+      currentDiagnostics.AddCounter(VulkanCounterId.TextAtlasRetirementCount)
     }
     return identity
   }
@@ -401,7 +401,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
   internal func LastUseSerial(index int32) uint64 -> lastUseSerial[index]
 
   internal func RecordPressureFailure() {
-    diagnostics?.AddTextAtlasPressureFailure(1uL)
+    diagnostics?.AddCounter(VulkanCounterId.TextAtlasPressureFailureCount)
   }
 
   internal func CanRetireAtlas(index int32, completedSerial uint64) bool {
@@ -434,8 +434,8 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
     evictionCount++
     retirementCount++
     if let currentDiagnostics = diagnostics {
-      currentDiagnostics.AddTextAtlasEviction(1uL)
-      currentDiagnostics.AddTextAtlasRetirement(1uL)
+      currentDiagnostics.AddCounter(VulkanCounterId.TextAtlasEvictionCount)
+      currentDiagnostics.AddCounter(VulkanCounterId.TextAtlasRetirementCount)
     }
     return true
   }
@@ -470,7 +470,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
   internal func RecordUploads(commandBuffer VkCommandBuffer, out recordedBytes VkDeviceSize,
     out recordedBarriers int32) int32{
       EnsureOpen()
-      if commandBuffer == nint(0) {
+      if commandBuffer == VkCommandBuffer.Null {
         throw ArgumentException("Command buffer is null", "commandBuffer")
       }
       recordedBytes = 0uL
@@ -498,7 +498,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
           recordedBytes = recordedBytes + stats.UploadByteCount
           uploadByteCount = uploadByteCount + stats.UploadByteCount
           if let currentDiagnostics = diagnostics {
-            currentDiagnostics.AddTextAtlasRecordedUploadBytes(uint64(stats.UploadByteCount))
+            currentDiagnostics.AddCounter(VulkanCounterId.TextAtlasRecordedUploadBytes, uint64(stats.UploadByteCount))
           }
           recordedBarriers = recordedBarriers + 1
           recorded = recorded + 1
@@ -528,7 +528,7 @@ internal unsafe sealed partial class VulkanTextAtlasSet : IDisposable {
 
   internal func MarkSubmitted(commandBuffer VkCommandBuffer, submissionSerial uint64) {
     EnsureOpen()
-    if commandBuffer == nint(0) || submissionSerial == 0uL {
+    if commandBuffer == VkCommandBuffer.Null || submissionSerial == 0uL {
       throw ArgumentException("Text atlas submission arguments are invalid")
     }
     var index int32 = 0

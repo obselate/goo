@@ -92,7 +92,7 @@ internal unsafe partial class VulkanExternalImageProof {
                 let opened = ExternalImageSession.Open(window)
                 Require(opened.Status == ExternalImageStatus.Success, "bundled MoltenVK did not expose Metal import: " + opened.Detail)
                 using let session = opened.Session!!
-                let device = session.Runtime.Dispatch.MetalDevice
+                let device = session.Runtime.Runtime.Dispatch.MetalDevice
                 Require(device != nint(0), "bundled MoltenVK did not export its Metal device")
                 let frame = ExternalFrameDescription{ X: 2, Y: 1, Width: 4, Height: 2, Orientation: 6,
                     AlphaMode: ExternalImageAlphaMode.Opaque, ColorEncoding: ExternalImageColorEncoding.Srgb }

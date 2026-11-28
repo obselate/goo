@@ -10,7 +10,7 @@ internal unsafe partial class VulkanTextAtlas {
     try { DestroyDescriptorResources() } catch (cleanup Exception) { }
     try { DestroyBufferView() } catch (cleanup Exception) { }
     try { DestroyAtlasBuffer() } catch (cleanup Exception) { }
-    uploadCommandBuffer = nint(0)
+    uploadCommandBuffer = VkCommandBuffer.Null
     uploadFence = 0uL
     uploadPending = false
     uploadRecorded = false

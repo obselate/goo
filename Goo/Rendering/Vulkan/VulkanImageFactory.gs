@@ -71,7 +71,7 @@ internal unsafe class VulkanImageFactory {
       layerCount uint32,
       levelCount uint32 = 1u) VkImageView{
 
-        if image == 0uL {
+        if image == VkImage.Null {
           throw ArgumentException("image")
         }
         if format == VkConstants.VK_FORMAT_UNDEFINED {
@@ -84,7 +84,7 @@ internal unsafe class VulkanImageFactory {
           throw ArgumentOutOfRangeException("layerCount")
         }
 
-        var imageView VkImageView = 0uL
+        var imageView VkImageView = VkImageView.Null
         var imageViewAccounted bool = false
         var viewInfo = VkImageViewCreateInfo{
           sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -111,7 +111,7 @@ internal unsafe class VulkanImageFactory {
         try {
           let createImageView = dispatch.vkCreateImageView
           let viewResult = createImageView(device, &viewInfo, nil, &imageView)
-          if viewResult != VkConstants.VK_SUCCESS || imageView == 0uL {
+          if viewResult != VkConstants.VK_SUCCESS || imageView == VkImageView.Null {
             throw InvalidOperationException("vkCreateImageView failed: " + viewResult.ToString())
           }
           if let accounting = objectAccounting {
@@ -120,7 +120,7 @@ internal unsafe class VulkanImageFactory {
           }
           return imageView
         } catch (error Exception) {
-          if imageView != 0uL {
+          if imageView != VkImageView.Null {
             let destroyImageView = dispatch.vkDestroyImageView
             try { destroyImageView(device, imageView, nil) } catch (cleanup Exception) { }
           }
@@ -162,8 +162,8 @@ internal unsafe class VulkanImageFactory {
           throw ArgumentOutOfRangeException("layerCount")
         }
 
-        var image VkImage = 0uL
-        var imageView VkImageView = 0uL
+        var image VkImage = VkImage.Null
+        var imageView VkImageView = VkImageView.Null
         var allocation VulkanMemoryAllocation? = nil
         var imageAccounted bool = false
         var imageViewAccounted bool = false
@@ -192,7 +192,7 @@ internal unsafe class VulkanImageFactory {
         try {
           let createImage = dispatch.vkCreateImage
           let imageResult = createImage(device, &imageInfo, nil, &image)
-          if imageResult != VkConstants.VK_SUCCESS || image == 0uL {
+          if imageResult != VkConstants.VK_SUCCESS || image == VkImage.Null {
             throw InvalidOperationException("vkCreateImage failed: " + imageResult.ToString())
           }
           if let accounting = objectAccounting {
@@ -229,7 +229,7 @@ internal unsafe class VulkanImageFactory {
 
           return VulkanImageCreation(image, imageView, createdAllocation)
         } catch (error Exception) {
-          if imageView != 0uL {
+          if imageView != VkImageView.Null {
             let destroyImageView = dispatch.vkDestroyImageView
             try { destroyImageView(device, imageView, nil) } catch (cleanup Exception) { }
           }
@@ -238,7 +238,7 @@ internal unsafe class VulkanImageFactory {
               try { accounting.Release() } catch (cleanup Exception) { }
             }
           }
-          if image != 0uL {
+          if image != VkImage.Null {
             let destroyImage = dispatch.vkDestroyImage
             try { destroyImage(device, image, nil) } catch (cleanup Exception) { }
           }

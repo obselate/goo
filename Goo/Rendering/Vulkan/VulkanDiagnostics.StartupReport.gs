@@ -207,7 +207,7 @@ internal unsafe partial class VulkanStartupReport {
                 VulkanDrivers.FallbackReason
             }
         )
-        Line("VK_LOADER_DEBUG=error,warn,driver (temporary diagnostic override)")
+        Line("VK_LOADER_DEBUG=" + (Environment.GetEnvironmentVariable("VK_LOADER_DEBUG") ?? "<unset>"))
         StartCapture()
     }
 

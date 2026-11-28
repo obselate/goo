@@ -122,7 +122,7 @@ internal unsafe partial class VulkanWindowTarget {
       guard let activeRuntime = runtime else {
         return WindowReadbackRequestStatus.NotReady
       }
-      if activeRuntime.DeviceLost || activeRuntime.Terminal {
+      if activeRuntime.Runtime.DeviceLost || activeRuntime.Runtime.Terminal {
         return WindowReadbackRequestStatus.DeviceLost
       }
       guard let currentGeneration = generation else {
@@ -168,7 +168,7 @@ internal unsafe partial class VulkanWindowTarget {
           readbackTiming.RecordTicks = Stopwatch.GetTimestamp()
           Present()
           if let currentRuntime = runtime {
-            if currentRuntime.DeviceLost {
+            if currentRuntime.Runtime.DeviceLost {
               return WindowReadbackRequestStatus.DeviceLost
             }
           }
@@ -219,13 +219,13 @@ internal unsafe partial class VulkanWindowTarget {
             copyDispatch,
             extent,
             requestedByteSize,
-            activeRuntime.GraphicsFamilyIndex,
+            activeRuntime.Runtime.GraphicsFamilyIndex,
             VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
             currentImages,
-            activeRuntime.Generation,
-            activeRuntime.MaxStorageBufferRange,
-            activeRuntime.ResourcePolicy,
-            activeRuntime.PrimitiveState,
+            activeRuntime.Runtime.Generation,
+            activeRuntime.Runtime.MaxStorageBufferRange,
+            activeRuntime.Runtime.ResourcePolicy,
+            activeRuntime.Runtime.PrimitiveState,
             currentPaths.Atlas,
             currentPaths,
             currentClipAtlas,
@@ -233,7 +233,7 @@ internal unsafe partial class VulkanWindowTarget {
             objectAccounting,
             diagnostics,
             if diagnostics != nil { timestampState } else { nil },
-            activeRuntime.QueueWorker.CreateMailbox(nil),
+            activeRuntime.Runtime.QueueWorker.CreateMailbox(nil),
             readbackLease,
             colorGlyphAtlas)
           if let accounting = objectAccounting {
@@ -248,7 +248,7 @@ internal unsafe partial class VulkanWindowTarget {
           ownedLease = nil
           ownedTarget = nil
           let createdRequest = VulkanReadbackFactory.Create(target, readbackLease,
-            activeRuntime.Generation)
+            activeRuntime.Runtime.Generation)
           ownedRequest = createdRequest
           readbackRequest = createdRequest
           ownedRequest = nil

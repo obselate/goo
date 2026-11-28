@@ -100,8 +100,8 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
 
   private func ClearDiagnosticImageState() {
     if let currentDiagnostics = diagnostics {
-      currentDiagnostics.SetImageResidentBytes(0uL)
-      currentDiagnostics.SetImageLiveObjectCount(0uL)
+      currentDiagnostics.SetCounter(VulkanCounterId.ImageResidentBytes, 0uL)
+      currentDiagnostics.SetCounter(VulkanCounterId.ImageLiveObjectCount, 0uL)
     }
   }
 
@@ -117,7 +117,7 @@ internal unsafe partial class VulkanImageResources : IDisposable, VulkanGpuCache
     nativeDiagnostics VulkanDiagnostics?,
     initialGeneration uint64,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if imageCapacity <= 0 || imageCapacity > MaxCapacity {

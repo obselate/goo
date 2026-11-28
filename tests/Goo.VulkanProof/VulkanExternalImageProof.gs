@@ -351,13 +351,13 @@ internal unsafe partial class VulkanExternalImageProof {
 
         private func SemaphoreSupported(runtime VulkanSharedLease, syncFd bool = false) bool {
             let handleType = if syncFd { 16u } else { 1u }
-            if (runtime.Dispatch.ExternalSemaphoreKinds & handleType) == 0u { return false }
+            if (runtime.Runtime.Dispatch.ExternalSemaphoreKinds & handleType) == 0u { return false }
             var timeline = VkSemaphoreTypeCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
                 semaphoreType: if syncFd { 0 } else { VkConstants.VK_SEMAPHORE_TYPE_TIMELINE } }
             var info = VkPhysicalDeviceExternalSemaphoreInfo{ sType: 1000076000, pNext: *void(&timeline), handleType: handleType }
             var properties = VkExternalSemaphoreProperties{ sType: 1000076001 }
-            let query = runtime.InstanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties
-            query(runtime.PhysicalDevice, &info, &properties)
+            let query = runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties
+            query(runtime.Runtime.PhysicalDevice, &info, &properties)
             return (properties.externalSemaphoreFeatures & 3u) == 3u
         }
 
@@ -372,8 +372,8 @@ internal unsafe partial class VulkanExternalImageProof {
                 usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT) }
             var externalProperties = VkExternalImageFormatProperties{ sType: 1000071001 }
             var properties = VkImageFormatProperties2{ sType: 1000059003, pNext: *void(&externalProperties) }
-            let query = runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
-            return query(runtime.PhysicalDevice, &info, &properties) == VkConstants.VK_SUCCESS
+            let query = runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
+            return query(runtime.Runtime.PhysicalDevice, &info, &properties) == VkConstants.VK_SUCCESS
                 && (externalProperties.externalMemoryProperties.externalMemoryFeatures & 6u) == 6u
         }
     }

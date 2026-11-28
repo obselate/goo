@@ -12,8 +12,8 @@ public unsafe partial class ExternalImageSession {
     private func ReadDeviceIdentity() {
         var identity = VkPhysicalDeviceIDProperties{ sType: 1000071004 }
         var properties = VkPhysicalDeviceProperties2{ sType: 1000059001, pNext: *void(&identity) }
-        let getProperties = Runtime.InstanceDispatch.vkGetPhysicalDeviceProperties2
-        getProperties(Runtime.PhysicalDevice, &properties)
+        let getProperties = Runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceProperties2
+        getProperties(Runtime.Runtime.PhysicalDevice, &properties)
         for index in 0 ... 16 {
             deviceUuid[index] = identity.deviceUUID[index]
             driverUuid[index] = identity.driverUUID[index]
@@ -31,7 +31,7 @@ public unsafe partial class ExternalImageSession {
             return ExternalImageStatus.UnsupportedSynchronization
         }
         if sync.QueueFamily != 0xFFFFFFFEu
-            && (sync.QueueFamily != 0xFFFFFFFDu || !Runtime.Dispatch.ForeignQueueFamily) {
+            && (sync.QueueFamily != 0xFFFFFFFDu || !Runtime.Runtime.Dispatch.ForeignQueueFamily) {
             return ExternalImageStatus.UnsupportedSynchronization
         }
         if sync.Kind == ExternalImageSyncKind.AlreadyComplete {
@@ -50,7 +50,7 @@ public unsafe partial class ExternalImageSession {
             case ExternalImageSyncKind.D3D12Fence: 8u
             default: 0u
         }
-        if handleType == 0u || (Runtime.Dispatch.ExternalSemaphoreKinds & handleType) == 0u {
+        if handleType == 0u || (Runtime.Runtime.Dispatch.ExternalSemaphoreKinds & handleType) == 0u {
             return ExternalImageStatus.UnsupportedSynchronization
         }
         guard let original = sync.Handle else { throw ArgumentException("A synchronization handle is required", "ready") }
@@ -58,13 +58,13 @@ public unsafe partial class ExternalImageSession {
             return ExternalImageStatus.Failed
         }
         using let handle = duplicate
-        let dispatch = Runtime.Dispatch
+        let dispatch = Runtime.Runtime.Dispatch
         var typeInfo = VkSemaphoreTypeCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
             semaphoreType: if syncFd { 0 } else { VkConstants.VK_SEMAPHORE_TYPE_TIMELINE } }
         var externalInfo = VkPhysicalDeviceExternalSemaphoreInfo{ sType: 1000076000, pNext: *void(&typeInfo), handleType: handleType }
         var properties = VkExternalSemaphoreProperties{ sType: 1000076001 }
-        let getProperties = Runtime.InstanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties
-        getProperties(Runtime.PhysicalDevice, &externalInfo, &properties)
+        let getProperties = Runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties
+        getProperties(Runtime.Runtime.PhysicalDevice, &externalInfo, &properties)
         if (properties.externalSemaphoreFeatures & 2u) == 0u { return ExternalImageStatus.UnsupportedSynchronization }
         var semaphore VkSemaphore
         var dependency ExternalNativeHandle?
@@ -74,18 +74,18 @@ public unsafe partial class ExternalImageSession {
             if dependency == nil { return ExternalImageStatus.Failed }
             var createInfo = VkSemaphoreCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, pNext: *void(&typeInfo) }
             let createSemaphore = dispatch.vkCreateSemaphore
-            var result = createSemaphore(Runtime.Device, &createInfo, nil, &semaphore)
+            var result = createSemaphore(Runtime.Runtime.Device, &createInfo, nil, &semaphore)
             if result != VkConstants.VK_SUCCESS { return ExternalImageStatus.Failed }
             if OperatingSystem.IsWindows() {
                 var importInfo = VkImportSemaphoreWin32HandleInfoKHR{ sType: 1000078000, semaphore: semaphore,
                     handleType: handleType, handle: handle.DangerousGetHandle() }
                 let importSemaphore = dispatch.vkImportSemaphoreWin32HandleKHR
-                result = importSemaphore(Runtime.Device, &importInfo)
+                result = importSemaphore(Runtime.Runtime.Device, &importInfo)
             } else {
                 var importInfo = VkImportSemaphoreFdInfoKHR{ sType: 1000079000, semaphore: semaphore,
                     flags: if syncFd { 1u } else { 0u }, handleType: handleType, fd: int32(handle.DangerousGetHandle()) }
                 let importSemaphore = dispatch.vkImportSemaphoreFdKHR
-                result = importSemaphore(Runtime.Device, &importInfo)
+                result = importSemaphore(Runtime.Runtime.Device, &importInfo)
                 if result == VkConstants.VK_SUCCESS { handle.SetHandleAsInvalid() }
             }
             if result != VkConstants.VK_SUCCESS {
@@ -98,9 +98,9 @@ public unsafe partial class ExternalImageSession {
         } finally {
             if !accepted {
                 dependency?.Dispose()
-                if semaphore != 0uL {
+                if semaphore != VkSemaphore.Null {
                     let destroy = dispatch.vkDestroySemaphore
-                    destroy(Runtime.Device, semaphore, nil)
+                    destroy(Runtime.Runtime.Device, semaphore, nil)
                 }
             }
         }
@@ -117,8 +117,8 @@ public unsafe partial class ExternalImageSession {
             return result
         }
         var value uint64
-        let counter = Runtime.Dispatch.vkGetSemaphoreCounterValue
-        let result = counter(Runtime.Device, frame.ReadySemaphore, &value)
+        let counter = Runtime.Runtime.Dispatch.vkGetSemaphoreCounterValue
+        let result = counter(Runtime.Runtime.Device, frame.ReadySemaphore, &value)
         if result == VkConstants.VK_SUCCESS && value >= frame.Sync.Value {
             frame.ReadyHandle?.Dispose()
             frame.ReadyHandle = nil
@@ -129,12 +129,12 @@ public unsafe partial class ExternalImageSession {
     }
 
     private func CreateReleaseCommands() {
-        let dispatch = Runtime.Dispatch
+        let dispatch = Runtime.Runtime.Dispatch
         var poolInfo = VkCommandPoolCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            flags: uint32(VkConstants.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), queueFamilyIndex: Runtime.GraphicsFamilyIndex }
+            flags: uint32(VkConstants.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), queueFamilyIndex: Runtime.Runtime.GraphicsFamilyIndex }
         let create = dispatch.vkCreateCommandPool
         var createdPool VkCommandPool
-        let result = create(Runtime.Device, &poolInfo, nil, &createdPool)
+        let result = create(Runtime.Runtime.Device, &poolInfo, nil, &createdPool)
         commandPool = createdPool
         if result != VkConstants.VK_SUCCESS {
             throw InvalidOperationException("External release command pool creation failed")
@@ -143,7 +143,7 @@ public unsafe partial class ExternalImageSession {
             commandPool: commandPool, level: VkConstants.VK_COMMAND_BUFFER_LEVEL_PRIMARY, commandBufferCount: uint32(FrameCapacity) }
         let allocate = dispatch.vkAllocateCommandBuffers
         fixed commands *VkCommandBuffer = releaseCommands {
-            if allocate(Runtime.Device, &allocation, commands) != VkConstants.VK_SUCCESS {
+            if allocate(Runtime.Runtime.Device, &allocation, commands) != VkConstants.VK_SUCCESS {
                 DestroyReleaseCommands()
                 throw InvalidOperationException("External release command allocation failed")
             }
@@ -152,14 +152,14 @@ public unsafe partial class ExternalImageSession {
     }
 
     private func DestroyReleaseCommands() {
-        if commandPool == 0uL { return }
-        let destroy = Runtime.Dispatch.vkDestroyCommandPool
-        destroy(Runtime.Device, commandPool, nil)
-        commandPool = 0uL
+        if commandPool == VkCommandPool.Null { return }
+        let destroy = Runtime.Runtime.Dispatch.vkDestroyCommandPool
+        destroy(Runtime.Runtime.Device, commandPool, nil)
+        commandPool = VkCommandPool.Null
     }
 
     private func RecordRelease(index int32, frame ExternalFrameLease) {
-        let dispatch = Runtime.Dispatch
+        let dispatch = Runtime.Runtime.Dispatch
         let command = releaseCommands[index]
         let reset = dispatch.vkResetCommandBuffer
         CheckRelease(reset(command, 0u))
@@ -167,7 +167,7 @@ public unsafe partial class ExternalImageSession {
             flags: uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) }
         let begin = dispatch.vkBeginCommandBuffer
         CheckRelease(begin(command, &beginInfo))
-        RecordOwnership(command, dispatch, frame, Runtime.GraphicsFamilyIndex, false)
+        RecordOwnership(command, dispatch, frame, Runtime.Runtime.GraphicsFamilyIndex, false)
         let end = dispatch.vkEndCommandBuffer
         CheckRelease(end(command))
     }
@@ -201,12 +201,12 @@ public unsafe partial class ExternalImageSession {
     private func ReleaseFrame(index int32, frame ExternalFrameLease) bool {
         if frame.Acquired {
             if !frame.ReleaseQueued {
-                if Runtime.PollGraphicsSubmission(frame.LastUse) == VkConstants.VK_NOT_READY { return false }
+                if Runtime.Runtime.PollGraphicsSubmission(frame.LastUse) == VkConstants.VK_NOT_READY { return false }
                 RecordRelease(index, frame)
                 let mailbox = releaseMailboxes[index]!!
-                mailbox.PrepareSubmit(releaseCommands[index], 0uL, 0uL)
+                mailbox.PrepareSubmit(releaseCommands[index], VkSemaphore.Null, VkSemaphore.Null)
                 if !mailbox.BeginSubmit() { throw InvalidOperationException("External release mailbox is not idle") }
-                if !Runtime.EnqueueGraphicsSubmission(mailbox, (serial uint64) -> { frame.ReleaseSerial = serial }) {
+                if !Runtime.Runtime.EnqueueGraphicsSubmission(mailbox, (serial uint64) -> { frame.ReleaseSerial = serial }) {
                     mailbox.CancelSubmit()
                     return false
                 }
@@ -216,10 +216,10 @@ public unsafe partial class ExternalImageSession {
             let mailbox = releaseMailboxes[index]!!
             if !mailbox.TakeSubmitCompletion(out var submitted) { return false }
             if submitted != VkConstants.VK_SUCCESS {
-                Runtime.MarkDeviceLost()
+                Runtime.Runtime.MarkDeviceLost()
                 return false
             }
-            if Runtime.PollGraphicsSubmission(frame.ReleaseSerial) != VkConstants.VK_SUCCESS { return false }
+            if Runtime.Runtime.PollGraphicsSubmission(frame.ReleaseSerial) != VkConstants.VK_SUCCESS { return false }
             mailbox.ResetSubmitCompletion()
         }
         FinishFrame(index, frame, if frame.Sampled { ExternalFrameStatus.Released } else { ExternalFrameStatus.Dropped })
@@ -228,16 +228,16 @@ public unsafe partial class ExternalImageSession {
 
     private func FinishFrame(index int32, frame ExternalFrameLease, status ExternalFrameStatus) {
         if frame.Terminal { return }
-        Runtime.ImageResources.ReleaseExternalFrame()
+        Runtime.Runtime.ImageResources.ReleaseExternalFrame()
         frame.Terminal = true
         let dependency = if !frame.Ready { frame.ReadyHandle } else { nil }
         if dependency == nil { frame.ReadyHandle?.Dispose() }
         frame.ReadyHandle = nil
         frames[index] = nil
-        if frame.ReadySemaphore != 0uL {
-            let destroy = Runtime.Dispatch.vkDestroySemaphore
-            destroy(Runtime.Device, frame.ReadySemaphore, nil)
-            frame.ReadySemaphore = 0uL
+        if frame.ReadySemaphore != VkSemaphore.Null {
+            let destroy = Runtime.Runtime.Dispatch.vkDestroySemaphore
+            destroy(Runtime.Runtime.Device, frame.ReadySemaphore, nil)
+            frame.ReadySemaphore = VkSemaphore.Null
         }
         frame.Image.Native.Busy = false
         if frame.Image.Native.Closed { frame.Image.Native.Dispose() }
@@ -247,21 +247,21 @@ public unsafe partial class ExternalImageSession {
     }
 
     private func CloseFrames(status ExternalImageStatus) {
-        var lost = status == ExternalImageStatus.DeviceLost || Runtime.DeviceLost
-        if lost { Runtime.QuiesceQueueAfterDeviceLoss() }
+        var lost = status == ExternalImageStatus.DeviceLost || Runtime.Runtime.DeviceLost
+        if lost { Runtime.Runtime.QuiesceQueueAfterDeviceLoss() }
         if !lost {
-            let serial = Runtime.QueueWorker.LastEnqueuedGraphicsSubmissionSerial
-            if serial != 0uL { CheckRelease(Runtime.WaitGraphicsSubmission(serial, uint64.MaxValue)) }
+            let serial = Runtime.Runtime.QueueWorker.LastEnqueuedGraphicsSubmissionSerial
+            if serial != 0uL { CheckRelease(Runtime.Runtime.WaitGraphicsSubmission(serial, uint64.MaxValue)) }
             VulkanDeviceRecoveryCoordinator.ServiceExternalImageCompletions()
         }
-        Runtime.ImageResources.RemoveExternalSession(this, lost)
+        Runtime.Runtime.ImageResources.RemoveExternalSession(this, lost)
         for index in 0 ... FrameCapacity {
             guard let frame = frames[index] else { continue }
             if !lost && frame.Acquired {
                 while !ReleaseFrame(index, frame) {
-                    if Runtime.DeviceLost {
+                    if Runtime.Runtime.DeviceLost {
                         lost = true
-                        Runtime.QuiesceQueueAfterDeviceLoss()
+                        Runtime.Runtime.QuiesceQueueAfterDeviceLoss()
                         FinishFrame(index, frame, ExternalFrameStatus.DeviceLost)
                         break
                     }

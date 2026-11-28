@@ -128,7 +128,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     guard let frame = preparedClipFrame else {
       throw InvalidOperationException("Vulkan clip frame is not prepared")
     }
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
     ValidateExtent(extent)
@@ -138,26 +138,26 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if frameData.PreparedSlot != preparedClipSlot {
       throw InvalidOperationException("Vulkan clip frame slot is not prepared")
     }
-    if clipMaskPipelineLayout == 0uL {
+    if clipMaskPipelineLayout == VkPipelineLayout.Null {
       throw NotSupportedException("Vulkan clip mask pipeline layout is unavailable")
     }
-    var selectedPipeline VkPipeline = 0uL
+    var selectedPipeline VkPipeline = VkPipeline.Null
     pathDescriptorBound = false
     strokeDescriptorBound = false
-    boundDescriptorLayout = 0uL
+    boundDescriptorLayout = VkPipelineLayout.Null
     pathAtlasId = ResourceId{}
-    activePipeline = 0uL
+    activePipeline = VkPipeline.Null
     clipDescriptorBound = false
-    clipDescriptorLayout = 0uL
+    clipDescriptorLayout = VkPipelineLayout.Null
     clipDescriptorSlot = -1
     var rendered int32 = 0
     var maskIndex int32 = 0
     while maskIndex < frame.ClipMaskCount {
       let region = clipRegions[maskIndex]
       if region.Dirty {
-        if selectedPipeline == 0uL {
+        if selectedPipeline == VkPipeline.Null {
           selectedPipeline = primitiveState.ClipMaskPipelineFor(atlas.Format)
-          if selectedPipeline == 0uL {
+          if selectedPipeline == VkPipeline.Null {
             throw NotSupportedException("Vulkan clip mask pipeline is unavailable")
           }
         }

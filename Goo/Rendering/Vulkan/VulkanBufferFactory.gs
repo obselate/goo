@@ -25,7 +25,7 @@ internal unsafe class VulkanBufferFactory {
           throw ArgumentOutOfRangeException("usage")
         }
 
-        var buffer VkBuffer = 0uL
+        var buffer VkBuffer = VkBuffer.Null
         var info = VkBufferCreateInfo{
           sType: VkConstants.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
           pNext: nil,
@@ -42,8 +42,8 @@ internal unsafe class VulkanBufferFactory {
         try {
           let createBuffer = dispatch.vkCreateBuffer
           if createBuffer(device, &info, nil, &buffer) != VkConstants.VK_SUCCESS
-            || buffer == 0uL {
-              buffer = 0uL
+            || buffer == VkBuffer.Null {
+              buffer = VkBuffer.Null
               throw InvalidOperationException("vkCreateBuffer failed")
             }
           if let accounting = objectAccounting {
@@ -64,7 +64,7 @@ internal unsafe class VulkanBufferFactory {
 
           return VulkanBufferCreation(buffer, createdAllocation)
         } catch (error Exception) {
-          if buffer != 0uL {
+          if buffer != VkBuffer.Null {
             let destroyBuffer = dispatch.vkDestroyBuffer
             try { destroyBuffer(device, buffer, nil) } catch (cleanup Exception) { }
           }

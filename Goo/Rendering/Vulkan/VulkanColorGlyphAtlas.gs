@@ -67,12 +67,12 @@ internal data struct VulkanColorGlyphDirtyUpload {
 }
 
 internal sealed class VulkanColorGlyphStagingChunk {
-  internal var Buffer VkBuffer = 0uL
+  internal var Buffer VkBuffer = VkBuffer.Null
   internal var Allocation VulkanMemoryAllocation? = nil
   internal var Mapped nint = nint(0)
   internal var Capacity VkDeviceSize
   internal var Used VkDeviceSize
-  internal var UploadCommandBuffer VkCommandBuffer = nint(0)
+  internal var UploadCommandBuffer VkCommandBuffer = VkCommandBuffer.Null
   internal var SubmissionSerial uint64
   internal var Pending bool
   internal var Recorded bool
@@ -86,8 +86,8 @@ internal sealed class VulkanColorGlyphAtlasPage {
   internal var PageIndex int32
   internal var Width uint32
   internal var Height uint32
-  internal var Image VkImage = 0uL
-  internal var ImageView VkImageView = 0uL
+  internal var Image VkImage = VkImage.Null
+  internal var ImageView VkImageView = VkImageView.Null
   internal var Allocation VulkanMemoryAllocation? = nil
   internal var ImageId ResourceId
   internal var SamplerId ResourceId
@@ -195,7 +195,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     nativePageWidth uint32 = DefaultPageWidth,
     nativePageHeight uint32 = DefaultPageHeight,
     nativeBudgetBytes VkDeviceSize = DefaultBudgetBytes) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeGeneration == 0uL {
@@ -496,14 +496,14 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
   }
 
   internal func RecordUploads(commandBuffer VkCommandBuffer) {
-    if disposed || deviceLost || commandBuffer == nint(0) {
+    if disposed || deviceLost || commandBuffer == VkCommandBuffer.Null {
       return
     }
     if pendingUploads.Count == 0 {
       lastUploadedDirtyCount = 0
       return
     }
-    if device == nint(0) {
+    if device == VkDevice.Null {
       lastUploadedDirtyCount = pendingUploads.Count
       var clearIndex int32 = 0
       while clearIndex < pages.Count {
@@ -528,7 +528,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     var dirtyIdx int32 = 0
     while dirtyIdx < dirtyPageIndices.Count {
       let page = pages[dirtyPageIndices[dirtyIdx]]
-      if page.Active && page.Image != 0uL {
+      if page.Active && page.Image != VkImage.Null {
         let oldLayout = page.ImageLayout
         let fromUndefined = oldLayout == VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
         VulkanTransitions.RecordImage(
@@ -551,7 +551,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       let item = pendingUploads[uploadIndex]
       let page = pages[item.PageIndex]
       let chunk = stagingChunks[item.StagingIndex]
-      if page.Active && page.Image != 0uL && chunk.Buffer != 0uL {
+      if page.Active && page.Image != VkImage.Null && chunk.Buffer != VkBuffer.Null {
         var copy = VkBufferImageCopy{
           bufferOffset: item.StagingOffset,
           bufferRowLength: item.Width,
@@ -575,7 +575,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     dirtyIdx = 0
     while dirtyIdx < dirtyPageIndices.Count {
       let page = pages[dirtyPageIndices[dirtyIdx]]
-      if page.Active && page.Image != 0uL {
+      if page.Active && page.Image != VkImage.Null {
         VulkanTransitions.RecordImage(
           commandBuffer,
           pipelineBarrier,
@@ -599,7 +599,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
   }
 
   internal func FlushBeforeSubmit() VkResult {
-    if disposed || deviceLost || device == nint(0) {
+    if disposed || deviceLost || device == VkDevice.Null {
       return VkConstants.VK_SUCCESS
     }
     var index int32 = 0
@@ -663,7 +663,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
         chunk.Pending = false
         chunk.Recorded = false
         chunk.FlushPrepared = false
-        chunk.UploadCommandBuffer = nint(0)
+        chunk.UploadCommandBuffer = VkCommandBuffer.Null
         chunk.Used = 0uL
       }
       chunkIndex++
@@ -687,7 +687,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
         chunk.FlushPrepared = false
         chunk.Submitted = false
         chunk.SubmissionSerial = 0uL
-        chunk.UploadCommandBuffer = nint(0)
+        chunk.UploadCommandBuffer = VkCommandBuffer.Null
         chunk.Used = 0uL
         collected = true
       }
@@ -841,7 +841,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     page.PendingUploadCount = 0
     let pageBytes = VkDeviceSize(pageWidth) * VkDeviceSize(pageHeight) * 4uL
     let version = NextVersion()
-    if device == nint(0) {
+    if device == VkDevice.Null {
       let id = NextOfflineId()
       page.ImageId = ResourceId{ Kind: SceneResourceKind.Image, LogicalId: id, Version: version }
       page.SamplerId = ResourceId{ Kind: SceneResourceKind.Sampler, LogicalId: 1uL, Version: 1uL }
@@ -984,12 +984,12 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       }
       page.Registered = false
     }
-    if device != nint(0) {
+    if device != VkDevice.Null {
       DestroyVulkanPageResources(page.Image, page.ImageView, page.Allocation)
     }
     let pageBytes = VkDeviceSize(page.Width) * VkDeviceSize(page.Height) * 4uL
-    page.Image = 0uL
-    page.ImageView = 0uL
+    page.Image = VkImage.Null
+    page.ImageView = VkImageView.Null
     page.Allocation = nil
     page.ImageId = ResourceId{}
     page.SamplerId = ResourceId{}
@@ -1027,7 +1027,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     contentHeight uint32,
     premultipliedRgba []uint8) bool {
       let byteCount = VkDeviceSize(paddedWidth) * VkDeviceSize(paddedHeight) * 4uL
-      if device == nint(0) {
+      if device == VkDevice.Null {
         guard let mirror = page.CpuMirror else {
           return false
         }
@@ -1150,14 +1150,14 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
 
   private func DestroyVulkanPageResources(image VkImage, view VkImageView,
     allocation VulkanMemoryAllocation?) {
-      if view != 0uL {
+      if view != VkImageView.Null {
         let destroyView = dispatch.vkDestroyImageView
         try { destroyView(device, view, nil) } catch (cleanup Exception) { }
         if let accounting = objectAccounting {
           try { accounting.Release() } catch (cleanup Exception) { }
         }
       }
-      if image != 0uL {
+      if image != VkImage.Null {
         let destroyImage = dispatch.vkDestroyImage
         try { destroyImage(device, image, nil) } catch (cleanup Exception) { }
         if let accounting = objectAccounting {
@@ -1173,13 +1173,13 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
     var index int32 = 0
     while index < stagingChunks.Count {
       let chunk = stagingChunks[index]
-      if chunk.Buffer != 0uL {
+      if chunk.Buffer != VkBuffer.Null {
         let destroyBuffer = dispatch.vkDestroyBuffer
         try { destroyBuffer(device, chunk.Buffer, nil) } catch (cleanup Exception) { }
         if let accounting = objectAccounting {
           try { accounting.Release() } catch (cleanup Exception) { }
         }
-        chunk.Buffer = 0uL
+        chunk.Buffer = VkBuffer.Null
       }
       if let allocation = chunk.Allocation {
         try { allocator.Release(allocation) } catch (cleanup Exception) { }
@@ -1225,7 +1225,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       index++
     }
     glyphs.Clear()
-    if device != nint(0) {
+    if device != VkDevice.Null {
       DestroyStagingChunks()
     }
   }
@@ -1245,7 +1245,7 @@ internal unsafe sealed class VulkanColorGlyphAtlas : IDisposable {
       index++
     }
     glyphs.Clear()
-    if device != nint(0) {
+    if device != VkDevice.Null {
       DestroyStagingChunks()
     }
   }

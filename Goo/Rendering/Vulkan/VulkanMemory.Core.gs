@@ -162,7 +162,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
 
   internal func AllocateImage(image VkImage,
     memoryPolicy VulkanMemoryPolicy) VulkanMemoryAllocation{
-      if image == 0uL {
+      if image == VkImage.Null {
         throw ArgumentOutOfRangeException("image")
       }
       EnsureOpen()
@@ -191,7 +191,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
 
   internal func AllocateBuffer(buffer VkBuffer,
     memoryPolicy VulkanMemoryPolicy) VulkanMemoryAllocation{
-      if buffer == 0uL {
+      if buffer == VkBuffer.Null {
         throw ArgumentOutOfRangeException("buffer")
       }
       EnsureOpen()
@@ -420,7 +420,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
           unmapMemory(device, block.memory)
           block.mapped = nil
         }
-        if block.memory != 0uL {
+        if block.memory != VkDeviceMemory.Null {
           freeMemory(device, block.memory, nil)
           if let recorder = FrameRecorder.Current {
             ProfileBlock(recorder, block, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceEvict)
@@ -428,7 +428,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
           if let accounting = objectAccounting {
             accounting.Release()
           }
-          block.memory = 0uL
+          block.memory = VkDeviceMemory.Null
         }
       }
       blocks[blockIndex] = nil

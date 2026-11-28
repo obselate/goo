@@ -101,17 +101,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var disposed bool
 
   internal prop ClipCapacity int32{ get -> clipStack.Length }
-  internal prop LiveObjectCount uint32{
-    get {
-      var count uint64 = primitiveFrameData.LiveObjectCount
-      count = count + textFrameData.LiveObjectCount
-      if let data = pathStrokeFrameData { count += data.LiveObjectCount }
-      if let data = clipMaskFrameData {
-        count = count + data.LiveObjectCount
-      }
-      return uint32(count)
-    }
-  }
 
   internal prop PrimitiveFrameStats VulkanPrimitiveFrameStats{
     get -> primitiveFrameData.LastStats
@@ -147,7 +136,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     nativeObjectAccounting VulkanObjectAccounting?,
     nativeAllocator VulkanMemoryAllocator?,
     nativeClipMaskAtlas VulkanClipMaskAtlas?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
@@ -260,7 +249,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if disposed {
         throw ObjectDisposedException("VulkanPrimitiveRenderer")
       }
-      if commandBuffer == nint(0) || image == 0uL || imageView == 0uL {
+      if commandBuffer == VkCommandBuffer.Null || image == VkImage.Null || imageView == VkImageView.Null {
         throw ArgumentException("Vulkan layer frame target is invalid")
       }
       if extent.width == 0u || extent.height == 0u {
@@ -408,7 +397,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           currentDrawOrdinal = uint32(drawIndex)
           primitiveRecordPlan[drawIndex] = uint32(primitiveRecordCount)
           let reference = frame.DrawRefs[drawIndex]
-          ProcessDraw(nint(0), reference, frame)
+          ProcessDraw(VkCommandBuffer.Null, reference, frame)
           drawIndex = drawIndex + 1
         }
         if clipDepth != 1 || layerDepth != 0 || currentTarget != nil {
@@ -513,7 +502,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if disposed {
         throw ObjectDisposedException("VulkanPrimitiveRenderer")
       }
-      if commandBuffer == nint(0) {
+      if commandBuffer == VkCommandBuffer.Null {
         throw ArgumentException("Command buffer is null", "commandBuffer")
       }
       if extent.width == 0u || extent.height == 0u {
@@ -533,7 +522,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         || textFrameData.PreparedSlot != primitiveFrameSlot{
           throw InvalidOperationException("Vulkan primitive and text frame data must be prepared before scene recording")
         }
-      if rootCommandBuffer != commandBuffer || rootImage == 0uL || rootImageView == 0uL {
+      if rootCommandBuffer != commandBuffer || rootImage == VkImage.Null || rootImageView == VkImageView.Null {
         throw InvalidOperationException("Vulkan layer frame target was not configured")
       }
       if rootExtent.width != extent.width || rootExtent.height != extent.height {
@@ -551,9 +540,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       currentTarget = nil
       currentOriginX = 0.0F
       currentOriginY = 0.0F
-      activePipeline = 0uL
-      boundDescriptorLayout = 0uL
-      clipDescriptorLayout = 0uL
+      activePipeline = VkPipeline.Null
+      boundDescriptorLayout = VkPipelineLayout.Null
+      clipDescriptorLayout = VkPipelineLayout.Null
       clipDescriptorBound = false
       clipDescriptorSlot = -1
       currentDrawOrdinal = 0u
@@ -569,7 +558,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       textDescriptorBound = false
       textAtlasId = ResourceId{}
       textInstanceDescriptorBound = false
-      textInstanceDescriptorLayout = 0uL
+      textInstanceDescriptorLayout = VkPipelineLayout.Null
       textInstanceDescriptorSlot = -1
       recordPipelineChangeCount = 0uL
       recordDescriptorChangeCount = 0uL

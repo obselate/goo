@@ -357,9 +357,9 @@ internal class VulkanSceneCompilerFixtures {
     var fence uint64
     let publish = () -> {
       fence++
-      paths.RecordUpload(1)
+      paths.RecordUpload(VkCommandBuffer(nint(1)))
       if paths.FlushBeforeSubmit() != 0 { throw InvalidOperationException("Path upload flush failed") }
-      paths.MarkSubmitted(1, fence)
+      paths.MarkSubmitted(VkCommandBuffer(nint(1)), fence)
       paths.Collect(fence)
     }
     try {

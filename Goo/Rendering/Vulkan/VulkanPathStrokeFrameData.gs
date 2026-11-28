@@ -89,16 +89,6 @@ internal unsafe class VulkanPathStrokeFrameData : IDisposable {
         get -> requestCount > 0
     }
 
-    internal prop LiveObjectCount uint64 {
-        get {
-            var count = descriptors.LiveObjectCount
-            for slot in slots {
-                count += slot.Buffers.LiveObjectCount
-            }
-            return count
-        }
-    }
-
     internal init(
         device VkDevice,
         dispatch VkDeviceDispatch,
@@ -249,7 +239,7 @@ internal unsafe class VulkanPathStrokeFrameData : IDisposable {
         }
         preparedBytes = totalWords * 4uL
         slot.Buffers.EnsureMappedCapacity(preparedBytes, 4096uL, uint32(VkConstants.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT))
-        if descriptors.Pool == 0uL {
+        if descriptors.Pool == VkDescriptorPool.Null {
             CreateDescriptors()
         }
         if slot.DescriptorGeneration != slot.Buffers.Generation || slot.DescriptorBytes != preparedBytes {

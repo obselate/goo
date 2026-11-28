@@ -37,7 +37,7 @@ internal unsafe class VulkanDescriptorFactory {
           throw ArgumentOutOfRangeException("bindingCount")
         }
 
-        var layout VkDescriptorSetLayout = 0uL
+        var layout VkDescriptorSetLayout = VkDescriptorSetLayout.Null
         var accounted bool = false
         var info = VkDescriptorSetLayoutCreateInfo{
           sType: VkConstants.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -49,7 +49,7 @@ internal unsafe class VulkanDescriptorFactory {
         try {
           let createLayout = dispatch.vkCreateDescriptorSetLayout
           let result = createLayout(device, &info, nil, &layout)
-          if result != VkConstants.VK_SUCCESS || layout == 0uL {
+          if result != VkConstants.VK_SUCCESS || layout == VkDescriptorSetLayout.Null {
             throw InvalidOperationException(
               "vkCreateDescriptorSetLayout failed: " + result.ToString())
           }
@@ -59,7 +59,7 @@ internal unsafe class VulkanDescriptorFactory {
           }
           return layout
         } catch (error Exception) {
-          if layout != 0uL {
+          if layout != VkDescriptorSetLayout.Null {
             let destroyLayout = dispatch.vkDestroyDescriptorSetLayout
             try { destroyLayout(device, layout, nil) } catch (cleanup Exception) { }
           }
@@ -97,7 +97,7 @@ internal unsafe class VulkanDescriptorFactory {
           throw ArgumentOutOfRangeException("descriptorSetCount")
         }
 
-        var pool VkDescriptorPool = 0uL
+        var pool VkDescriptorPool = VkDescriptorPool.Null
         var poolAccounted bool = false
         var setsAccounted int32 = 0
         var poolInfo = VkDescriptorPoolCreateInfo{
@@ -111,7 +111,7 @@ internal unsafe class VulkanDescriptorFactory {
         try {
           let createPool = dispatch.vkCreateDescriptorPool
           let poolResult = createPool(device, &poolInfo, nil, &pool)
-          if poolResult != VkConstants.VK_SUCCESS || pool == 0uL {
+          if poolResult != VkConstants.VK_SUCCESS || pool == VkDescriptorPool.Null {
             throw InvalidOperationException(
               "vkCreateDescriptorPool failed: " + poolResult.ToString())
           }
@@ -141,7 +141,7 @@ internal unsafe class VulkanDescriptorFactory {
           }
           return VulkanDescriptorAllocation(pool, descriptorSetCount)
         } catch (error Exception) {
-          if pool != 0uL {
+          if pool != VkDescriptorPool.Null {
             let destroyPool = dispatch.vkDestroyDescriptorPool
             try { destroyPool(device, pool, nil) } catch (cleanup Exception) { }
           }
@@ -158,7 +158,7 @@ internal unsafe class VulkanDescriptorFactory {
           }
           var index int32 = 0
           while index < int32(descriptorSetCount) {
-            descriptorSets[index] = 0uL
+            descriptorSets[index] = VkDescriptorSet.Null
             index++
           }
           rethrow

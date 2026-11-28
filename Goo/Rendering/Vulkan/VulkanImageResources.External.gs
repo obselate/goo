@@ -21,7 +21,7 @@ internal unsafe partial class VulkanImageResources {
         EnsureOpen()
         ValidateImageId(id)
         ValidateSamplerId(samplerId)
-        if frame.Terminal || frame.Source.Session.IsClosed || frame.Image.Native.Runtime.Generation != generation {
+        if frame.Terminal || frame.Source.Session.IsClosed || frame.Image.Native.Runtime.Runtime.Generation != generation {
             return VulkanImageResourceLookup{}
         }
         let existing = FindExactIndex(id)
@@ -63,7 +63,7 @@ internal unsafe partial class VulkanImageResources {
             guard let frame = entry.External else { continue }
             if frame.Acquired || frame.AcquireCommand == command { continue }
             ExternalImageSession.RecordOwnership(command, dispatch, frame,
-                frame.Image.Native.Runtime.GraphicsFamilyIndex, true)
+                frame.Image.Native.Runtime.Runtime.GraphicsFamilyIndex, true)
             frame.AcquireCommand = command
         }
     }
@@ -73,7 +73,7 @@ internal unsafe partial class VulkanImageResources {
         for position in 0 ... slots.Count {
             let entry = entries[slots[position]]
             guard let frame = entry.External else { continue }
-            if frame.AcquireCommand == command && !frame.Acquired && frame.ReadySemaphore != 0uL {
+            if frame.AcquireCommand == command && !frame.Acquired && frame.ReadySemaphore != VkSemaphore.Null {
                 mailbox.AddExternalWait(frame.ReadySemaphore, frame.Sync.Value, frame)
             }
         }
@@ -104,7 +104,7 @@ internal unsafe partial class VulkanImageResources {
             }
         }
         if let current = runtime {
-            if current.GetCompletedGraphicsSubmissionSerial(out var completed) == VkConstants.VK_SUCCESS { Collect(completed) }
+            if current.Runtime.GetCompletedGraphicsSubmissionSerial(out var completed) == VkConstants.VK_SUCCESS { Collect(completed) }
         }
     }
 
@@ -141,7 +141,7 @@ internal unsafe partial class VulkanImageResources {
         EnsureOpen()
         ValidateImageId(id)
         ValidateSamplerId(samplerId)
-        if image == 0uL || view == 0uL || width == 0u || height == 0u {
+        if image == VkImage.Null || view == VkImageView.Null || width == 0u || height == 0u {
             return VulkanImageResourceLookup{}
         }
         let existing = FindExactIndex(id)

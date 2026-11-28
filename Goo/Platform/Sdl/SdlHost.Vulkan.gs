@@ -129,10 +129,10 @@ internal unsafe partial class SdlHost {
         sType: VkConstants.VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
         display: nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.display", nil)),
         surface: nint(SDL.GetPointerProperty(properties, "SDL.window.wayland.surface", nil)) }
-      var createdSurface VkSurfaceKHR = 0uL
+      var createdSurface = VkSurfaceKHR.Null
       let create = createSurface
-      let result = create(instance, &info, nil, &createdSurface)
-      surface = createdSurface
+      let result = create(VkInstance(instance), &info, nil, &createdSurface)
+      surface = createdSurface.Raw
       return result == VkConstants.VK_SUCCESS
     }
     if VulkanDrivers.ManualLoader {
@@ -144,10 +144,10 @@ internal unsafe partial class SdlHost {
       info.sType = VkConstants.VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR
       info.hwnd = nint(SDL.GetPointerProperty(properties, "SDL.window.win32.hwnd", nil))
       info.hinstance = nint(SDL.GetPointerProperty(properties, "SDL.window.win32.instance", nil))
-      var createdSurface VkSurfaceKHR = 0uL
+      var createdSurface = VkSurfaceKHR.Null
       let create = createSurface
-      let result = create(instance, &info, nil, &createdSurface)
-      surface = createdSurface
+      let result = create(VkInstance(instance), &info, nil, &createdSurface)
+      surface = createdSurface.Raw
       return result == VkConstants.VK_SUCCESS
     }
     var nativeSurface = Hexa.NET.SDL3.VkSurfaceKHR.Null
@@ -173,7 +173,7 @@ internal unsafe partial class SdlHost {
         as (unmanaged[Cdecl](VkInstance, VkSurfaceKHR, *VkAllocationCallbacks) -> void)?
       if destroySurface == nil { throw InvalidOperationException("vkDestroySurfaceKHR is unavailable.") }
       let destroy = destroySurface
-      destroy(instance, surface, nil)
+      destroy(VkInstance(instance), VkSurfaceKHR(surface), nil)
       return
     }
     SDL.VulkanDestroySurface(
@@ -189,7 +189,7 @@ internal unsafe partial class SdlHost {
     let storage = Marshal.StringToCoTaskMemUTF8(name)
     try {
       let lookup = getProc
-      return lookup(instance, *int8(storage))
+      return lookup(VkInstance(instance), *int8(storage))
     } finally { Marshal.FreeCoTaskMem(storage) }
   }
 }

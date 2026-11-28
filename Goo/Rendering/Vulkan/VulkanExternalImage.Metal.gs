@@ -6,7 +6,7 @@ import System.Runtime.InteropServices
 internal unsafe sealed partial class VulkanExternalImage {
     shared {
         internal func ImportMetal(runtime VulkanSharedLease, value nint, surface bool) ExternalImageResult {
-            if !OperatingSystem.IsMacOS() || !runtime.Dispatch.MetalObjects {
+            if !OperatingSystem.IsMacOS() || !runtime.Runtime.Dispatch.MetalObjects {
                 return ExternalImageResult(ExternalImageStatus.Unsupported, detail: "VK_EXT_metal_objects is unavailable")
             }
             let retained = MetalObjectHandle(value, surface)
@@ -29,7 +29,7 @@ internal unsafe sealed partial class VulkanExternalImage {
                         default: 0
                     }
                 } else {
-                    if !MetalObjectHandle.SameDevice(value, runtime.Dispatch.MetalDevice) {
+                    if !MetalObjectHandle.SameDevice(value, runtime.Runtime.Dispatch.MetalDevice) {
                         return ExternalImageResult(ExternalImageStatus.WrongDevice)
                     }
                     let usage = MetalObjectHandle.Integer(value, "usage")
@@ -53,8 +53,8 @@ internal unsafe sealed partial class VulkanExternalImage {
                     imageType: VkConstants.VK_IMAGE_TYPE_2D, tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL,
                     usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) }
                 var properties = VkImageFormatProperties2{ sType: 1000059003 }
-                let query = runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
-                if query(runtime.PhysicalDevice, &request, &properties) != VkConstants.VK_SUCCESS
+                let query = runtime.Runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
+                if query(runtime.Runtime.PhysicalDevice, &request, &properties) != VkConstants.VK_SUCCESS
                     || width > uint64(properties.maxExtent.width) || height > uint64(properties.maxExtent.height) {
                     return ExternalImageResult(ExternalImageStatus.UnsupportedFormat)
                 }
@@ -88,9 +88,9 @@ internal unsafe sealed partial class VulkanExternalImage {
             mipLevels: 1u, arrayLayers: 1u, samples: VkConstants.VK_SAMPLE_COUNT_1_BIT,
             tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL, usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
             sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE, initialLayout: VkConstants.VK_IMAGE_LAYOUT_UNDEFINED }
-        let create = Runtime.Dispatch.vkCreateImage
+        let create = Runtime.Runtime.Dispatch.vkCreateImage
         var createdImage VkImage
-        let result = create(Runtime.Device, &info, nil, &createdImage)
+        let result = create(Runtime.Runtime.Device, &info, nil, &createdImage)
         Image = createdImage
         Check(result, "Metal image import failed")
         if surface { BindSurfaceMemory() }
@@ -100,21 +100,21 @@ internal unsafe sealed partial class VulkanExternalImage {
     private func BindSurfaceMemory() {
         var request = VkImageMemoryRequirementsInfo2{ sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2, image: Image }
         var requirements = VkMemoryRequirements2{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 }
-        let getRequirements = Runtime.Dispatch.vkGetImageMemoryRequirements2
-        getRequirements(Runtime.Device, &request, &requirements)
+        let getRequirements = Runtime.Runtime.Dispatch.vkGetImageMemoryRequirements2
+        getRequirements(Runtime.Runtime.Device, &request, &requirements)
         var memoryType uint32 = 0u
         while memoryType < 32u && (requirements.memoryRequirements.memoryTypeBits & (1u << int32(memoryType))) == 0u { memoryType++ }
         if memoryType == 32u { throw InvalidOperationException("IOSurface memory type is unavailable") }
         var dedicated = VkMemoryDedicatedAllocateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO, image: Image }
         var allocation = VkMemoryAllocateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             pNext: *void(&dedicated), allocationSize: requirements.memoryRequirements.size, memoryTypeIndex: memoryType }
-        let allocate = Runtime.Dispatch.vkAllocateMemory
+        let allocate = Runtime.Runtime.Dispatch.vkAllocateMemory
         var importedMemory VkDeviceMemory
-        let result = allocate(Runtime.Device, &allocation, nil, &importedMemory)
+        let result = allocate(Runtime.Runtime.Device, &allocation, nil, &importedMemory)
         memory = importedMemory
         Check(result, "IOSurface memory binding allocation failed")
         var bind = VkBindImageMemoryInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO, image: Image, memory: memory }
-        let bindMemory = Runtime.Dispatch.vkBindImageMemory2
-        Check(bindMemory(Runtime.Device, 1u, &bind), "IOSurface memory binding failed")
+        let bindMemory = Runtime.Runtime.Dispatch.vkBindImageMemory2
+        Check(bindMemory(Runtime.Runtime.Device, 1u, &bind), "IOSurface memory binding failed")
     }
 }

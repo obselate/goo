@@ -155,10 +155,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     nativeQueueMailbox VulkanQueueMailbox,
     nativeSharedLease VulkanSharedLease,
     nativeColorGlyphAtlas VulkanColorGlyphAtlas? = nil) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if nativeQueue == nint(0) {
+      if nativeQueue == VkQueue.Null {
         throw ArgumentException("Vulkan queue is null", "nativeQueue")
       }
       if targetExtent.width == 0u || targetExtent.height == 0u {
@@ -215,8 +215,8 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       if expectedGeneration == 0uL
         || sharedImages.Generation != expectedGeneration
         || sharedState.Generation != expectedGeneration
-        || nativeSharedLease.Generation != expectedGeneration
-        || nativeSharedLease.Device != nativeDevice{
+        || nativeSharedLease.Runtime.Generation != expectedGeneration
+        || nativeSharedLease.Runtime.Device != nativeDevice{
           throw ArgumentOutOfRangeException("expectedGeneration")
         }
       device = nativeDevice
@@ -271,8 +271,8 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       reservedImageIds = Array.Empty[ResourceId]()
       reservedTextAtlasIds = Array.Empty[ResourceId]()
       reservedPathIds = Array.Empty[ResourceId]()
-      commandPool = 0uL
-      timestampQueryPool = 0uL
+      commandPool = VkCommandPool.Null
+      timestampQueryPool = VkQueryPool.Null
       readbackRegion = fullReadbackPlan.Region
       readbackByteSize = stagingByteSize
       Create()
@@ -433,7 +433,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       return commandResult
     }
     var completed uint64
-    let completionResult = sharedLease.GetCompletedGraphicsSubmissionSerial(out completed)
+    let completionResult = sharedLease.Runtime.GetCompletedGraphicsSubmissionSerial(out completed)
     NoteResult(completionResult)
     if completionResult != VkConstants.VK_SUCCESS { return completionResult }
     readbackRegion = requestedRegion
@@ -554,7 +554,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if primitiveFlushResult != VkConstants.VK_SUCCESS {
       NoteResult(primitiveFlushResult)
       if primitiveFlushResult == VkConstants.VK_ERROR_DEVICE_LOST {
-        sharedLease.MarkDeviceLost()
+        sharedLease.Runtime.MarkDeviceLost()
       }
       return primitiveFlushResult
     }
@@ -572,10 +572,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         if colorFlush != VkConstants.VK_SUCCESS { return colorFlush }
       }
     }
-    queueMailbox.PrepareSubmit(commandBuffer, 0uL, 0uL)
+    queueMailbox.PrepareSubmit(commandBuffer, VkSemaphore.Null, VkSemaphore.Null)
     imageResources.AppendExternalWaits(queueMailbox, commandBuffer)
     if !queueMailbox.BeginSubmit() { return VkConstants.VK_NOT_READY }
-    if !sharedLease.EnqueueGraphicsSubmission(queueMailbox, validateGraphicsSubmission) {
+    if !sharedLease.Runtime.EnqueueGraphicsSubmission(queueMailbox, validateGraphicsSubmission) {
       queueMailbox.CancelSubmit()
       try { AbortPrepared() } catch (cleanup Exception) { }
       return VkConstants.VK_NOT_READY
@@ -636,7 +636,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       return result
     }
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
-      sharedLease.MarkDeviceLost()
+      sharedLease.Runtime.MarkDeviceLost()
       try { AbandonAfterDeviceLoss() } catch (cleanup Exception) { }
       return result
     }
@@ -716,7 +716,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       }
       queuePending = false
       if submitResult != VkConstants.VK_SUCCESS {
-        sharedLease.MarkDeviceLost()
+        sharedLease.Runtime.MarkDeviceLost()
       }
       var marked VkResult = VkConstants.VK_NOT_READY
       try {
@@ -737,7 +737,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       return VkConstants.VK_NOT_READY
     }
     var completed uint64
-    let queryResult = sharedLease.GetCompletedGraphicsSubmissionSerial(out completed)
+    let queryResult = sharedLease.Runtime.GetCompletedGraphicsSubmissionSerial(out completed)
     let status = if queryResult != VkConstants.VK_SUCCESS { queryResult }
     else if completed < clipMaskSubmissionSerial { VkConstants.VK_NOT_READY }
     else { VkConstants.VK_SUCCESS }
@@ -770,7 +770,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     pathResources.Collect(completed)
     state = VulkanOffscreenState.Complete
     if let currentDiagnostics = diagnostics {
-      currentDiagnostics.AddReadback(1uL)
+      currentDiagnostics.AddCounter(VulkanCounterId.ReadbackCount)
     }
     return VkConstants.VK_SUCCESS
   }
@@ -822,9 +822,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       return
     }
     ReleaseReservedImageReferences()
-    if timestampQueryPool != 0uL {
+    if timestampQueryPool != VkQueryPool.Null {
       let staleQueryPool = timestampQueryPool
-      timestampQueryPool = 0uL
+      timestampQueryPool = VkQueryPool.Null
       let destroyQueryPool = dispatch.vkDestroyQueryPool
       try { destroyQueryPool(device, staleQueryPool, nil) } catch (cleanup Exception) { }
     }
@@ -847,9 +847,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if let pool = staleLayerPool {
       try { pool.AbandonAfterDeviceLoss() } catch (cleanup Exception) { }
     }
-    if stagingBuffer != 0uL {
+    if stagingBuffer != VkBuffer.Null {
       let staleStagingBuffer = stagingBuffer
-      stagingBuffer = 0uL
+      stagingBuffer = VkBuffer.Null
       let destroyBuffer = dispatch.vkDestroyBuffer
       try { destroyBuffer(device, staleStagingBuffer, nil) } catch (cleanup Exception) { }
       if stagingBufferAccounted {
@@ -863,9 +863,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       try { allocator.Release(staleStagingAllocation) } catch (cleanup Exception) { }
       stagingAllocation = nil
     }
-    if imageView != 0uL {
+    if imageView != VkImageView.Null {
       let staleImageView = imageView
-      imageView = 0uL
+      imageView = VkImageView.Null
       let destroyImageView = dispatch.vkDestroyImageView
       try { destroyImageView(device, staleImageView, nil) } catch (cleanup Exception) { }
       if imageViewAccounted {
@@ -875,9 +875,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         imageViewAccounted = false
       }
     }
-    if image != 0uL {
+    if image != VkImage.Null {
       let staleImage = image
-      image = 0uL
+      image = VkImage.Null
       let destroyImage = dispatch.vkDestroyImage
       try { destroyImage(device, staleImage, nil) } catch (cleanup Exception) { }
       if imageAccounted {
@@ -891,18 +891,18 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       try { allocator.Release(staleImageAllocation) } catch (cleanup Exception) { }
       imageAllocation = nil
     }
-    if commandBuffer != nint(0) {
+    if commandBuffer != VkCommandBuffer.Null {
       var staleCommandBuffer = commandBuffer
-      commandBuffer = nint(0)
-      if commandPool != 0uL {
+      commandBuffer = VkCommandBuffer.Null
+      if commandPool != VkCommandPool.Null {
         let freeCommandBuffers = dispatch.vkFreeCommandBuffers
         try { freeCommandBuffers(device, commandPool, 1u, &staleCommandBuffer) }
         catch (cleanup Exception) { }
       }
     }
-    if commandPool != 0uL {
+    if commandPool != VkCommandPool.Null {
       let staleCommandPool = commandPool
-      commandPool = 0uL
+      commandPool = VkCommandPool.Null
       let destroyCommandPool = dispatch.vkDestroyCommandPool
       try { destroyCommandPool(device, staleCommandPool, nil) } catch (cleanup Exception) { }
     }
@@ -951,7 +951,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       }
     }
     if state == VulkanOffscreenState.Pending {
-      let waitResult = sharedLease.WaitGraphicsSubmission(
+      let waitResult = sharedLease.Runtime.WaitGraphicsSubmission(
         clipMaskSubmissionSerial, VkConstants.VK_WHOLE_SIZE)
       NoteResult(waitResult)
       if waitResult != VkConstants.VK_SUCCESS {
@@ -983,10 +983,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       pool.Dispose()
       layerPool = nil
     }
-    if stagingBuffer != 0uL {
+    if stagingBuffer != VkBuffer.Null {
       let destroyBuffer = dispatch.vkDestroyBuffer
       destroyBuffer(device, stagingBuffer, nil)
-      stagingBuffer = 0uL
+      stagingBuffer = VkBuffer.Null
       if stagingBufferAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         stagingBufferAccounted = false
@@ -996,19 +996,19 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       allocator.Release(stagingAllocation!!)
       stagingAllocation = nil
     }
-    if imageView != 0uL {
+    if imageView != VkImageView.Null {
       let destroyImageView = dispatch.vkDestroyImageView
       destroyImageView(device, imageView, nil)
-      imageView = 0uL
+      imageView = VkImageView.Null
       if imageViewAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         imageViewAccounted = false
       }
     }
-    if image != 0uL {
+    if image != VkImage.Null {
       let destroyImage = dispatch.vkDestroyImage
       destroyImage(device, image, nil)
-      image = 0uL
+      image = VkImage.Null
       if imageAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         imageAccounted = false
@@ -1018,15 +1018,15 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       allocator.Release(imageAllocation!!)
       imageAllocation = nil
     }
-    if commandBuffer != nint(0) {
+    if commandBuffer != VkCommandBuffer.Null {
       let freeCommandBuffers = dispatch.vkFreeCommandBuffers
       freeCommandBuffers(device, commandPool, 1u, &commandBuffer)
-      commandBuffer = nint(0)
+      commandBuffer = VkCommandBuffer.Null
     }
-    if commandPool != 0uL {
+    if commandPool != VkCommandPool.Null {
       let destroyCommandPool = dispatch.vkDestroyCommandPool
       destroyCommandPool(device, commandPool, nil)
-      commandPool = 0uL
+      commandPool = VkCommandPool.Null
       if commandPoolAccounted {
         if let accounting = objectAccounting { accounting.Release() }
         commandPoolAccounted = false
@@ -1120,7 +1120,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     gpuTimingAvailable = false
     gpuSceneReplayNanoseconds = 0uL
     gpuCopyNanoseconds = 0uL
-    if !timestampEnabled || timestampQueryPool == 0uL {
+    if !timestampEnabled || timestampQueryPool == VkQueryPool.Null {
       return
     }
     let values * uint64 = stackalloc[TimestampQueryCount]uint64
@@ -1145,14 +1145,14 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   }
 
   private func DestroyTimestampQueryPool() {
-    if timestampQueryPool == 0uL {
+    if timestampQueryPool == VkQueryPool.Null {
       timestampEnabled = false
       timestampQueryPoolAccounted = false
       return
     }
     let destroyQueryPool = dispatch.vkDestroyQueryPool
     destroyQueryPool(device, timestampQueryPool, nil)
-    timestampQueryPool = 0uL
+    timestampQueryPool = VkQueryPool.Null
     if timestampQueryPoolAccounted {
       if let accounting = objectAccounting { accounting.Release() }
       timestampQueryPoolAccounted = false
@@ -1161,7 +1161,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   }
 
   private func WriteTimestamp(stage VkPipelineStageFlags2, query uint32) {
-    if !timestampEnabled || timestampQueryPool == 0uL {
+    if !timestampEnabled || timestampQueryPool == VkQueryPool.Null {
       return
     }
     let writeTimestamp = dispatch.vkCmdWriteTimestamp2
@@ -1176,7 +1176,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     attachment.imageView = imageView
     attachment.imageLayout = VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     attachment.resolveMode = VkConstants.VK_RESOLVE_MODE_NONE
-    attachment.resolveImageView = 0uL
+    attachment.resolveImageView = VkImageView.Null
     attachment.resolveImageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
     attachment.loadOp = VkConstants.VK_ATTACHMENT_LOAD_OP_CLEAR
     attachment.storeOp = VkConstants.VK_ATTACHMENT_STORE_OP_STORE
@@ -1312,7 +1312,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       let poolResult = createCommandPool(device, &commandPoolCreateInfo, nil, &createdCommandPool)
       commandPool = createdCommandPool
       NoteResult(poolResult)
-      if poolResult != VkConstants.VK_SUCCESS || commandPool == 0uL {
+      if poolResult != VkConstants.VK_SUCCESS || commandPool == VkCommandPool.Null {
         throw InvalidOperationException("vkCreateCommandPool failed: " + poolResult.ToString())
       }
       try {
@@ -1323,7 +1323,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       } catch (error Exception) {
         let destroyCommandPool = dispatch.vkDestroyCommandPool
         destroyCommandPool(device, commandPool, nil)
-        commandPool = 0uL
+        commandPool = VkCommandPool.Null
         rethrow
       }
       var imageCreateInfo = VkImageCreateInfo{}
@@ -1347,7 +1347,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       let imageResult = createImage(device, &imageCreateInfo, nil, &createdImage)
       image = createdImage
       NoteResult(imageResult)
-      if imageResult != VkConstants.VK_SUCCESS || image == 0uL {
+      if imageResult != VkConstants.VK_SUCCESS || image == VkImage.Null {
         throw InvalidOperationException("vkCreateImage failed: " + imageResult.ToString())
       }
       try {
@@ -1358,7 +1358,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       } catch (error Exception) {
         let destroyImage = dispatch.vkDestroyImage
         destroyImage(device, image, nil)
-        image = 0uL
+        image = VkImage.Null
         rethrow
       }
       try {
@@ -1396,7 +1396,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       let viewResult = createImageView(device, &viewCreateInfo, nil, &createdView)
       imageView = createdView
       NoteResult(viewResult)
-      if viewResult != VkConstants.VK_SUCCESS || imageView == 0uL {
+      if viewResult != VkConstants.VK_SUCCESS || imageView == VkImageView.Null {
         throw InvalidOperationException("vkCreateImageView failed: " + viewResult.ToString())
       }
       try {
@@ -1407,7 +1407,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       } catch (error Exception) {
         let destroyImageView = dispatch.vkDestroyImageView
         destroyImageView(device, imageView, nil)
-        imageView = 0uL
+        imageView = VkImageView.Null
         rethrow
       }
 
@@ -1421,7 +1421,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       let bufferResult = createBuffer(device, &bufferCreateInfo, nil, &createdBuffer)
       stagingBuffer = createdBuffer
       NoteResult(bufferResult)
-      if bufferResult != VkConstants.VK_SUCCESS || stagingBuffer == 0uL {
+      if bufferResult != VkConstants.VK_SUCCESS || stagingBuffer == VkBuffer.Null {
         throw InvalidOperationException("vkCreateBuffer failed: " + bufferResult.ToString())
       }
       try {
@@ -1432,7 +1432,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       } catch (error Exception) {
         let destroyBuffer = dispatch.vkDestroyBuffer
         destroyBuffer(device, stagingBuffer, nil)
-        stagingBuffer = 0uL
+        stagingBuffer = VkBuffer.Null
         rethrow
       }
       try {
@@ -1463,7 +1463,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       let allocateCommandBuffers = dispatch.vkAllocateCommandBuffers
       let commandResult = allocateCommandBuffers(device, &allocateInfo, commandBuffers)
       NoteResult(commandResult)
-      if commandResult != VkConstants.VK_SUCCESS || commandBuffers[0] == nint(0) {
+      if commandResult != VkConstants.VK_SUCCESS || commandBuffers[0] == VkCommandBuffer.Null {
         throw InvalidOperationException("vkAllocateCommandBuffers failed: " + commandResult.ToString())
       }
       commandBuffer = commandBuffers[0]
@@ -1490,7 +1490,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         targetFormat,
         objectAccounting,
         resourcePolicy.OffscreenLayerInitialCapacity,
-        sharedLease.Facts.MaxImageDimension2D,
+        sharedLease.Runtime.Facts.MaxImageDimension2D,
         nil)
       primitiveRenderer!!.SetLayerPool(layerPool)
       CreateTimestampQueryPool()
@@ -1520,8 +1520,8 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       NoteResult(result)
       throw InvalidOperationException("vkCreateQueryPool failed: " + result.ToString())
     }
-    if result != VkConstants.VK_SUCCESS || timestampQueryPool == 0uL {
-      timestampQueryPool = 0uL
+    if result != VkConstants.VK_SUCCESS || timestampQueryPool == VkQueryPool.Null {
+      timestampQueryPool = VkQueryPool.Null
       timestampEnabled = false
       return
     }
@@ -1533,7 +1533,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     } catch (error Exception) {
       let destroyQueryPool = dispatch.vkDestroyQueryPool
       destroyQueryPool(device, timestampQueryPool, nil)
-      timestampQueryPool = 0uL
+      timestampQueryPool = VkQueryPool.Null
       timestampEnabled = false
     }
   }

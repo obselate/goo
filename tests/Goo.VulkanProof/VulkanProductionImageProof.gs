@@ -597,7 +597,7 @@ private func VulkanProductionImageRehydrate(
       var recordedBarriers int32
       var staleRejected bool
       try {
-        resources.RecordUploads(nint(0), proof.Generation,
+        resources.RecordUploads(VkCommandBuffer.Null, proof.Generation,
           out recordedBytes, out recordedBarriers)
       } catch (error InvalidOperationException) {
         if error.Message != "Vulkan image generation is stale" {

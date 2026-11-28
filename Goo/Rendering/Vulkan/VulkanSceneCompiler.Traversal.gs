@@ -130,8 +130,6 @@ internal partial class VulkanSceneCompiler {
         && RetainedCommonEligible(node, bounds, opacity, context, true) {
           InvalidateRetainedText(owner)
           InvalidateRetainedBox(owner)
-          IncrementSaturated(ref retainedLeaf.Total)
-          IncrementSaturated(ref retainedLeaf.Fallback)
           frame.AppendPlaceholderChunk(ownerId, frameVersion, bounds)
           emittedNodeCount++
           return
@@ -172,7 +170,6 @@ internal partial class VulkanSceneCompiler {
       var retainedTextEligible = false
       if node.Kind == NodeKind.Text || node.Kind == NodeKind.Entry {
         InvalidateRetainedBox(owner)
-        IncrementSaturated(ref retainedText.Total)
         retainedTextEligible = RetainedTextEligible(node, owner, bounds, opacity, context)
         if hasActiveScrollbarParts { retainedTextEligible = false }
         if retainedTextEligible {
@@ -184,13 +181,12 @@ internal partial class VulkanSceneCompiler {
             }
         } else {
           InvalidateRetainedText(owner)
-          IncrementSaturated(ref retainedText.Fallback)
+          IncrementRetainedTextCounter(ref retainedTextFallbackCount)
         }
       } else if Portals.SourceChildCount(node) == 0 && !hasActiveScrollbarParts {
         InvalidateRetainedText(owner)
         let retainedBorderCandidate = RetainedBorderCandidate(node, bounds)
         if retainedBorderCandidate {
-          IncrementSaturated(ref retainedBorder.Total)
           var retainedBorderRecord PerEdgeBorderRecord
           let retainedBorderEligible = RetainedBorderEligible(node, bounds, opacity,
             context, out retainedBorderRecord)
@@ -206,9 +202,7 @@ internal partial class VulkanSceneCompiler {
             return
           }
           InvalidateRetainedBox(owner)
-          IncrementSaturated(ref retainedBorder.Fallback)
         } else {
-          IncrementSaturated(ref retainedLeaf.Total)
           retainedLeafEligible = RetainedLeafEligible(node, bounds, opacity, context)
           if retainedLeafEligible {
             if TryAppendRetainedLeaf(node, owner, ownerId, bounds, opacity) {
@@ -218,7 +212,6 @@ internal partial class VulkanSceneCompiler {
             InvalidateRetainedBox(owner)
           } else {
             InvalidateRetainedBox(owner)
-            IncrementSaturated(ref retainedLeaf.Fallback)
           }
           if retainedLeafEligible {
             AppendRetainedLeafRebuild(node, owner, ownerId, bounds, opacity)
@@ -230,7 +223,6 @@ internal partial class VulkanSceneCompiler {
         let retainedParentBoxEligible = RetainedParentBoxEligible(
           node, bounds, opacity, context)
         if retainedParentBoxEligible && !hasActiveScrollbarParts && !scrolls {
-          IncrementSaturated(ref retainedParentBox.Total)
           if TryAppendRetainedBox(node, owner, ownerId, bounds, opacity, false) {
             emittedNodeCount = emittedNodeCount + 1
             CompileRetainedParentChildren(node, context)
@@ -241,10 +233,7 @@ internal partial class VulkanSceneCompiler {
           CompileRetainedParentChildren(node, context)
           return
         }
-        if owner.RetainedLeafValid && !owner.RetainedBoxIsLeaf {
-          InvalidateRetainedBox(owner)
-          IncrementSaturated(ref retainedParentBox.Fallback)
-        } else if owner.RetainedLeafValid {
+        if owner.RetainedLeafValid {
           InvalidateRetainedBox(owner)
         }
       }
@@ -519,10 +508,10 @@ internal partial class VulkanSceneCompiler {
           StoreRetainedTextFingerprint(node, owner, bounds, opacity,
             context.ParentTransformIndex, context.ParentRectClipDepth, context.ActiveClipBounds)
           frame.Chunks[chunk].RetentionState = SceneChunkRetentionState.ExactLeafRebuild
-          IncrementSaturated(ref retainedText.Rebuild)
+          IncrementRetainedTextCounter(ref retainedTextRebuildCount)
         } else {
           InvalidateRetainedText(owner)
-          IncrementSaturated(ref retainedText.Fallback)
+          IncrementRetainedTextCounter(ref retainedTextFallbackCount)
         }
       }
       emittedNodeCount = emittedNodeCount + 1

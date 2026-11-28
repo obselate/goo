@@ -227,7 +227,7 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
     Lifecycle.FlushPrepared = false
     PreparedRangeCount = 0
     Lifecycle.Recorded = false
-    Lifecycle.RecordedCommandBuffer = nint(0)
+    Lifecycle.RecordedCommandBuffer = VkCommandBuffer.Null
     InvalidateHistory()
   }
 
@@ -314,29 +314,18 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       }
     }
   }
-  internal prop LiveObjectCount uint64{
-    get {
-      var count = descriptors.LiveObjectCount
-      var index int32 = 0
-      while index < slots.Length {
-        count = count + slots[index].Buffers.LiveObjectCount
-        index = index + 1
-      }
-      return count
-    }
-  }
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     nativeAllocator VulkanMemoryAllocator, nativeDescriptorSetLayout VkDescriptorSetLayout,
     nativeMaxStorageBufferRange VkDeviceSize, nativeSlotCount int32,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeAllocator == nil {
         throw ArgumentNullException("nativeAllocator")
       }
-      if nativeDescriptorSetLayout == 0uL {
+      if nativeDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw ArgumentException("Vulkan text descriptor set layout is null", "nativeDescriptorSetLayout")
       }
       if nativeMaxStorageBufferRange < RecordBytes {
@@ -587,7 +576,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
 
   internal func RecordUpload(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
     if preparedSlot < 0 {
@@ -631,7 +620,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
   internal func Bind(commandBuffer VkCommandBuffer, pipelineLayout VkPipelineLayout,
     setIndex uint32) {
       EnsureOpen()
-      if commandBuffer == nint(0) || pipelineLayout == 0uL {
+      if commandBuffer == VkCommandBuffer.Null || pipelineLayout == VkPipelineLayout.Null {
         throw ArgumentException("Vulkan text descriptor binding arguments are invalid")
       }
       if preparedSlot < 0 || !slots[preparedSlot].Lifecycle.Prepared {

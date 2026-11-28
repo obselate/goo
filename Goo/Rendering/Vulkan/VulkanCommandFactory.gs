@@ -27,11 +27,11 @@ internal unsafe class VulkanCommandFactory {
         let count = int32(commandBufferCount)
         var index int32 = 0
         while index < count {
-          commandBuffers[index] = nint(0)
+          commandBuffers[index] = VkCommandBuffer.Null
           index++
         }
 
-        var pool VkCommandPool = 0uL
+        var pool VkCommandPool = VkCommandPool.Null
         var poolAccounted bool = false
         var buffersAccounted int32 = 0
         var poolInfo = VkCommandPoolCreateInfo{
@@ -43,7 +43,7 @@ internal unsafe class VulkanCommandFactory {
         try {
           let createPool = dispatch.vkCreateCommandPool
           let poolResult = createPool(device, &poolInfo, nil, &pool)
-          if poolResult != VkConstants.VK_SUCCESS || pool == 0uL {
+          if poolResult != VkConstants.VK_SUCCESS || pool == VkCommandPool.Null {
             throw InvalidOperationException(
               "vkCreateCommandPool failed: " + poolResult.ToString())
           }
@@ -71,7 +71,7 @@ internal unsafe class VulkanCommandFactory {
 
           index = 0
           while index < count {
-            if commandBuffers[index] == nint(0) {
+            if commandBuffers[index] == VkCommandBuffer.Null {
               throw InvalidOperationException("vkAllocateCommandBuffers returned a null buffer")
             }
             if let accounting = objectAccounting {
@@ -82,7 +82,7 @@ internal unsafe class VulkanCommandFactory {
           }
           return VulkanCommandAllocation(pool, count)
         } catch (error Exception) {
-          if pool != 0uL {
+          if pool != VkCommandPool.Null {
             let destroyPool = dispatch.vkDestroyCommandPool
             try { destroyPool(device, pool, nil) } catch (cleanup Exception) { }
           }
@@ -99,7 +99,7 @@ internal unsafe class VulkanCommandFactory {
           }
           index = 0
           while index < count {
-            commandBuffers[index] = nint(0)
+            commandBuffers[index] = VkCommandBuffer.Null
             index++
           }
           rethrow

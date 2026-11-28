@@ -571,7 +571,7 @@ func MeasureNonScalingStroke(path VectorPath, count int32, nonScaling bool) {
             )
         }
         Array.Sort(samples)
-        let frames = float64(finalCounters.recordCount - counters.recordCount)
+        let frames = float64(finalCounters[VulkanCounterId.RecordCount] - counters[VulkanCounterId.RecordCount])
         Console.WriteLine(
             "NON_SCALING_STROKE_ZOOM instances=" + count.ToString()
             + " non_scaling=" + nonScaling.ToString() + " frames=300 encode_builds="
@@ -580,19 +580,20 @@ func MeasureNonScalingStroke(path VectorPath, count int32, nonScaling bool) {
             + " stroke_builds=" + (PathStrokeCache.Shared.BuildCount - strokeBuilds).ToString()
             + " flattens=" + (PathStrokeCache.Shared.FlattenCount - flattens).ToString()
             + " gpu_metric_builds=" + (VulkanPathStrokeFrameData.MetricBuildCount - metricBuilds).ToString()
-            + " draws_per_frame=" + (float64(finalCounters.drawCount - counters.drawCount) / frames).ToString(
+            + " draws_per_frame="
+            + (float64(finalCounters[VulkanCounterId.DrawCount] - counters[VulkanCounterId.DrawCount]) / frames).ToString(
                 "F1",
                 CultureInfo.InvariantCulture
             )
             +
                 " pipeline_binds_per_frame=" +
-                (float64(finalCounters.pipelineChangeCount - counters.pipelineChangeCount) / frames).ToString(
+                (float64(finalCounters[VulkanCounterId.PipelineChangeCount] - counters[VulkanCounterId.PipelineChangeCount]) / frames).ToString(
                 "F1",
                 CultureInfo.InvariantCulture
             )
             +
                 " descriptor_binds_per_frame=" +
-                (float64(finalCounters.descriptorChangeCount - counters.descriptorChangeCount) / frames).ToString(
+                (float64(finalCounters[VulkanCounterId.DescriptorChangeCount] - counters[VulkanCounterId.DescriptorChangeCount]) / frames).ToString(
                 "F1",
                 CultureInfo.InvariantCulture
             )

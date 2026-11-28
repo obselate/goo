@@ -567,7 +567,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       ValidateOpacity(value.Opacity)
       ValidateFinite(value.OriginX, "layer origin x")
       ValidateFinite(value.OriginY, "layer origin y")
-      if !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
+      if !primitivePrepass && (target == nil || target.DescriptorSet == VkDescriptorSet.Null) {
         throw InvalidOperationException("Vulkan layer target descriptor is unavailable")
       }
       if value.Bounds.IsEmpty {
@@ -672,11 +672,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.BlendMode != 0u {
         throw NotSupportedException("ShaderEffect cannot be combined with a non-normal BlendMode")
       }
-      if !generator && !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
+      if !generator && !primitivePrepass && (target == nil || target.DescriptorSet == VkDescriptorSet.Null) {
         throw InvalidOperationException("Vulkan shader effect source is unavailable")
       }
       if effect.SamplesBackdrop && !primitivePrepass
-        && (backdrop == nil || backdrop.DescriptorSet == 0uL) {
+        && (backdrop == nil || backdrop.DescriptorSet == VkDescriptorSet.Null) {
           throw InvalidOperationException("Vulkan shader effect backdrop is unavailable")
         }
       let effectPipeline = primitivePipelines.ResolveShaderEffectPipeline(program)
@@ -750,7 +750,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     target VulkanOffscreenLayerTarget?,
     backdrop VulkanOffscreenLayerTarget?) {
       if !primitivePrepass && (target == nil || backdrop == nil
-          || target.DescriptorSet == 0uL || backdrop.DescriptorSet == 0uL) {
+          || target.DescriptorSet == VkDescriptorSet.Null || backdrop.DescriptorSet == VkDescriptorSet.Null) {
             throw InvalidOperationException("Vulkan blend layer descriptor is unavailable")
           }
       if value.BlendMode > uint32(int32(BlendMode.Luminosity)) {
@@ -832,7 +832,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         } else {
           primitivePipelines.TextPaintPipeline
         }
-        if selectedPipeline == 0uL {
+        if selectedPipeline == VkPipeline.Null {
           throw NotSupportedException("Vulkan primitive renderer has no selected text pipeline")
         }
         let globalFirst = uint64(value.FirstInstance) + uint64(run.FirstInstance)
@@ -891,7 +891,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       guard let atlases = textAtlases else {
         throw NotSupportedException("Vulkan primitive renderer has no text atlas pipeline")
       }
-      if textPipelineLayout == 0uL {
+      if textPipelineLayout == VkPipelineLayout.Null {
         throw NotSupportedException("Vulkan primitive renderer has no text atlas pipeline")
       }
       ValidateBounds(value.Bounds)
@@ -1103,13 +1103,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     boundDescriptorLayout = layout
     strokeDescriptorBound = false
     clipDescriptorBound = false
-    clipDescriptorLayout = 0uL
+    clipDescriptorLayout = VkPipelineLayout.Null
     clipDescriptorSlot = -1
     primitiveDescriptorBound = false
-    primitiveDescriptorLayout = 0uL
+    primitiveDescriptorLayout = VkPipelineLayout.Null
     primitiveDescriptorSlot = -1
     textInstanceDescriptorBound = false
-    textInstanceDescriptorLayout = 0uL
+    textInstanceDescriptorLayout = VkPipelineLayout.Null
     textInstanceDescriptorSlot = -1
     sampledDescriptorBound = false
     sampledImageId = ResourceId{}

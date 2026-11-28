@@ -88,17 +88,17 @@ func RunPathAtlasGrowthSmoke() {
         WindowReadbackTestFixture.SetForceFullRedraw(first, true)
         let deadline = Environment.TickCount64 + 10000
         if mode == 2 {
-          let pressureBefore = WindowReadbackTestFixture.DiagnosticCounters(first).memoryPressureCount
+          let pressureBefore = WindowReadbackTestFixture.DiagnosticCounters(first)[VulkanCounterId.MemoryPressureCount]
           firstRoot.Boxes = 4000
           firstRoot.Rebuild()
           target.FailMemoryAllocationsForTest(2)
-          while WindowReadbackTestFixture.DiagnosticCounters(first).memoryPressureCount == pressureBefore
+          while WindowReadbackTestFixture.DiagnosticCounters(first)[VulkanCounterId.MemoryPressureCount] == pressureBefore
             && Environment.TickCount64 < deadline {
             WindowReadbackTestFixture.ForceRenderNonblocking(first, 0.0)
             Thread.Yield()
           }
           target.FailMemoryAllocationsForTest(0)
-          Require(WindowReadbackTestFixture.DiagnosticCounters(first).memoryPressureCount > pressureBefore
+          Require(WindowReadbackTestFixture.DiagnosticCounters(first)[VulkanCounterId.MemoryPressureCount] > pressureBefore
               && !WindowReadbackTestFixture.RuntimeQueueWorkPending(first),
             "Path atlas fixture did not abandon a recorded frame under memory pressure")
         } else {

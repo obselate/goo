@@ -122,14 +122,6 @@ internal data struct VulkanRectOverflowClipPreflight {
   internal var RectangularEmittable bool
 }
 
-internal data struct VulkanRetentionCounters {
-  internal var Hit uint64
-  internal var Rebuild uint64
-  internal var Fallback uint64
-  internal var Invalidation uint64
-  internal var Total uint64
-}
-
 internal data struct VulkanSceneCompileResult {
   internal var FrameVersion uint64
   internal var RootOwnerId uint64
@@ -152,10 +144,6 @@ internal data struct VulkanSceneCompileResult {
   internal var UnsupportedDetailCount int32
   internal var UnsupportedDetailDropped int32
   internal var BackgroundDrawn bool
-  internal var RetainedLeaf VulkanRetentionCounters
-  internal var RetainedBorder VulkanRetentionCounters
-  internal var RetainedParentBox VulkanRetentionCounters
-  internal var RetainedText VulkanRetentionCounters
   internal var ExactTextClipCandidateCount int32
   internal var ExactTextClipCullCount int32
   internal var CachedTextPaintCullCount int32

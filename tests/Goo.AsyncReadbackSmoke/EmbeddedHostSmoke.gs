@@ -9,11 +9,11 @@ internal partial class VulkanWindowTarget {
   internal prop EmbeddedSubmitCompletionServiceReadyForTest bool{
     get -> queueStage == QueueStageSubmit
       && queueMailbox?.Phase == VulkanQueueMailboxPhase.SubmitComplete
-      && runtime?.QueueWorker.HasOutstandingWork != true
+      && runtime?.Runtime.QueueWorker.HasOutstandingWork != true
   }
   internal prop EmbeddedSubmittedFrameCompleteForTest bool{
     get -> EmbeddedSubmitCompletionServiceReadyForTest
-      && runtime?.PollGraphicsSubmission(pendingGlobalSubmissionSerial) == VkConstants.VK_SUCCESS
+      && runtime?.Runtime.PollGraphicsSubmission(pendingGlobalSubmissionSerial) == VkConstants.VK_SUCCESS
   }
   internal prop EmbeddedPresentCompletionReadyForTest bool{
     get -> queueMailbox?.Phase == VulkanQueueMailboxPhase.PresentComplete

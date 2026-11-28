@@ -27,13 +27,11 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let graphicsQueue VkQueue
-  private let presentQueue VkQueue
   private let graphicsTimeline VkSemaphore
   private var lastTracedGraphicsSerial uint64
   private let queueWorker VulkanQueueWorker
   private let processExit EventHandler
   private let graphicsFamilyIndex uint32
-  private let presentFamilyIndex uint32
   private let deviceWaitIdleAddress nint
   private let instanceMaintenanceVariant VulkanSwapchainMaintenanceVariant
   private let swapchainMaintenanceVariant VulkanSwapchainMaintenanceVariant
@@ -92,7 +90,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
         try {
           let createSemaphore = dispatch.vkCreateSemaphore
           let result = createSemaphore(device, &createInfo, nil, &timeline)
-          if result != VkConstants.VK_SUCCESS || timeline == 0uL {
+          if result != VkConstants.VK_SUCCESS || timeline == VkSemaphore.Null {
             throw InvalidOperationException("vkCreateSemaphore failed for graphics timeline: "
               +result.ToString())
           }
@@ -103,7 +101,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
           return VulkanGraphicsQueueCore(timeline,
             VulkanQueueWorker(queue, dispatch, timeline))
         } catch (error Exception) {
-          if timeline != 0uL {
+          if timeline != VkSemaphore.Null {
             let destroySemaphore = dispatch.vkDestroySemaphore
             try { destroySemaphore(device, timeline, nil) } catch (cleanup Exception) { }
           }
@@ -185,8 +183,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     internal func Create(nativeInstance VkInstance, nativeInstanceDispatch VkInstanceDispatch,
       nativePhysicalDevice VkPhysicalDevice, nativeDevice VkDevice,
       nativeDispatch VkDeviceDispatch, nativeGraphicsQueue VkQueue,
-      nativePresentQueue VkQueue, nativeGraphicsFamilyIndex uint32,
-      nativePresentFamilyIndex uint32, nativeDeviceWaitIdleAddress nint,
+      nativeGraphicsFamilyIndex uint32,
+      nativeDeviceWaitIdleAddress nint,
       nativeInstanceMaintenanceVariant VulkanSwapchainMaintenanceVariant,
       nativeSwapchainMaintenanceVariant VulkanSwapchainMaintenanceVariant,
       nativeFacts VulkanSharedDeviceFacts,
@@ -338,9 +336,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             nativeDevice,
             nativeDispatch,
             nativeGraphicsQueue,
-            nativePresentQueue,
             nativeGraphicsFamilyIndex,
-            nativePresentFamilyIndex,
             nativeDeviceWaitIdleAddress,
             nativeInstanceMaintenanceVariant,
             nativeSwapchainMaintenanceVariant,
@@ -445,8 +441,8 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   internal init(nativeInstance VkInstance, nativeInstanceDispatch VkInstanceDispatch,
     nativePhysicalDevice VkPhysicalDevice, nativeDevice VkDevice,
     nativeDispatch VkDeviceDispatch, nativeGraphicsQueue VkQueue,
-    nativePresentQueue VkQueue, nativeGraphicsFamilyIndex uint32,
-    nativePresentFamilyIndex uint32, nativeDeviceWaitIdleAddress nint,
+    nativeGraphicsFamilyIndex uint32,
+    nativeDeviceWaitIdleAddress nint,
     nativeInstanceMaintenanceVariant VulkanSwapchainMaintenanceVariant,
     nativeSwapchainMaintenanceVariant VulkanSwapchainMaintenanceVariant,
     nativeFacts VulkanSharedDeviceFacts, nativeMaxStorageBufferRange uint32,
@@ -468,13 +464,13 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     nativeObjectAccounting VulkanObjectAccounting?,
     nativeSharedObjectAccounting VulkanObjectAccounting?,
     nativeReleaseLoader Action) {
-      if nativeInstance == nint(0) || nativePhysicalDevice == nint(0) || nativeDevice == nint(0) {
+      if nativeInstance == VkInstance.Null || nativePhysicalDevice == VkPhysicalDevice.Null || nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan shared runtime handles cannot be null")
       }
       if nativeMaxStorageBufferRange == 0u {
         throw ArgumentOutOfRangeException("nativeMaxStorageBufferRange")
       }
-      if nativeGraphicsQueue == nint(0) || nativePresentQueue == nint(0) {
+      if nativeGraphicsQueue == VkQueue.Null {
         throw ArgumentException("Vulkan shared runtime queues cannot be null")
       }
       if nativeImageResources == nil {
@@ -508,13 +504,11 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       device = nativeDevice
       dispatch = nativeDispatch
       graphicsQueue = nativeGraphicsQueue
-      presentQueue = nativePresentQueue
       let queueCore = VulkanSharedRuntime.CreateGraphicsQueueCore(
         nativeDevice, nativeDispatch, nativeGraphicsQueue, nativeSharedObjectAccounting)
       graphicsTimeline = queueCore.Timeline
       queueWorker = queueCore.Worker
       graphicsFamilyIndex = nativeGraphicsFamilyIndex
-      presentFamilyIndex = nativePresentFamilyIndex
       deviceWaitIdleAddress = nativeDeviceWaitIdleAddress
       instanceMaintenanceVariant = nativeInstanceMaintenanceVariant
       swapchainMaintenanceVariant = nativeSwapchainMaintenanceVariant
@@ -559,11 +553,9 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   internal prop Device VkDevice{ get -> device }
   internal prop Dispatch VkDeviceDispatch{ get -> dispatch }
   internal prop GraphicsQueue VkQueue{ get -> graphicsQueue }
-  internal prop PresentQueue VkQueue{ get -> presentQueue }
   internal prop GraphicsTimeline VkSemaphore{ get -> graphicsTimeline }
   internal prop QueueWorker VulkanQueueWorker{ get -> queueWorker }
   internal prop GraphicsFamilyIndex uint32{ get -> graphicsFamilyIndex }
-  internal prop PresentFamilyIndex uint32{ get -> presentFamilyIndex }
   internal prop DeviceWaitIdleAddress nint{ get -> deviceWaitIdleAddress }
   internal prop InstanceMaintenanceVariant VulkanSwapchainMaintenanceVariant{
     get -> instanceMaintenanceVariant
@@ -581,9 +573,6 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     get -> imageIdentityRegistry
   }
   internal prop PathResources VulkanPathResources{ get -> pathResources }
-  internal prop PathIdentityRegistry VulkanPathIdentityRegistry{
-    get -> pathIdentityRegistry
-  }
   internal prop ObjectAccounting VulkanObjectAccounting? { get -> objectAccounting }
   internal prop Diagnostics VulkanDiagnostics? { get -> diagnostics }
   internal prop DebugUtilsEnabled bool{ get -> debugUtilsEnabled }
@@ -624,7 +613,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     }
 
   internal func DrainAcquiredSemaphore(semaphore VkSemaphore) VkResult {
-    if semaphore == 0uL {
+    if semaphore == VkSemaphore.Null {
       throw ArgumentException("semaphore")
     }
     if disposed {
@@ -637,7 +626,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       return terminalIdleResult
     }
     let mailbox = queueWorker.CreateMailbox(nil)
-    mailbox.PrepareSubmit(nint(0), semaphore, 0uL)
+    mailbox.PrepareSubmit(VkCommandBuffer.Null, semaphore, VkSemaphore.Null)
     if !mailbox.BeginSubmit() {
       throw InvalidOperationException("Vulkan acquire drain mailbox was not idle")
     }
@@ -796,6 +785,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     terminalFailureResult = result
     queueWorker.MarkFaulted()
     VulkanSharedRuntime.DisposeRetainedLogicalImageIdentityRegistry()
+    VulkanSharedRuntime.DisposeRetainedLogicalPathIdentityRegistry()
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
       deviceLost = true
     }
@@ -808,7 +798,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if deviceLost {
       return VkConstants.VK_ERROR_DEVICE_LOST
     }
-    if disposed || device == nint(0) || deviceWaitIdleAddress == nint(0) {
+    if disposed || device == VkDevice.Null || deviceWaitIdleAddress == nint(0) {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
     let nullable = deviceWaitIdleAddress as (unmanaged[Cdecl](VkDevice) -> VkResult)?
@@ -826,8 +816,6 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     }
     return result
   }
-
-  internal func WaitDeviceIdle() bool -> WaitDeviceIdleResult() == VkConstants.VK_SUCCESS
 
   private func DisposeWithIdleState(alreadyIdle bool) {
     if disposed || terminal {
@@ -885,21 +873,21 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   }
 
   private func DestroyNativeResources() {
-    if graphicsTimeline != 0uL {
+    if graphicsTimeline != VkSemaphore.Null {
       let destroySemaphore = dispatch.vkDestroySemaphore
       try { destroySemaphore(device, graphicsTimeline, nil) } catch (cleanup Exception) { }
       if let accounting = sharedObjectAccounting {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
     }
-    if device != nint(0) && deviceDestroyAvailable {
+    if device != VkDevice.Null && deviceDestroyAvailable {
       let destroyDevice = dispatch.vkDestroyDevice
       destroyDevice(device, nil)
       if let accounting = sharedObjectAccounting {
         accounting.Release()
       }
     }
-    if published && validationMessengerCreated && instance != nint(0)
+    if published && validationMessengerCreated && instance != VkInstance.Null
       && instanceDispatch.vkDestroyDebugUtilsMessengerEXT != nil {
         let destroyMessenger = instanceDispatch.vkDestroyDebugUtilsMessengerEXT
         destroyMessenger(instance, validationMessenger, nil)
@@ -907,7 +895,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
           accounting.Release()
         }
       }
-    if published && instance != nint(0) && instanceDestroyAvailable {
+    if published && instance != VkInstance.Null && instanceDestroyAvailable {
       let destroyInstance = instanceDispatch.vkDestroyInstance
       destroyInstance(instance, nil)
       if let accounting = sharedObjectAccounting {
@@ -928,98 +916,21 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
 }
 
 internal unsafe sealed class VulkanSharedLease : IDisposable {
-  private let owner VulkanSharedRuntime
+  internal let Runtime VulkanSharedRuntime
   private var disposed bool
 
   internal init(nativeOwner VulkanSharedRuntime) {
-    owner = nativeOwner
+    Runtime = nativeOwner
   }
 
-  internal prop Instance VkInstance{ get -> owner.Instance }
-  internal prop InstanceDispatch VkInstanceDispatch{ get -> owner.InstanceDispatch }
-  internal prop PhysicalDevice VkPhysicalDevice{ get -> owner.PhysicalDevice }
-  internal prop Device VkDevice{ get -> owner.Device }
-  internal prop Dispatch VkDeviceDispatch{ get -> owner.Dispatch }
-  internal prop GraphicsQueue VkQueue{ get -> owner.GraphicsQueue }
-  internal prop PresentQueue VkQueue{ get -> owner.PresentQueue }
-  internal prop GraphicsTimeline VkSemaphore{ get -> owner.GraphicsTimeline }
-  internal prop QueueWorker VulkanQueueWorker{ get -> owner.QueueWorker }
-  internal prop GraphicsFamilyIndex uint32{ get -> owner.GraphicsFamilyIndex }
-  internal prop PresentFamilyIndex uint32{ get -> owner.PresentFamilyIndex }
-  internal prop DeviceWaitIdleAddress nint{ get -> owner.DeviceWaitIdleAddress }
-  internal prop InstanceMaintenanceVariant VulkanSwapchainMaintenanceVariant{
-    get -> owner.InstanceMaintenanceVariant
-  }
-  internal prop SwapchainMaintenanceVariant VulkanSwapchainMaintenanceVariant{
-    get -> owner.SwapchainMaintenanceVariant
-  }
-  internal prop Facts VulkanSharedDeviceFacts{ get -> owner.Facts }
-  internal prop MaxStorageBufferRange VkDeviceSize{ get -> owner.MaxStorageBufferRange }
-  internal prop ResourcePolicy VulkanResourcePolicy{ get -> owner.ResourcePolicy }
-  internal prop MemoryAllocator VulkanMemoryAllocator{ get -> owner.MemoryAllocator }
-  internal prop ImageResources VulkanImageResources{ get -> owner.ImageResources }
-  internal prop PipelineCache VulkanPipelineCache{ get -> owner.PipelineCache }
-  internal prop PrimitiveState VulkanSharedPrimitiveState{ get -> owner.PrimitiveState }
-  internal prop ImageIdentityRegistry VulkanImageIdentityRegistry{
-    get -> owner.ImageIdentityRegistry
-  }
-  internal prop PathResources VulkanPathResources{ get -> owner.PathResources }
-  internal prop PathIdentityRegistry VulkanPathIdentityRegistry{
-    get -> owner.PathIdentityRegistry
-  }
-  internal prop ObjectAccounting VulkanObjectAccounting? { get -> owner.ObjectAccounting }
-  internal prop Diagnostics VulkanDiagnostics? { get -> owner.Diagnostics }
-  internal prop DebugUtilsEnabled bool{ get -> owner.DebugUtilsEnabled }
-  internal prop DeviceLost bool{ get -> owner.DeviceLost }
-  internal prop Disposed bool{ get -> owner.Disposed }
-  internal prop Terminal bool{ get -> owner.Terminal }
-  internal prop TerminalIdleResult VkResult{ get -> owner.TerminalIdleResult }
-  internal prop Generation uint64{ get -> owner.Generation }
-  internal prop HasUnsubmittedRecordedSharedUpload bool{
-    get -> owner.HasUnsubmittedRecordedSharedUpload
-  }
-
-  internal func Publish() {
-    owner.Publish()
-  }
-
-  internal func EnqueueGraphicsSubmission(mailbox VulkanQueueMailbox,
-    validate Action[uint64]) bool -> owner.EnqueueGraphicsSubmission(mailbox, validate)
-
-  internal func DrainAcquiredSemaphore(semaphore VkSemaphore) VkResult ->
-  owner.DrainAcquiredSemaphore(semaphore)
-
-  internal func GetCompletedGraphicsSubmissionSerial(out value uint64) VkResult ->
-  owner.GetCompletedGraphicsSubmissionSerial(out value)
-
-  internal func PollGraphicsSubmission(serial uint64) VkResult ->
-  owner.PollGraphicsSubmission(serial)
-
-  internal func WaitGraphicsSubmission(serial uint64, timeout uint64) VkResult ->
-  owner.WaitGraphicsSubmission(serial, timeout)
-
-  internal func MarkDeviceLost() {
-    owner.MarkDeviceLost()
-  }
-
-  internal func QuiesceQueueAfterDeviceLoss() {
-    owner.QuiesceQueueAfterDeviceLoss()
-  }
-
-  internal func MarkTeardownFailed(result VkResult) {
-    owner.MarkTeardownFailed(result)
-  }
-
-  internal func WaitDeviceIdle() bool -> owner.WaitDeviceIdle()
-
-  internal func WaitDeviceIdleResult() VkResult -> owner.WaitDeviceIdleResult()
+  internal prop Disposed bool{ get -> disposed || Runtime.Disposed }
 
   private func ReleaseCore(alreadyIdle bool) bool {
     if disposed {
       return false
     }
     disposed = true
-    return if alreadyIdle { owner.ReleaseLeaseAfterIdle() } else { owner.ReleaseLease() }
+    return if alreadyIdle { Runtime.ReleaseLeaseAfterIdle() } else { Runtime.ReleaseLease() }
   }
 
   internal func Release() bool -> ReleaseCore(false)
@@ -1031,7 +942,7 @@ internal unsafe sealed class VulkanSharedLease : IDisposable {
       return
     }
     disposed = true
-    owner.AbandonLeaseAfterDeviceLoss()
+    Runtime.AbandonLeaseAfterDeviceLoss()
   }
 
   public func Dispose() {

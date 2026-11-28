@@ -20,13 +20,12 @@ internal unsafe partial class VulkanWindowTarget {
     if hidden || hideReleasePending { return }
     if host is SdlHost && host.IsLayerWindow && !host.WaylandVulkanFrameReady() { return }
     if let activeRuntime = runtime {
-      if activeRuntime.DeviceLost {
+      if activeRuntime.Runtime.DeviceLost {
         if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {
           frameFailed = true
           throw InvalidOperationException("Vulkan device recovery failed")
         }
-      } else if activeRuntime.DeviceLost || activeRuntime.Terminal {
-        presentationRetirement.ClearPresentationLatency()
+      } else if activeRuntime.Runtime.DeviceLost || activeRuntime.Runtime.Terminal {
         return
       }
     }
@@ -35,11 +34,10 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     if let activeRuntime = runtime {
-      if activeRuntime.DeviceLost || activeRuntime.Terminal {
-        presentationRetirement.ClearPresentationLatency()
+      if activeRuntime.Runtime.DeviceLost || activeRuntime.Runtime.Terminal {
         return
       }
-      if activeRuntime.HasUnsubmittedRecordedSharedUpload {
+      if activeRuntime.Runtime.HasUnsubmittedRecordedSharedUpload {
         frameFailureRetryable = true
         host.Wake()
         return
@@ -94,7 +92,7 @@ internal unsafe partial class VulkanWindowTarget {
         throw InvalidOperationException("Vulkan shared runtime is unavailable")
       }
       var completed uint64
-      let completionResult = activeRuntime.GetCompletedGraphicsSubmissionSerial(out completed)
+      let completionResult = activeRuntime.Runtime.GetCompletedGraphicsSubmissionSerial(out completed)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, completionResult)
       if completionResult != VkConstants.VK_SUCCESS {
         selectedSlot.AbortPrepared()
@@ -136,7 +134,7 @@ internal unsafe partial class VulkanWindowTarget {
         current.Handle,
         1000000uL,
         selectedSlot.AcquireSemaphore,
-        0uL,
+        VkFence.Null,
         &imageIndex)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.SwapchainAcquire, acquire)
       let markedAcquire = selectedSlot.MarkAcquired(acquire)
@@ -204,16 +202,16 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     if let activeRuntime = runtime {
-      if activeRuntime.DeviceLost || activeRuntime.Terminal {
+      if activeRuntime.Runtime.DeviceLost || activeRuntime.Runtime.Terminal {
         CancelDeferredInitialFrame()
         return
       }
-      if frameRenderDeferred && activeRuntime.HasUnsubmittedRecordedSharedUpload {
+      if frameRenderDeferred && activeRuntime.Runtime.HasUnsubmittedRecordedSharedUpload {
         host.Wake()
         return
       }
       if frameRenderDeferred {
-        let result = activeRuntime.GetCompletedGraphicsSubmissionSerial(out var completed)
+        let result = activeRuntime.Runtime.GetCompletedGraphicsSubmissionSerial(out var completed)
         if result != VkConstants.VK_SUCCESS {
           HandleFrameFailure(result, VulkanDiagnosticEventIds.PresentWait)
           return
@@ -462,7 +460,6 @@ internal unsafe partial class VulkanWindowTarget {
       CaptureDiagnosticResources()
       CloseDiagnosticFrame(false)
       CaptureDiagnosticValidationBoundary()
-      presentationRetirement.CancelPendingPresentationLatency()
       ClearActiveFrame()
       if let pressure = error as VulkanMemoryPressureException? {
         frameFailureRetryable = true

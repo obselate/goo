@@ -44,7 +44,7 @@ func RunTransparentWindowSmoke() {
     }
     target.ResetRenderResourcesForTest(int64(metrics.FramebufferWidth) * int64(metrics.FramebufferHeight) * 2L)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
-    Require(target.DiagnosticCountersSnapshotForTest().layerPoolResidentBytes == 0uL,
+    Require(target.DiagnosticCountersSnapshotForTest()[VulkanCounterId.LayerPoolResidentBytes] == 0uL,
       "Transparent encoded presentation allocated an unnecessary present copy")
     window.RequestClose()
     WindowReadbackTestFixture.ForceRender(window, 0.0)

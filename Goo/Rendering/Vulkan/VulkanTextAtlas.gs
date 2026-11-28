@@ -29,16 +29,16 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   private let allocator VulkanMemoryAllocator
   private let objectAccounting VulkanObjectAccounting?
   private let byteSize VkDeviceSize
-  private var atlasBuffer VkBuffer = 0uL
+  private var atlasBuffer VkBuffer = VkBuffer.Null
   private var atlasAllocation VulkanMemoryAllocation? = nil
-  private var atlasBufferView VkBufferView = 0uL
-  private var stagingBuffer VkBuffer = 0uL
+  private var atlasBufferView VkBufferView = VkBufferView.Null
+  private var stagingBuffer VkBuffer = VkBuffer.Null
   private var stagingAllocation VulkanMemoryAllocation? = nil
   private var testStagingMapped nint = nint(0)
-  private var descriptorSetLayout VkDescriptorSetLayout = 0uL
-  private var descriptorPool VkDescriptorPool = 0uL
-  private var descriptorSet VkDescriptorSet = 0uL
-  private var uploadCommandBuffer VkCommandBuffer = nint(0)
+  private var descriptorSetLayout VkDescriptorSetLayout = VkDescriptorSetLayout.Null
+  private var descriptorPool VkDescriptorPool = VkDescriptorPool.Null
+  private var descriptorSet VkDescriptorSet = VkDescriptorSet.Null
+  private var uploadCommandBuffer VkCommandBuffer = VkCommandBuffer.Null
   private var uploadFence uint64 = 0uL
   private var uploadPending bool
   private var uploadRecorded bool
@@ -114,10 +114,10 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     nativeMaxTexelBufferElements uint32,
     nativeDescriptorSetLayout VkDescriptorSetLayout,
     nativeObjectAccounting VulkanObjectAccounting?) {
-      if nativeDevice == nint(0) {
+      if nativeDevice == VkDevice.Null {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
-      if nativeDescriptorSetLayout == 0uL {
+      if nativeDescriptorSetLayout == VkDescriptorSetLayout.Null {
         throw ArgumentException("Vulkan text atlas descriptor layout is null", "nativeDescriptorSetLayout")
       }
       if atlasByteSize == 0uL || atlasByteSize > MaxAtlasBytes
@@ -182,7 +182,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
       uploadSubmitted = false
       uploadByteOffset = sourceByteOffset
       uploadByteCount = sourceByteCount
-      uploadCommandBuffer = nint(0)
+      uploadCommandBuffer = VkCommandBuffer.Null
       uploadFence = 0uL
       flushPrepared = false
       return true
@@ -190,7 +190,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
 
   internal func RecordUpload(commandBuffer VkCommandBuffer) {
     EnsureOpen()
-    if commandBuffer == nint(0) {
+    if commandBuffer == VkCommandBuffer.Null {
       throw ArgumentException("Command buffer is null", "commandBuffer")
     }
     if !uploadPending {
@@ -245,7 +245,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
 
   internal func MarkSubmitted(commandBuffer VkCommandBuffer, fence uint64) {
     EnsureOpen()
-    if commandBuffer == nint(0) || fence == 0uL {
+    if commandBuffer == VkCommandBuffer.Null || fence == 0uL {
       throw ArgumentException("Text atlas submission arguments are invalid")
     }
     if !uploadPending || !uploadRecorded || uploadCommandBuffer != commandBuffer {
@@ -275,7 +275,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     uploaded = true
     uploadByteOffset = 0uL
     uploadByteCount = 0uL
-    uploadCommandBuffer = nint(0)
+    uploadCommandBuffer = VkCommandBuffer.Null
     uploadFence = 0uL
     completedUploadSequence = uploadSequence
     flushPrepared = false
@@ -297,7 +297,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     uploadRecorded = false
     uploadByteOffset = 0uL
     uploadByteCount = 0uL
-    uploadCommandBuffer = nint(0)
+    uploadCommandBuffer = VkCommandBuffer.Null
     uploadFence = 0uL
     flushPrepared = false
     return true
@@ -305,7 +305,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
 
   internal func BindDescriptor(commandBuffer VkCommandBuffer, pipelineLayout VkPipelineLayout) {
     EnsureOpen()
-    if commandBuffer == nint(0) || pipelineLayout == 0uL {
+    if commandBuffer == VkCommandBuffer.Null || pipelineLayout == VkPipelineLayout.Null {
       throw ArgumentException("Text atlas descriptor binding arguments are invalid")
     }
     if uploadPending {
@@ -315,7 +315,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     } else if !uploaded {
       throw InvalidOperationException("Vulkan text atlas upload is not ready for this command buffer")
     }
-    if descriptorSet == 0uL {
+    if descriptorSet == VkDescriptorSet.Null {
       throw InvalidOperationException("Vulkan text atlas descriptor set is unavailable")
     }
     let bindDescriptorSets = dispatch.vkCmdBindDescriptorSets
@@ -324,18 +324,18 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   }
 
   internal func Track(cache VulkanGpuCache, handle int32) {
-    if device == nint(0) { return }
+    if device == VkDevice.Null { return }
     allocator.Track(atlasAllocation!!, cache, handle)
     allocator.Track(stagingAllocation!!, cache, handle)
   }
 
   private func LiveObjectCount() uint64 {
     var count uint64 = 0uL
-    if atlasBuffer != 0uL { count = count + 1uL }
-    if atlasBufferView != 0uL { count = count + 1uL }
-    if descriptorPool != 0uL { count = count + 1uL }
-    if descriptorSet != 0uL { count = count + 1uL }
-    if stagingBuffer != 0uL { count = count + 1uL }
+    if atlasBuffer != VkBuffer.Null { count = count + 1uL }
+    if atlasBufferView != VkBufferView.Null { count = count + 1uL }
+    if descriptorPool != VkDescriptorPool.Null { count = count + 1uL }
+    if descriptorSet != VkDescriptorSet.Null { count = count + 1uL }
+    if stagingBuffer != VkBuffer.Null { count = count + 1uL }
     return count
   }
 
@@ -385,7 +385,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     var createdView VkBufferView
     let result = createBufferView(device, &viewInfo, nil, &createdView)
     atlasBufferView = createdView
-    if result != VkConstants.VK_SUCCESS || atlasBufferView == 0uL {
+    if result != VkConstants.VK_SUCCESS || atlasBufferView == VkBufferView.Null {
       throw InvalidOperationException("vkCreateBufferView failed for text atlas")
     }
     try {
@@ -395,20 +395,20 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
     } catch (error Exception) {
       let destroyBufferView = dispatch.vkDestroyBufferView
       destroyBufferView(device, atlasBufferView, nil)
-      atlasBufferView = 0uL
+      atlasBufferView = VkBufferView.Null
       rethrow
     }
   }
 
   private func CreateDescriptorResources() {
-    if descriptorSetLayout == 0uL {
+    if descriptorSetLayout == VkDescriptorSetLayout.Null {
       throw InvalidOperationException("Vulkan text atlas descriptor layout is unavailable")
     }
     var poolSize = VkDescriptorPoolSize{}
     poolSize._type = VkConstants.VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
     poolSize.descriptorCount = 1u
     var layout = descriptorSetLayout
-    var createdSet VkDescriptorSet = 0uL
+    var createdSet VkDescriptorSet = VkDescriptorSet.Null
     let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
       device,
       dispatch,
@@ -442,9 +442,9 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   }
 
   private func DestroyStagingBuffer() {
-    if stagingBuffer != 0uL {
+    if stagingBuffer != VkBuffer.Null {
       let staleBuffer = stagingBuffer
-      stagingBuffer = 0uL
+      stagingBuffer = VkBuffer.Null
       let destroyBuffer = dispatch.vkDestroyBuffer
       try { destroyBuffer(device, staleBuffer, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
@@ -458,15 +458,15 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   }
 
   private func DestroyDescriptorResources() {
-    if descriptorPool != 0uL {
+    if descriptorPool != VkDescriptorPool.Null {
       let stalePool = descriptorPool
       let staleSet = descriptorSet
-      descriptorPool = 0uL
-      descriptorSet = 0uL
-      descriptorSetLayout = 0uL
+      descriptorPool = VkDescriptorPool.Null
+      descriptorSet = VkDescriptorSet.Null
+      descriptorSetLayout = VkDescriptorSetLayout.Null
       let destroyPool = dispatch.vkDestroyDescriptorPool
       try { destroyPool(device, stalePool, nil) } catch (cleanup Exception) { }
-      if staleSet != 0uL {
+      if staleSet != VkDescriptorSet.Null {
         if let accounting = objectAccounting {
           try { accounting.Release() } catch (cleanup Exception) { }
         }
@@ -475,14 +475,14 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
     }
-    descriptorSet = 0uL
-    descriptorSetLayout = 0uL
+    descriptorSet = VkDescriptorSet.Null
+    descriptorSetLayout = VkDescriptorSetLayout.Null
   }
 
   private func DestroyBufferView() {
-    if atlasBufferView != 0uL {
+    if atlasBufferView != VkBufferView.Null {
       let staleBufferView = atlasBufferView
-      atlasBufferView = 0uL
+      atlasBufferView = VkBufferView.Null
       let destroyBufferView = dispatch.vkDestroyBufferView
       try { destroyBufferView(device, staleBufferView, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
@@ -492,9 +492,9 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
   }
 
   private func DestroyAtlasBuffer() {
-    if atlasBuffer != 0uL {
+    if atlasBuffer != VkBuffer.Null {
       let staleBuffer = atlasBuffer
-      atlasBuffer = 0uL
+      atlasBuffer = VkBuffer.Null
       let destroyBuffer = dispatch.vkDestroyBuffer
       try { destroyBuffer(device, staleBuffer, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
