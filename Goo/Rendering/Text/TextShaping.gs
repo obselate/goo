@@ -1309,20 +1309,26 @@ internal partial class TextShaping {
             }
             i++
           }
-          if OperatingSystem.IsAndroid() && result.Count < PrimaryFaceCacheCapacity {
-            let name = "Noto Color Emoji"
+          if result.Count < PrimaryFaceCacheCapacity {
+            let systemEmoji = if OperatingSystem.IsWindows() {
+              "Segoe UI Emoji"
+            } else if OperatingSystem.IsMacOS() {
+              "Apple Color Emoji"
+            } else {
+              "Noto Color Emoji"
+            }
             var seenFamily = false
             for previous in familiesSeen {
-              if normalizeFamily(previous) == normalizeFamily(name) {
+              if normalizeFamily(previous) == normalizeFamily(systemEmoji) {
                 seenFamily = true
                 break
               }
             }
             if !seenFamily {
-              let candidate = ResolveCachedPrimary(name, 400, false)
-              if candidate.IsRegistered || normalizeFamily(candidate.Family) == normalizeFamily(name) {
+              let candidate = ResolveCachedPrimary(systemEmoji, 400, false)
+              if candidate.IsRegistered || normalizeFamily(candidate.Family) == normalizeFamily(systemEmoji) {
                 result.Add(candidate)
-                familiesSeen.Add(name)
+                familiesSeen.Add(systemEmoji)
               } else {
                 candidate.Dispose()
               }
